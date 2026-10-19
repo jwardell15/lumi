@@ -1,4 +1,13 @@
-import csv, gzip, json, sys, heapq
+import csv, gzip, json, sys, heapq, re
+NONEN=re.compile(r"\b(le|la|les|du|des|de|et|au|aux|avec|sans|nature|fromage|lait|sucre|sans|chocolat|biscuits?|gateau|confiture|jus|boisson|yaourt|leche|con|sin|del|azucar|galletas|queso|und|mit|ohne|vanille|fraise|framboise|eau|pain|beurre|creme|pâte|natur|saveur|parfum|sabor|naranja|fresa|thé|blanc|noir|petit|tradition|recette|aceite|harina|arroz|frijoles|salsa de|agua|bebida|refresco|zumo|dulce|pollo|carne|huevo|pan|integral|tostadas|avena)\b",re.I)
+def english(name):
+    if re.search(r"[^\x20-\x7e’®™]", name): return False
+    return len(NONEN.findall(name)) == 0
+def us_ok(code, cty):
+    c=[x for x in cty.split(',') if x]
+    us_only = c and all(x in ('en:united-states','en:puerto-rico') for x in c)
+    upc = (len(code)==12) or (len(code)==13 and code[0] in '01')
+    return upc or (us_only and len(code)!=8)
 csv.field_size_limit(10**9)
 F=lambda r,k: (r.get(k) or '').strip()
 def num(v):
@@ -13,6 +22,7 @@ with gzip.open('products.csv.gz','rt',encoding='utf-8',errors='replace',newline=
         if 'en:united-states' not in F(r,'countries_tags'): continue
         name=F(r,'product_name'); code=F(r,'code')
         if not name or not code.isdigit() or len(code)<8: continue
+        if not english(name) or not us_ok(code, F(r,'countries_tags')): continue
         c=num(F(r,'carbohydrates_100g'))
         if c is None or c>100: continue
         scans=num(F(r,'unique_scans_n')) or 0

@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '2.0.1';
+const VERSION = '2.0.2';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -99,7 +99,7 @@ const ICON_SEARCH = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"
 const CHIPS = [
   ['🍿', 'Snacks', /snack|chips|crisps|crackers|popcorn|pretzel|puffs/i], ['🥣', 'Cereal', /cereal|granola|muesli|oat/i], ['🥤', 'Drinks', /beverage|drink|soda|juice|water|tea|coffee|lemonade/i],
   ['🥛', 'Yogurt', /yogurt|yoghurt|skyr|kefir/i], ['🥫', 'Sauces', /sauce|dressing|condiment|ketchup|salsa|mayonnaise|syrup|spread/i], ['🍫', 'Bars', /\bbars?\b/i],
-  ['🍞', 'Bread', /bread|tortilla|wrap|bagel|bun/i], ['🧀', 'Dairy', /cheese|milk|butter|cream/i], ['🍪', 'Sweets', /cookie|candy|candies|chocolate|dessert|ice cream|biscuit/i], ['🥜', 'Nuts', /nut|seed|almond|peanut/i]];
+  ['🍞', 'Bread', /bread|tortilla|wrap|bagel|bun/i], ['🧀', 'Dairy', /cheese|milk(?! chocolate)|(?<!peanut |nut |almond )butter\b(?! cookie)|cream cheese|cottage/i], ['🍪', 'Sweets', /cookie|candy|candies|chocolate|dessert|ice cream|biscuit/i], ['🥜', 'Nuts', /nut|seed|almond|peanut/i]];
 
 /* ---------------- search box w/ suggestions ---------------- */
 function searchBox(q = '') {
@@ -143,11 +143,23 @@ function viewHome() {
   $('#heroScan').onclick = startScan;
   $('#bform').onsubmit = e => { e.preventDefault(); const c = $('#bc').value.replace(/\D/g, ''); if (c.length >= 8) go('#/product/' + c); else toast('Enter an 8–14 digit barcode'); };
   if ($('#clrRec')) $('#clrRec').onclick = () => { store.set('recent', []); viewHome(); };
-  loadIndex().then(() => { const el = $('#picks'); if (!el) return; const p = engine.docs.slice(0, 3000).filter(d => d.score >= 80 && d.img && d.net >= 3 && /^[\x20-\x7e]+$/.test(d.name + d.brand) && !/water/i.test(d.name)).slice(0, 6); el.innerHTML = `<div class="list">${p.map(d => rowHTML(itemFromDoc(d))).join('')}</div>`; })
+  loadIndex().then(() => { const el = $('#picks'); if (!el) return; const p = topPicks(); el.innerHTML = `<div class="list">${p.map(d => rowHTML(itemFromDoc(d))).join('')}</div>`; })
     .catch(() => { const el = $('#picks'); if (el) el.innerHTML = ''; });
   setTimeout(() => loadIndexFull().catch(() => {}), 1500);
 }
 
+function topPicks() {
+  const order = ['Yogurt', 'Cereal', 'Snacks', 'Bars', 'Dairy', 'Nuts', 'Bread', 'Sauces', 'Drinks', 'Sweets'];
+  const pool = engine.docs.slice(0, 6000).filter(d => d.score >= 72 && d.img && d.brand && d.net != null && d.net >= 2 && /^[\x20-\x7e]+$/.test(d.name + d.brand) && /^[01]/.test(d.code.padStart(13, '0')) && !/\bwater\b/i.test(d.name));
+  const out = [], brands = new Set(), codes = new Set(), cats = new Set();
+  for (const name of order) {
+    const re = CHIPS.find(c => c[1] === name)[2];
+    const d = pool.find(x => !codes.has(x.code) && !cats.has(x.cat) && !(name !== 'Yogurt' && /yogh?urt/i.test(x.cat + x.name)) && !brands.has(x.brand.toLowerCase().split(' ')[0]) && re.test(x.cat + ' ' + x.name));
+    if (d) { out.push(d); cats.add(d.cat); brands.add(d.brand.toLowerCase().split(' ')[0]); codes.add(d.code); }
+    if (out.length >= 6) break;
+  }
+  return out;
+}
 let rs = null; // current result state
 function resultsShell(title, q) {
   app.innerHTML = `${searchBox(q)}
