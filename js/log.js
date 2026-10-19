@@ -163,9 +163,11 @@ function viewSettings() {
     <label class="field"><span>Grams of carbs per unit (the “X” in 1:X)</span><input name="icr" type="number" inputmode="decimal" min="0" step="0.1" value="${st.icr ?? ''}" placeholder="Off"></label>
     <div class="seg wide" id="basis"><button type="button" data-b="total" class="${st.icrBasis !== 'net' ? 'on' : ''}">Use total carbs</button><button type="button" data-b="net" class="${st.icrBasis === 'net' ? 'on' : ''}">Use net carbs</button></div>
     <div class="actions"><button class="btn pri">Save</button></div></form>
+  ${prefsCard()}
   <div class="card"><h2>Primary rating</h2><p class="small">Which rating is shown first on cards and product pages. The other one stays as a small badge.</p><div class="seg wide" id="prim"><button type="button" data-p="carb" class="${st.primary !== 'health' ? 'on' : ''}">Carb score</button><button type="button" data-p="health" class="${st.primary === 'health' ? 'on' : ''}">Health rating</button></div></div>
   <div class="card"><h2>Data</h2><div class="actions"><button class="btn" id="expCsv">Export log CSV</button><button class="btn" id="expJson">Backup JSON</button></div><div class="actions"><label class="btn" for="impFile">Import…</label><input type="file" id="impFile" accept=".json,.csv" hidden><button class="btn" id="reOnb">Show intro again</button></div></div>
   <div class="card"><a class="lnk" href="#/about">About Lumi, scoring formula & data sources ›</a></div>`;
+  bindPrefs();
   document.querySelectorAll('#prim button').forEach(b => b.onclick = () => { setSettings({ primary: b.dataset.p }); document.querySelectorAll('#prim button').forEach(x => x.classList.toggle('on', x === b)); toast('Primary rating: ' + b.textContent); });
   let basis = st.icrBasis; document.querySelectorAll('#basis button').forEach(b => b.onclick = () => { basis = b.dataset.b; document.querySelectorAll('#basis button').forEach(x => x.classList.toggle('on', x === b)); });
   $('#sf').onsubmit = e => { e.preventDefault(); const fd = new FormData(e.target); const t = +fd.get('target') || null, i = +fd.get('icr') || null; setSettings({ target: t, icr: i, icrBasis: basis }); toast('Saved'); };

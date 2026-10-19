@@ -105,7 +105,7 @@ function rate(p, opt = {}) {
   if (fvl > 40) row('fvl', 'Fruits, vegetables, legumes', Math.round(fvl) + '%', fvl > 80 ? 0 : 1, fvl > 80 ? 'Excellent quantity' : 'Some');
   if (out.basis === 'full') {
     const risky = adds.filter(a => a.tier >= 1);
-    if (risky.length) out.neg.push({ k: 'add', title: 'Additives', val: String(risky.length), l: Math.max(...risky.map(a => a.tier)) === 3 ? 3 : 2, desc: risky.some(a => a.tier === 3) ? 'Contains a high-risk additive' : 'Contains additives to limit', list: risky.map(a => ({ name: a.name + ' (' + a.e.toUpperCase().replace('E', 'E') + ')', risk: TIER[a.tier], tier: a.tier })) });
+    if (risky.length) out.neg.push({ k: 'add', title: 'Additives', val: String(risky.length), l: Math.max(...risky.map(a => a.tier)) === 3 ? 3 : 2, desc: risky.some(a => a.tier === 3) ? 'Contains a high-risk additive' : 'Contains additives to limit', list: risky.map(a => ({ e: a.e, name: a.name + ' (' + a.e.toUpperCase().replace('E', 'E') + ')', risk: TIER[a.tier], tier: a.tier })) });
     else out.pos.push({ k: 'add', title: 'Additives', val: '0', l: 0, desc: adds.length ? 'Only no-risk additives' : 'No additives found' });
     if (organic) out.pos.push({ k: 'org', title: 'Organic', val: '✓', l: 0, desc: 'Certified organic' });
   }

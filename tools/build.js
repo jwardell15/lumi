@@ -4,7 +4,9 @@ const fs = require('fs'), path = require('path');
 const S = require('../js/score.js'); const C = require('../js/cats.js'); const H = require('../js/health.js');
 const SIDE = fs.existsSync(path.join(path.dirname(process.argv[2]), 'side.json')) ? JSON.parse(fs.readFileSync(path.join(path.dirname(process.argv[2]), 'side.json'), 'utf8')) : {};
 const COV = {}; const cov = (k, r) => { const c = COV[k] = COV[k] || { n: 0, rated: 0, full: 0, nutritionOnly: 0, estimated: 0, unrated: 0, reasons: {} }; c.n++; if (r.score == null) { c.unrated++; c.reasons[r.reason] = (c.reasons[r.reason] || 0) + 1; } else { c.rated++; c[r.basis === 'full' ? 'full' : 'nutritionOnly']++; if (r.est.length) c.estimated++; } };
-const ORG = /\borganic\b/i;
+const ORG = /\borganic\b/i; const D = require('../js/diet.js');
+const SIDE2 = fs.existsSync(path.join(path.dirname(process.argv[2]), 'side2.json')) ? JSON.parse(fs.readFileSync(path.join(path.dirname(process.argv[2]), 'side2.json'), 'utf8')) : {};
+const ALC = {}; const alc = (k, m) => { const c = ALC[k] = ALC[k] || { n: 0, ingredientsKnown: 0, anyAllergen: 0 }; c.n++; if (m.df & 1) c.ingredientsKnown++; if (m.am) c.anyAllergen++; };
 const audit = { total: 0, carbsUnknown: 0, inconsistent: 0, fiberDropped: 0, zeroCarbOk: 0, issues: {} };
 const src = process.argv[2]; const out = path.join(__dirname, '..', 'data');
 fs.rmSync(out, { recursive: true, force: true }); fs.mkdirSync(path.join(out, 'd'), { recursive: true });
@@ -34,6 +36,7 @@ for (const l of lines) {
   const comp = [r.code, r.name, r.brand, r.qty, img, r.servQ, r.serv, r.nova, nut, adds, r.ing, cat, (na ? 1 : 0) | (liquid ? 2 : 0) | (S.CARBY.test(r.cats + ' ' + r.cat) ? 4 : 0) | (S.DRY.test(r.cats + ' ' + r.cat) ? 8 : 0) | 16];
   if (r.src === 'usda-branded') comp.push(null, { src: 'USDA Branded Foods', url: `https://fdc.nal.usda.gov/food-details/${r.fdc}/nutrients`, date: r.date });
   const sd = SIDE[r.code]; const hx = { o: (sd && sd[0]) || ORG.test(r.name) ? 1 : 0, fv: sd && sd[1] != null ? sd[1] : null };
+  const s2 = SIDE2[r.code]; const dm = D.analyze({ ing: r.ing, name: r.name, allergens: s2 && s2[0], traces: s2 && s2[1], analysis: s2 && s2[2], labels: s2 && s2[3], organic: !!hx.o }); hx.am = dm.am; hx.tm = dm.tm; hx.df = dm.df; alc(r.src === 'usda-branded' ? 'USDA Branded' : 'OFF', dm);
   if (r.src !== 'usda-branded') comp.push(null, null); comp.push(hx);
   const p = S.fromCompact(comp); const s = S.score(p); audit.total++;
   const hr = H.rate(p, { organic: !!hx.o, fvl: hx.fv }); cov(r.src === 'usda-branded' ? 'USDA Branded (no photo)' : 'Open Food Facts', hr);
@@ -45,7 +48,7 @@ for (const l of lines) {
   const parts = r.code.length > 8 ? r.code.padStart(13, '0').match(/^(...)(...)(...)(.*)$/).slice(1).join('/') : r.code;
   let short = img.replace(/\.(100|200|400|full)\.jpg$/, '');
   if (short.startsWith(parts + '/')) short = '~' + short.slice(parts.length + 1); else if (!img.startsWith('http')) short = img;
-  docs.push([r.code, r.name, r.brand, s.score == null ? -1 : s.score, s.score == null || s.net == null ? -1 : Math.round(s.net), catIdx.get(cat), img ? short : '', keys, m.sugars == null ? -1 : Math.round(m.sugars), hr.score == null ? -1 : hr.score, (hr.basis === 'nutrition' ? 1 : 0) | (hr.est.length ? 2 : 0)]);
+  docs.push([r.code, r.name, r.brand, s.score == null ? -1 : s.score, s.score == null || s.net == null ? -1 : Math.round(s.net), catIdx.get(cat), img ? short : '', keys, m.sugars == null ? -1 : Math.round(m.sugars), hr.score == null ? -1 : hr.score, (hr.basis === 'nutrition' ? 1 : 0) | (hr.est.length ? 2 : 0), hx.am | hx.tm << 9, hx.df]);
   const k = r.code.slice(-3); (shards[k] = shards[k] || {})[r.code] = comp;
 }
 const TIERS = [[0, 15000], [15000, 70000], [70000, nOFF]].concat(nX ? [[nOFF, nOFF + Math.ceil(nX / 2)], [nOFF + Math.ceil(nX / 2), 1e9]] : []);
@@ -72,13 +75,13 @@ if (gsrc) {
     const p0 = r.portions && r.portions[0];
     const liquid = !!r.liquid || /beverage|drinks?\b|juice|milk\b|soda|coffee|tea\b/i.test(r.group + ' ' + r.name) && !/powder|dry|bar\b/i.test(r.name);
     const comp = [r.id, r.name, r.brand, '', '', p0 ? p0[1] : null, p0 ? p0[0] : '', null, nut, '', '', r.group, 1 | (liquid ? 2 : 0) | (S.CARBY.test(r.group + ' ' + r.name) ? 4 : 0) | 16, r.portions || [], { src: r.src, url: r.url, date: r.date, perItem: !!r.perItem }];
-    const isWhole = r.keys[0] === 'whole' || !r.keys.some(k => k.startsWith('rest')); const hx = { w: isWhole ? 1 : 0, g: r.group, o: ORG.test(r.name) ? 1 : 0 }; if (r.keys.some(k => /^whole-(fruit|veg|legumes)/.test(k))) hx.fv = 100; comp.push(hx);
+    const isWhole = r.keys[0] === 'whole' || !r.keys.some(k => k.startsWith('rest')); const hx = { w: isWhole ? 1 : 0, g: r.group, o: ORG.test(r.name) ? 1 : 0 }; if (r.keys.some(k => /^whole-(fruit|veg|legumes)/.test(k))) hx.fv = 100; { const simple = isWhole && /^(Fruits|Vegetables|Legumes|Nut and Seed|Spices|Finfish|Beef Products|Pork Products|Poultry|Lamb|Dairy and Egg)/.test(r.group || '') && !/FNDDS/.test((r.brand || '') + r.src) && !/breaded|batter|fried|stuffed|with |sauce|gravy|prepared|recipe/i.test(r.name); const dm = D.analyze({ name: r.name, whole: simple, organic: !!hx.o }); hx.am = dm.am; hx.tm = dm.tm; hx.df = dm.df; alc(isWhole ? 'Whole' : 'Restaurant', dm); } comp.push(hx);
     const p = S.fromCompact(comp); const s = S.score(p); ga.total++;
     const hr = H.rate(p, { whole: isWhole, group: r.group, organic: !!hx.o, fvl: hx.fv }); cov(isWhole ? 'Whole foods (USDA)' : r.src.includes('official') ? 'Restaurants (official)' : 'Restaurants (USDA)', hr); if (s.score == null) ga.inconsistent++;
     let keys = r.keys.filter(k => k === 'rest' || k === 'whole' || !k.startsWith('rest-') || okKeys.has(k) || k === 'rest-other');
     if (r.keys[1] && r.keys[1].startsWith('rest-') && !okKeys.has(r.keys[1]) && r.keys[1] !== 'rest-other') keys = ['rest', 'rest-other'];
     if (!gci.has(r.group)) { gci.set(r.group, gcats.length); gcats.push(r.group); }
-    gdocs.push([r.id, r.name, r.brand, s.score == null ? -1 : s.score, s.score == null || s.net == null ? -1 : Math.round(s.net), gci.get(r.group), '', keys.join('.'), n.sugars == null ? -1 : Math.round(n.sugars), hr.score == null ? -1 : hr.score, (hr.basis === 'nutrition' ? 1 : 0) | (hr.est.length ? 2 : 0)]);
+    gdocs.push([r.id, r.name, r.brand, s.score == null ? -1 : s.score, s.score == null || s.net == null ? -1 : Math.round(s.net), gci.get(r.group), '', keys.join('.'), n.sugars == null ? -1 : Math.round(n.sugars), hr.score == null ? -1 : hr.score, (hr.basis === 'nutrition' ? 1 : 0) | (hr.est.length ? 2 : 0), hx.am | hx.tm << 9, hx.df]);
     const k = hash(r.id); (gsh[k] = gsh[k] || {})[r.id] = comp;
   }
   fs.mkdirSync(path.join(out, 'g'), { recursive: true });
@@ -87,5 +90,5 @@ if (gsrc) {
   META.whole = gdocs.filter(d => d[7].startsWith('whole')).length; META.restaurant = gdocs.length - META.whole; META.chains = dyn.length; META.chainCounts = dyn.map(x => [x[1], chainCount[x[0]], G.some(r => r.keys[1] === x[0] && r.src.includes('official')) ? 'official' : 'USDA']);
   console.log('generic', JSON.stringify(ga), 'chains', dyn.map(x => x[1] + ':' + chainCount[x[0]]).join(', '));
 }
-META.health = COV; console.log('HEALTH', JSON.stringify(COV));
+META.health = COV; META.allergenData = ALC; console.log('ALLERGEN', JSON.stringify(ALC)); console.log('HEALTH', JSON.stringify(COV));
 fs.writeFileSync(path.join(out, 'meta.json'), JSON.stringify(META));
