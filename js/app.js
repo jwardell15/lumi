@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '2.0.0';
+const VERSION = '2.0.1';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -143,7 +143,7 @@ function viewHome() {
   $('#heroScan').onclick = startScan;
   $('#bform').onsubmit = e => { e.preventDefault(); const c = $('#bc').value.replace(/\D/g, ''); if (c.length >= 8) go('#/product/' + c); else toast('Enter an 8–14 digit barcode'); };
   if ($('#clrRec')) $('#clrRec').onclick = () => { store.set('recent', []); viewHome(); };
-  loadIndex().then(() => { const el = $('#picks'); if (!el) return; const p = engine.docs.slice(0, 400).filter(d => d.score >= 85 && d.img).slice(0, 5); el.innerHTML = `<div class="list">${p.map(d => rowHTML(itemFromDoc(d))).join('')}</div>`; })
+  loadIndex().then(() => { const el = $('#picks'); if (!el) return; const p = engine.docs.slice(0, 3000).filter(d => d.score >= 80 && d.img && d.net >= 3 && /^[\x20-\x7e]+$/.test(d.name + d.brand) && !/water/i.test(d.name)).slice(0, 6); el.innerHTML = `<div class="list">${p.map(d => rowHTML(itemFromDoc(d))).join('')}</div>`; })
     .catch(() => { const el = $('#picks'); if (el) el.innerHTML = ''; });
   setTimeout(() => loadIndexFull().catch(() => {}), 1500);
 }
@@ -163,7 +163,7 @@ function resultsShell(title, q) {
 function renderResults() {
   if (!rs) return; const el = $('#res'); if (!el) return;
   const st = rs.src, lab = { local: 'Lumi index', usda: 'USDA', off: 'Open Food Facts' };
-  $('#status').innerHTML = Object.keys(st).map(k => `<i><span class="dot ${st[k]}"></span>${lab[k]}${st[k] === 'ok' ? ` ${rs.counts[k] || 0}` : ''}</i>`).join('');
+  $('#status').innerHTML = Object.keys(st).map(k => `<i><span class="dot ${st[k]}"></span>${lab[k]}${st[k] === 'ok' ? ` · ${rs.counts[k] || 0}` : st[k] === 'err' ? ' · unavailable' : ''}</i>`).join('');
   let items = [...rs.items.values()]; const f = store.get('filters', {}), sort = store.get('sort', 'rel');
   if (f.good) items = items.filter(i => i.score >= 50); if (f.low) items = items.filter(i => i.net != null && i.net <= 10);
   items = items.filter(i => i.score != null);
@@ -253,8 +253,8 @@ async function viewProduct(id) {
     <div class="actions"><button class="btn pri" id="share">↗ Share</button><button class="btn" id="save">${isSaved(p.id) ? '♥ Saved' : '♡ Save'}</button></div>
   </div>
   ${s.missing ? '' : `<div class="card"><h2>Key numbers</h2><div class="facts" style="margin-bottom:12px">
-    <div class="fact"><small>Net carbs /100${unit}</small><b>${r1(s.net)} g</b></div><div class="fact"><small>${ps ? 'Net carbs / serving' : 'Serving size'}</small><b>${ps ? r1(s.perServ.net) + ' g' : '—'}</b></div>
-    <div class="fact"><small>Sugars /100${unit}</small><b>${r1(n.sugars)} g</b></div><div class="fact"><small>Fiber /100${unit}</small><b>${r1(n.fiber)} g</b></div></div>
+    <div class="fact"><small>Net carbs /100${unit}</small><b>${s.net == null ? '—' : r1(s.net) + ' g'}</b></div><div class="fact"><small>${ps ? 'Net carbs / serving' : 'Serving size'}</small><b>${ps ? r1(s.perServ.net) + ' g' : '—'}</b></div>
+    <div class="fact"><small>Sugars /100${unit}</small><b>${n.sugars == null ? '—' : r1(n.sugars) + ' g'}</b></div><div class="fact"><small>Fiber /100${unit}</small><b>${n.fiber == null ? '—' : r1(n.fiber) + ' g'}</b></div></div>
     <table><tr><th></th><th>per 100${unit}</th>${ps ? `<th>per serving<br>${esc(p.serv || p.servQ + unit)}</th>` : ''}</tr>
     ${row('Total carbohydrate', n.carbs, 'g', 1)}${row('Net carbs', s.net, 'g', 1)}${row('Sugars', n.sugars)}${n.added != null ? row('Added sugars', n.added) : ''}${row('Fiber', n.fiber)}${n.polyols ? row('Polyols', n.polyols) : ''}${row('Protein', n.protein)}${row('Fat', n.fat)}${row('Saturated fat', n.sat)}${n.trans != null ? row('Trans fat', n.trans) : ''}${row('Sodium', n.sodiumMg, 'mg')}${row('Energy (kcal)', n.kcal, 'kcal')}</table>
     <div class="small" style="margin-top:8px">${esc(s.netNote)}.${p.nova ? ' NOVA ' + p.nova + '.' : ''}</div></div>

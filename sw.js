@@ -1,5 +1,5 @@
 /* Lumi service worker: precache app shell; stale-while-revalidate for index data & images; network for APIs. */
-const V = 'lumi-v2.0.0';
+const V = 'lumi-v2.0.1';
 const SHELL = ['./', 'index.html', 'css/app.css', 'js/score.js', 'js/search.js', 'js/app.js', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'icons/apple-touch-icon.png', 'data/index-0.json'];
 self.addEventListener('install', e => e.waitUntil(caches.open(V).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== V && k !== 'lumi-data' && k !== 'lumi-img').map(k => caches.delete(k)))).then(() => self.clients.claim())));
