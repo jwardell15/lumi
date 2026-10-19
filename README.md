@@ -19,3 +19,4 @@ Local dev: `python3 serve.py 8765`.
 - Home picks fixed. They had been computed from the first 6,000 index docs, which in v4.0 were all photo-less generic USDA/restaurant docs, so every pick was filtered out. Picks now always render: a skeleton while loading, then a fallback set, then 10–12 varied picks including whole foods and restaurants. Added "Best at restaurants".
 - 449k products: Open Food Facts (165k) plus USDA Branded Foods (284k, `tools/extract_branded.py`), lazy-loaded in tiers 3–4 only when searching. Detail shards are keyed by the last 3 barcode digits.
 - 15 chains with official data (`tools/chains.py`) plus 13 from USDA. Whole-food subcategories cover chips and swaps.
+- v5.1: every item also gets a Yuka-style Health rating (js/health.js: Nutri-Score 2023 ~60%, additive risk tiers ~30%, organic ~10%; nutrition-only when ingredients are unknown). Precomputed in tools/build.js; organic/fruit-veg share come from `offdata/side.py`.

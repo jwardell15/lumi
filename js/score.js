@@ -120,7 +120,7 @@ function fromOFF(p) {
   return { id: p.code, code: p.code, src: 'off', name: p.product_name || p.product_name_en || p.generic_name || 'Unnamed product', brand: String(p.brands || '').split(',')[0], qty: p.quantity || '',
     img: p.image_front_url || p.image_url || p.image_front_small_url || p.image_small_url || '', servQ: num(p.serving_quantity) || null, serv: p.serving_size || '', nova: num(p.nova_group),
     additives: addTags(p.additives_tags), ing: p.ingredients_text_en || p.ingredients_text || '', cat: (p.categories_tags || []).slice(-1)[0]?.replace(/^\w\w:/, '').replace(/-/g, ' ') || '', cats,
-    naLabel: isNA(p.countries_tags || []), liquid: isLiquid(cats, p.serving_size, p.product_name),
+    organic: (p.labels_tags || []).some(t => /organic/.test(t)), fvl: num(m['fruits-vegetables-legumes-estimate-from-ingredients_100g']) ?? num(m['fruits-vegetables-nuts-estimate-from-ingredients_100g']), naLabel: isNA(p.countries_tags || []), liquid: isLiquid(cats, p.serving_size, p.product_name),
     n: { carbs: g('carbohydrates'), sugars: g('sugars'), added: g('added-sugars'), fiber: g('fiber'), protein: g('proteins'), fat: g('fat'), sat: g('saturated-fat'), trans: g('trans-fat'), sodiumMg: sod != null ? sod * 1000 : null, kcal: g('energy-kcal') ?? (g('energy') != null ? g('energy') / 4.184 : null), polyols: g('polyols') } };
 }
 // USDA FDC: nutrient numbers (search results: nutrientNumber/value; detail: nutrient.number/amount). Branded values are per 100 g/ml.
@@ -143,7 +143,7 @@ const titleCase = s => String(s || '').toLowerCase().replace(/\b([a-z])/g, c => 
 const DK = ['carbs', 'sugars', 'added', 'fiber', 'protein', 'fat', 'sat', 'trans', 'sodiumMg', 'kcal', 'polyols'];
 function fromCompact(a) {
   const [code, name, brand, qty, img, servQ, serv, nova, nut, adds, ing, cat, flags, portions, meta] = a; const fl = flags || 0; const n = {}; DK.forEach((k, i) => n[k] = nut[i] == null ? null : nut[i]);
-  return { id: code, code: /^\d+$/.test(code) ? code : '', src: meta ? (meta.src.includes('official') ? 'chain' : 'usda') : 'local', fdcId: /^fdc-/.test(code) ? code.slice(4) : undefined, name, brand, qty, img: img ? (img.startsWith('http') ? img : 'https://images.openfoodfacts.org/images/products/' + img) : '', servQ, serv, nova, additives: adds ? adds.split(',') : [], ing, cat, cats: cat, naLabel: !!(fl & 1), liquid: !!(fl & 2), carby: fl & 16 ? !!(fl & 4) : undefined, dry: fl & 16 ? !!(fl & 8) : undefined, portions: portions || null, meta: meta || null, n };
+  return { id: code, code: /^\d+$/.test(code) ? code : '', src: meta ? (meta.src.includes('official') ? 'chain' : 'usda') : 'local', fdcId: /^fdc-/.test(code) ? code.slice(4) : undefined, name, brand, qty, img: img ? (img.startsWith('http') ? img : 'https://images.openfoodfacts.org/images/products/' + img) : '', servQ, serv, nova, additives: adds ? adds.split(',') : [], ing, cat, cats: cat, naLabel: !!(fl & 1), liquid: !!(fl & 2), carby: fl & 16 ? !!(fl & 4) : undefined, dry: fl & 16 ? !!(fl & 8) : undefined, portions: portions || null, meta: meta || null, hx: a[15] || null, n };
 }
 const imgSize = (u, n) => u ? u.replace(/\.(100|200|400|full)\.jpg$/, '.' + n + '.jpg') : '';
 return { DRY, CARBY, imgSize, score, quality, fromOFF, fromUSDA, fromCompact, band, label, netCarbs, addTags, isNA, isLiquid, DK, ADDITIVES };

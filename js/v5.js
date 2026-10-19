@@ -1,10 +1,19 @@
+/* ---------- v5.1 dual ratings ---------- */
+const HLTH = window.LumiHealth;
+const PRIM = () => (store.get('settings', {}).primary === 'health' ? 'health' : 'carb');
+const HB = s => s == null ? 'na' : s >= 75 ? 'ex' : s >= 50 ? 'gd' : s >= 25 ? 'pr' : 'bd';
+const HL = s => s == null ? 'Not rated' : s >= 75 ? 'Excellent' : s >= 50 ? 'Good' : s >= 25 ? 'Poor' : 'Bad';
+const sortKey = sort => sort === 'health' ? 'h' : sort === 'score' || sort === 'carb' ? 'score' : (PRIM() === 'health' ? 'h' : 'score');
+const _hr = new WeakMap();
+function HR(p) { if (!p) return { score: null, est: [], neg: [], pos: [], adds: [], reason: 'No data' }; if (_hr.has(p)) return _hr.get(p);
+  const x = p.hx || {}; const r = HLTH.rate(p, { organic: !!(x.o || p.organic || /\borganic\b/i.test(p.name || '')), fvl: x.fv != null ? x.fv : (p.fvl ?? null), whole: !!x.w || p.src === 'whole', group: x.g || '' }); _hr.set(p, r); return r; }
 /* Lumi v5: mascot, compare, meal builder (plate), scan/viewed history, did-you-mean, haptics. Uses globals from app.js/log.js at call time. */
 const MASCOT = (size = 64, cls = '') => `<img class="mascot ${cls}" src="icons/mascot-${size <= 64 ? 128 : size <= 128 ? 256 : 512}.png" width="${size}" height="${size}" alt="" decoding="async">`;
 // Reaction: mascot with a tinted badge (happy for Good/Excellent, concerned for Poor/Bad)
 function mascotReact(score) {
   if (score == null) return '';
-  const b = S.band(score), good = b === 'ex' || b === 'gd';
-  const msg = b === 'ex' ? 'Great pick!' : b === 'gd' ? 'Good choice' : b === 'pr' ? 'Hmm, watch the carbs' : 'Careful, this one spikes';
+  const b = S.band(score), hp = PRIM() === 'health', good = b === 'ex' || b === 'gd';
+  const msg = b === 'ex' ? 'Great pick!' : b === 'gd' ? 'Good choice' : b === 'pr' ? (hp ? 'Hmm, not the healthiest' : 'Hmm, watch the carbs') : (hp ? 'Careful, low health rating' : 'Careful, this one spikes');
   return `<div class="react react-${good ? 'ok' : 'warn'}">${MASCOT(44)}<span class="rb">${good ? '♥' : '!'}</span><span class="rt">${msg}</span></div>`;
 }
 const haptic = (ms = 8) => { try { if (navigator.vibrate) navigator.vibrate(ms); } catch {} };
@@ -39,13 +48,14 @@ async function viewCompare() {
   app.innerHTML = `<h1>Compare</h1><div class="card">${'<div class="sk skl" style="height:36px;margin:8px 0"></div>'.repeat(6)}</div>`;
   const ps = (await Promise.all(ids.map(id => resolveProduct(id).catch(() => null)))).filter(Boolean);
   if (!/^#\/compare/.test(location.hash)) return;
-  const rows = ps.map(p => { const s = S.score(p); const g = p.servQ || (p.meta && p.meta.perItem ? 100 : null); const per = g ? scale(per100(p), g) : null; return { p, s, g, per, n: per100(p) }; });
+  const rows = ps.map(p => { const s = S.score(p); const h = HR(p); const g = p.servQ || (p.meta && p.meta.perItem ? 100 : null); const per = g ? scale(per100(p), g) : null; return { p, s, h, g, per, n: per100(p) }; });
   const best = (f, low) => { const v = rows.map(f).filter(x => x != null); if (v.length < 2) return null; return low ? Math.min(...v) : Math.max(...v); };
   const line = (lab, f, fmt, low) => { const b = best(f, low); return `<tr><td>${lab}</td>${rows.map(r => { const v = f(r); return `<td class="${v != null && v === b ? 'win' : ''}">${v == null ? '—' : fmt(v)}</td>`; }).join('')}</tr>`; };
   const g = v => r1(v) + ' g', mg = v => Math.round(v) + ' mg', k = v => Math.round(v);
   app.innerHTML = `<h1>Compare</h1><p class="lead">Best value in each row is highlighted. Servings are as labeled.</p>
   <div class="card cmp"><table class="cmpt"><tr><th></th>${rows.map(r => `<th><a href="#/product/${esc(r.p.id)}">${thumb(r.p.img, r.p.name, [], r.p.cat)}<span class="cn">${esc(r.p.name)}</span><small>${esc(r.p.brand || '')}</small></a><button class="x" data-rm="${esc(r.p.id)}" aria-label="Remove">✕</button></th>`).join('')}</tr>
-  ${line('Score', r => r.s.score, v => `<span class="pill bg-${S.band(v)}">${v}</span>`)}
+  ${[['Carb score', line('Carb score', r => r.s.score, v => `<span class="pill bg-${S.band(v)}">${v}</span>`)], ['Health', line('Health rating', r => r.h.score, v => `<span class="pill bg-${HB(v)}">${v}</span> <small>${HL(v)}</small>`)]].sort((a, b) => (PRIM() === 'health') === (a[0] === 'Health') ? -1 : 1).map(x => x[1]).join('')}
+  <tr><td>Additives</td>${rows.map(r => { const a = r.h.adds.filter(x => x.tier >= 1); return `<td>${r.h.basis !== 'full' ? '<small>unknown</small>' : a.length ? a.map(x => `<span class="adot bg-${['ex', 'gd', 'pr', 'bd'][x.tier]}"></span>`).join('') + ' ' + a.length : '0'}</td>`; }).join('')}</tr>
   <tr class="sub"><td colspan="${rows.length + 1}">Per serving</td></tr>
   <tr><td>Serving</td>${rows.map(r => `<td>${r.g ? esc(r.p.meta && r.p.meta.perItem ? '1 item' : (r.p.serv || r.g + ' g')) : '—'}</td>`).join('')}</tr>
   ${line('Net carbs', r => r.per && r.per.net, g, 1)}${line('Total carbs', r => r.per && r.per.carbs, g, 1)}${line('Sugar', r => r.per && r.per.sugars, g, 1)}${line('Fiber', r => r.per && r.per.fiber, g)}${line('Protein', r => r.per && r.per.protein, g)}${line('Calories', r => r.per && r.per.kcal, k, 1)}
@@ -61,17 +71,20 @@ async function viewCompare() {
 /* ---------- meal builder (plate) ---------- */
 const plate = () => store.get('plate', []);
 function addToPlate(p, grams, label) {
-  remember(p); const l = plate(); l.push({ k: Date.now().toString(36), id: p.id, name: p.name, brand: p.brand || '', grams, label, n: per100(p), perItem: !!(p.meta && p.meta.perItem), liquid: !!p.liquid });
+  remember(p); const l = plate(); l.push({ k: Date.now().toString(36), id: p.id, name: p.name, brand: p.brand || '', grams, label, n: per100(p), cs: S.score(p).score, h: HR(p).score, perItem: !!(p.meta && p.meta.perItem), liquid: !!p.liquid });
   store.set('plate', l); haptic(15); toast(`Added to plate · ${l.length} item${l.length > 1 ? 's' : ''}`);
 }
+function plateAvg(l) { const av = k => { let w = 0, t = 0; l.forEach(x => { if (x[k] != null) { w += x.grams; t += x[k] * x.grams; } }); return w ? Math.round(t / w) : null; };
+  const c = av('cs'), h = av('h'); if (c == null && h == null) return '';
+  return `<div class="pavg small">Plate average (by weight): <span class="b2"><i class="bg-${S.band(c)}"></i>Carb ${c ?? '?'}</span> <span class="b2"><i class="bg-${HB(h)}"></i>Health ${h ?? '?'} ${h == null ? '' : HL(h)}</span></div>`; }
 function viewMeal() {
   document.title = 'Meal builder — Lumi';
   const l = plate(), st = settings();
   const t = totals(l.map(x => ({ n: x.n, grams: x.grams })));
   const icr = st.icr > 0 ? (() => { const base = st.icrBasis === 'net' ? t.net : t.carbs; return `<div class="icr"><b>${r1(base)} g ${st.icrBasis === 'net' ? 'net' : 'total'} carbs ÷ your 1:${r1(st.icr)} ratio = ${r1(base / st.icr)} units</b><small>Estimate only, confirm on your pump.</small></div>`; })() : '';
   app.innerHTML = `<h1>Meal builder</h1><p class="lead">Build a plate from several foods and see the totals.</p>
-  ${l.length ? `<div class="card plate-tot"><div class="pt-big"><b>${Math.round(t.carbs)}</b><span>g carbs</span></div><div class="tot">${['net', 'sugars', 'fiber', 'protein', 'fat', 'kcal'].map(k => `<div><small>${NL[k]}</small><b>${fmtN(k, t[k])}</b></div>`).join('')}</div></div>${icr}
-  <div class="card"><h2>On the plate</h2><ul class="loglist">${l.map(x => { const c = x.n.carbs == null ? null : x.n.carbs * x.grams / 100; return `<li><div class="t"><b>${esc(x.name)}</b><small>${esc(x.brand)}</small></div>
+  ${l.length ? `<div class="card plate-tot"><div class="pt-big"><b>${Math.round(t.carbs)}</b><span>g carbs</span></div>${plateAvg(l)}<div class="tot">${['net', 'sugars', 'fiber', 'protein', 'fat', 'kcal'].map(k => `<div><small>${NL[k]}</small><b>${fmtN(k, t[k])}</b></div>`).join('')}</div></div>${icr}
+  <div class="card"><h2>On the plate</h2><ul class="loglist">${l.map(x => { const c = x.n.carbs == null ? null : x.n.carbs * x.grams / 100; return `<li><div class="t"><b>${esc(x.name)}</b><small>${esc(x.brand)}</small>${x.cs !== undefined ? `<span class="pills">${pills({ score: x.cs, h: x.h })}</span>` : ''}</div>
     <div class="qty sm"><button data-pm="${x.k}" data-d="-1" aria-label="Less">−</button><span class="pq">${x.perItem ? r1(x.grams / 100) + ' item' : Math.round(x.grams) + (x.liquid ? ' ml' : ' g')}</span><button data-pm="${x.k}" data-d="1" aria-label="More">+</button></div>
     <span class="v">${c == null ? '—' : r1(c) + 'g'}</span><button class="icon sm" data-del="${x.k}" aria-label="Remove">✕</button></li>`; }).join('')}</ul></div>
   <div class="actions"><button class="btn pri" id="plateLog">＋ Log this meal</button><a class="btn" href="#/">＋ Add food</a><button class="btn" id="plateClr">Clear</button></div>`
