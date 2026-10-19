@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '4.1.0';
+const VERSION = '5.0.0';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -139,25 +139,40 @@ function bindSearch() {
       sg.classList.toggle('on', document.activeElement === q);
     });
   };
-  q.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(show, 90); });
-  q.addEventListener('focus', show); q.addEventListener('blur', () => setTimeout(close, 180));
+  q.addEventListener('input', () => { clearTimeout(timer);
+    if (rs && rs.live) { const v = q.value.trim(); clr.hidden = !v; timer = setTimeout(() => { if (v.length >= 2) { history.replaceState(null, '', '#/search/' + encodeURIComponent(v)); runQuery(v, true); } }, 140); return; }
+    timer = setTimeout(show, 90); });
+  q.addEventListener('focus', () => { if (!(rs && rs.live)) show(); }); q.addEventListener('blur', () => setTimeout(close, 180));
   q.addEventListener('keydown', e => { const a = [...sg.querySelectorAll('a')]; if (!a.length) return;
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); act = (act + (e.key === 'ArrowDown' ? 1 : -1) + a.length) % a.length; a.forEach((x, i) => x.classList.toggle('act', i === act)); }
     else if (e.key === 'Enter' && act >= 0) { e.preventDefault(); location.hash = a[act].getAttribute('href'); close(); } else if (e.key === 'Escape') close(); });
   clr.onclick = () => { q.value = ''; q.focus(); show(); };
-  f.onsubmit = e => { e.preventDefault(); const v = q.value.trim(); if (!v) return; close(); q.blur(); if (/^\d{8,14}$/.test(v)) go('#/product/' + v); else go('#/search/' + encodeURIComponent(v)); };
+  f.onsubmit = e => { e.preventDefault(); const v = q.value.trim(); if (!v) return; close(); q.blur(); if (rs && rs.live && !/^\d{8,14}$/.test(v)) { history.replaceState(null, '', '#/search/' + encodeURIComponent(v)); addRecent(v); return runQuery(v, false); } if (/^\d{8,14}$/.test(v)) go('#/product/' + v); else go('#/search/' + encodeURIComponent(v)); };
 }
 
 /* ---------------- views ---------------- */
+function greeting() { const h = new Date().getHours(); return h < 5 ? 'Up late' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'; }
+function todayCard() {
+  const st = settings(), es = LOG.all().filter(e => dayKey(e.ts) === dayKey(new Date())), t = totals(es);
+  const pct = st.target ? Math.min(1, t.carbs / st.target) : null, R = 26, c = 2 * Math.PI * R;
+  return `<a class="today-mini" href="#/log">
+    <svg viewBox="0 0 64 64" width="64" height="64" class="tm-ring"><circle cx="32" cy="32" r="${R}" class="trk"/>${pct != null ? `<circle cx="32" cy="32" r="${R}" class="val ${t.carbs > st.target ? 'over' : ''}" stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - pct)}" transform="rotate(-90 32 32)"/>` : ''}<text x="32" y="37" text-anchor="middle">${Math.round(t.carbs)}</text></svg>
+    <div><b>${es.length ? `${Math.round(t.carbs)} g carbs today` : 'Nothing logged today'}</b><span>${es.length ? `${es.length} item${es.length > 1 ? 's' : ''} · ${Math.round(t.net)} g net · ${Math.round(t.kcal)} Cal${st.target ? ` · ${Math.max(0, Math.round(st.target - t.carbs))} g left` : ''}` : 'Tap to open your log'}</span></div><span class="chev">›</span></a>`;
+}
 function viewHome() {
-  const rec = store.get('recent', []), sv = saved();
-  app.innerHTML = `<h1>What are you eating?</h1><p class="lead" id="lead">${leadText(META)}</p>
+  const rec = store.get('recent', []), viewed = histItems('viewed').slice(0, 4), pl = plate(), nc = cmpIds().length;
+  app.innerHTML = `<section class="hello">${MASCOT(72, 'wave')}<div><h1>${greeting()}!</h1><p class="lead" id="lead">${leadText(META)}</p></div></section>
+  ${todayCard()}
   ${searchBox()}
   <div class="chips">${C.TOP.map(k => `<a class="chip" href="#/browse/${k}">${C.CATS[k][0]} ${C.CATS[k][1]}</a>`).join('')}</div>
-  <button class="hero-scan" id="heroScan"><div class="ic"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10 8v8M13 8v8M17 8v8"/></svg></div><div><b>Scan a barcode</b><span>Instant score from the package</span></div></button>
+  <div class="quick">
+    <button class="hero-scan" id="heroScan"><div class="ic"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10 8v8M13 8v8M17 8v8"/></svg></div><div><b>Scan a barcode</b><span>Score + add to log in seconds</span></div></button>
+    <a class="qa-tile" href="#/meal"><span class="qi">🍽</span><b>Meal builder</b><span>${pl.length ? `${pl.length} on plate · ${Math.round(totals(pl).carbs)} g` : 'Build a plate'}</span></a>
+    <a class="qa-tile" href="#/compare"><span class="qi">⇆</span><b>Compare</b><span>${nc ? `${nc} selected` : 'Side by side'}</span></a>
+  </div>
   <form class="bc" id="bform"><input id="bc" inputmode="numeric" pattern="[0-9]*" placeholder="…or type a barcode" aria-label="Barcode"><button>Look up</button></form>
+  ${viewed.length ? `<div class="sec-h"><h2>Recently viewed</h2><a href="#/saved">History</a></div><div class="list">${viewed.map(rowHTML).join('')}</div>` : ''}
   ${rec.length ? `<div class="sec-h"><h2>Recent searches</h2><button id="clrRec">Clear</button></div><div class="chips" style="margin-top:0">${rec.map(r => `<a class="chip" href="#/search/${encodeURIComponent(r)}">🕘 ${esc(r)}</a>`).join('')}</div>` : ''}
-  ${sv.length ? `<div class="sec-h"><h2>Saved</h2><a href="#/saved">See all</a></div><div class="list">${sv.slice(0, 3).map(x => rowHTML(itemFromProduct(x.p))).join('')}</div>` : ''}
   <div id="foryou"></div>
   <div class="sec-h"><h2>Top-scoring picks</h2></div><div id="picks">${skel(4)}</div>
   <div class="sec-h"><h2>Best at restaurants</h2><a href="#/browse/rest">All chains</a></div><div id="restBest"><div class="swaps">${'<div class="swap skel"></div>'.repeat(4)}</div></div>
@@ -173,7 +188,7 @@ function viewHome() {
     let p = []; try { p = topPicks(); } catch (e) { console.warn('picks', e); }
     const items = p.length >= 4 ? p.map(itemFromDoc) : FALLBACK_PICKS.map(x => ({ id: x[0], code: x[0], name: x[1], brand: x[2], score: x[3], net: x[4], img: '', src: x[5] || 'local', keys: [], cat: '' }));
     el.innerHTML = `<div class="list">${items.map(rowHTML).join('')}</div>`;
-    const rb = $('#restBest'); if (rb) { const r = bestAtRestaurants(); rb.innerHTML = r.length ? `<div class="swaps">${r.map(d => `<a class="swap" href="#/product/${esc(d.code)}">${thumb(d.img, d.name, d.keys, d.cat)}<div class="b chain">${esc(d.brand)}</div><div class="n">${esc(d.name)}</div><div class="s"><span>${d.net}g net</span><span class="pill bg-${BAND(d.score)}">${d.score}</span></div></a>`).join('')}</div>` : '<p class="small">Restaurant data is loading or unavailable offline.</p>'; }
+    const rb = $('#restBest'); if (rb) { let r = []; try { r = bestAtRestaurants(); } catch {} rb.innerHTML = r.length ? `<div class="swaps">${r.map(d => `<a class="swap" href="#/product/${esc(d.code)}">${thumb(d.img, d.name, d.keys, d.cat)}<div class="b chain">${esc(d.brand)}</div><div class="n">${esc(d.name)}</div><div class="s"><span>${d.net}g net</span><span class="pill bg-${BAND(d.score)}">${d.score}</span></div></a>`).join('')}</div>` : `<div class="empty sm">${MASCOT(48)}<span>Restaurant data is loading or unavailable offline.</span></div>`; }
   };
   const fb = setTimeout(drawPicks, 6000); // never leave the section empty
   loadIndex().then(() => { clearTimeout(fb); drawPicks(); return loadIndexFull(); }).then(drawPicks).catch(() => { clearTimeout(fb); drawPicks(); });
@@ -237,6 +252,7 @@ function resultsShell(title, q) {
   app.innerHTML = `${searchBox(q)}
   <div class="tools"><div class="seg" id="sort"><button data-s="rel">Relevance</button><button data-s="score">Best score</button><button data-s="carb">Low carb</button></div>
   <button class="chip tog" id="fGood">Good+</button><button class="chip tog" id="fLow">≤10g carbs</button></div>
+  <div class="chips grp" id="grp"></div><div id="dym"></div>
   <div class="status" id="status"></div><div id="res">${skel(6)}</div>`;
   bindSearch();
   const sortSel = store.get('sort', 'rel');
@@ -249,6 +265,14 @@ function renderResults() {
   const st = rs.src, lab = { local: 'Lumi index', usda: 'USDA', off: 'Open Food Facts' };
   $('#status').innerHTML = Object.keys(st).map(k => `<i><span class="dot ${st[k]}"></span>${lab[k]}${st[k] === 'ok' ? ` · ${rs.counts[k] || 0}` : st[k] === 'err' ? ' · unavailable' : ''}</i>`).join('');
   let items = [...rs.items.values()]; const f = store.get('filters', {}), sort = store.get('sort', 'rel');
+  const grpOf = i => i.src === 'rest' || i.src === 'chain' ? 'rest' : i.src === 'whole' ? 'whole' : 'prod';
+  if (rs.live) {
+    const cnt = { prod: 0, rest: 0, whole: 0 }; items.forEach(i => { if (i.score != null || sort === 'rel') cnt[grpOf(i)]++; });
+    const G = [['all', 'All'], ['prod', 'Products'], ['rest', 'Restaurants'], ['whole', 'Whole foods']], cur = rs.group || 'all';
+    $('#grp').innerHTML = G.map(([k, l]) => `<button class="chip${cur === k ? ' on' : ''}" data-g="${k}">${l}${k === 'all' ? '' : ` <small>${cnt[k]}</small>`}</button>`).join('');
+    document.querySelectorAll('#grp button').forEach(b => b.onclick = () => { rs.group = b.dataset.g; rs.limit = 40; renderResults(); });
+    if (cur !== 'all') items = items.filter(i => grpOf(i) === cur);
+  }
   if (f.good) items = items.filter(i => i.score >= 50); if (f.low) items = items.filter(i => i.net != null && i.net <= 10);
   const unknown = sort === 'rel' && !f.good && !f.low ? items.filter(i => i.score == null) : [];
   items = items.filter(i => i.score != null);
@@ -260,30 +284,45 @@ function renderResults() {
   if (!items.length) {
     if (pending) { el.innerHTML = skel(4); return; }
     const anyFiltered = rs.items.size > 0;
-    el.innerHTML = `<div class="empty"><b>${anyFiltered ? 'No matches with these filters' : 'Nothing found'}</b>${anyFiltered ? 'Try turning off a filter.' : 'Check the spelling, try fewer words or a brand name — or scan the barcode.'}</div>`; return;
+    el.innerHTML = `<div class="empty">${MASCOT(96, 'big sad')}<b>${anyFiltered ? 'No matches with these filters' : 'Nothing found'}</b>${anyFiltered ? 'Try turning off a filter.' : 'Check the spelling, try fewer words or a brand name — or scan the barcode.'}</div>`; return;
   }
   const lim = rs.limit || 40;
+  if (rs.live && (rs.group || 'all') === 'all' && sort === 'rel' && !f.good && !f.low) {
+    const by = { prod: [], rest: [], whole: [] }; items.forEach(i => by[grpOf(i)].push(i));
+    const top = items[0] ? grpOf(items[0]) : 'prod';
+    const order = [top].concat(['prod', 'rest', 'whole'].filter(k => k !== top)), L = { prod: 'Products', rest: 'Restaurants', whole: 'Whole foods' };
+    el.innerHTML = order.filter(k => by[k].length).map(k => { const n = k === top ? 8 : 4; return `<div class="sec-h grp-h"><h2>${L[k]}</h2>${by[k].length > n ? `<button data-sg="${k}">See all ${by[k].length} ›</button>` : ''}</div><div class="list">${by[k].slice(0, n).map(rowHTML).join('')}</div>`; }).join('') + (pending ? `<div class="small" style="text-align:center;margin-top:10px">Still checking other sources…</div>` : '');
+    document.querySelectorAll('[data-sg]').forEach(b => b.onclick = () => { rs.group = b.dataset.sg; renderResults(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+    return;
+  }
   el.innerHTML = `<div class="list">${items.slice(0, lim).map(rowHTML).join('')}</div>${items.length > lim ? `<button class="more" id="more">Show more (${items.length - lim})</button>` : ''}${pending ? `<div class="small" style="text-align:center;margin-top:10px">Still checking other sources…</div>` : ''}`;
   if ($('#more')) $('#more').onclick = () => { rs.limit = lim + 40; renderResults(); };
 }
 function mergeItems(list) {
+  if (!rs.keyIdx) { rs.keyIdx = new Map(); for (const x of rs.items.values()) { const g = gtinKey(x.code); if (g) rs.keyIdx.set('g' + g, x); rs.keyIdx.set('n' + LumiSearch.norm(x.name + '|' + x.brand), x); } }
   for (const it of list) {
-    const g = gtinKey(it.code), nk = LumiSearch.norm(it.name + '|' + it.brand);
-    let dup = null; for (const x of rs.items.values()) { if ((g && gtinKey(x.code) === g) || LumiSearch.norm(x.name + '|' + x.brand) === nk) { dup = x; break; } }
-    if (dup) { if (!dup.img && it.img) dup.img = it.img; continue; }
-    rs.items.set(it.id, it);
+    const g = gtinKey(it.code), nk = 'n' + LumiSearch.norm(it.name + '|' + it.brand);
+    const dup = (g && rs.keyIdx.get('g' + g)) || rs.keyIdx.get(nk);
+    if (dup && dup.id !== it.id) { if (!dup.img && it.img) dup.img = it.img; continue; }
+    rs.items.set(it.id, it); if (g) rs.keyIdx.set('g' + g, it); rs.keyIdx.set(nk, it);
   }
 }
 function viewSearch(q) {
-  addRecent(q); document.title = `${q} — Lumi`;
-  resultsShell('', q);
-  const my = rs = { q, items: new Map(), src: { local: 'load', usda: 'load', off: 'load' }, counts: {} };
+  addRecent(q); resultsShell('', q); runQuery(q, false);
+}
+function runQuery(q, typing) {
+  document.title = `${q} — Lumi`;
+  const prev = rs; const my = rs = { q, live: true, group: prev && prev.live ? prev.group : 'all', items: new Map(), src: { local: 'load', usda: 'load', off: 'load' }, counts: {} };
   const done = (k, list, err) => { if (rs !== my) return; my.src[k] = err ? 'err' : 'ok'; if (list) { my.counts[k] = list.length; mergeItems(list); } renderResults(); };
-  const runLocal = () => { const r = engine.search(q, { limit: 120 }).map(itemFromDoc); for (const it of r) my.items.delete(it.id); done('local', r); };
+  const runLocal = () => { if (rs !== my) return; const seen = new Set(), r = [];
+    for (const d of engine.search(q, { limit: 160 }).concat(engine.search(q, { limit: 30, filter: d => d.src === 'rest' }), engine.search(q, { limit: 30, filter: d => d.src === 'whole' }))) if (!seen.has(d.code)) { seen.add(d.code); r.push(itemFromDoc(d)); } for (const it of r) my.items.delete(it.id); my.keyIdx = null; done('local', r);
+    const d = $('#dym'); if (d) { const sug = didYouMean(q); d.innerHTML = sug ? `<div class="dym">Did you mean <a href="#/search/${encodeURIComponent(sug)}">${esc(sug)}</a>?</div>` : ''; } };
   loadIndex().then(() => { runLocal(); return loadIndexFull(); }).then(() => { runLocal(); return loadIndexAll(); }).then(() => { runLocal(); return loadIndexX(); }).then(() => runLocal()).catch(e => { if (!engine.docs.length) done('local', null, e); else runLocal(); });
   const cf = customFoods().filter(c => textRel(q, c.name, c.brand) >= 50).map(c => itemFromProduct(c, textRel(q, c.name, c.brand) + 30)); if (cf.length) mergeItems(cf);
-  usdaSearch(q).then(ps => done('usda', ps.map(p => itemFromProduct(p, textRel(q, p.name, p.brand) - 6)))).catch(e => done('usda', null, e));
-  offSearch(q).then(ps => done('off', ps.map(p => itemFromProduct(p, textRel(q, p.name, p.brand) - 3)))).catch(e => done('off', null, e));
+  // remote sources: wait until typing pauses
+  clearTimeout(runQuery.t); runQuery.t = setTimeout(() => { if (rs !== my) return;
+    usdaSearch(q).then(ps => done('usda', ps.map(p => itemFromProduct(p, textRel(q, p.name, p.brand) - 6)))).catch(e => done('usda', null, e));
+    offSearch(q).then(ps => done('off', ps.map(p => itemFromProduct(p, textRel(q, p.name, p.brand) - 3)))).catch(e => done('off', null, e)); }, typing ? 700 : 0);
   renderResults();
 }
 function viewBrowse(key) {
@@ -353,14 +392,15 @@ function factRows(p, s) {
 }
 const factLi = r => `<li class="fx"><span class="fx-i">${icon(r.ic)}</span><span class="fx-t"><b>${esc(r.title)}</b><small>${esc(r.desc)}</small></span><span class="fx-v">${r.val}</span><span class="fx-d bg-${LV[r.l]}"></span></li>`;
 async function viewProduct(id) {
-  app.innerHTML = `<div class="card"><div class="ph"><div class="thumb big sk"></div><div style="flex:1"><div class="sk skl" style="height:22px;width:85%"></div><div class="sk skl" style="width:50%"></div><div class="sk skl" style="width:40%;height:26px;margin-top:14px"></div></div></div></div><div class="card">${'<div class="sk skl" style="height:40px;margin:10px 0"></div>'.repeat(4)}</div>`;
+  app.innerHTML = `<div class="loading-dog">${MASCOT(56, 'bounce')}<span>Sniffing out the label…</span></div><div class="card"><div class="ph"><div class="thumb big sk"></div><div style="flex:1"><div class="sk skl" style="height:22px;width:85%"></div><div class="sk skl" style="width:50%"></div><div class="sk skl" style="width:40%;height:26px;margin-top:14px"></div></div></div></div><div class="card">${'<div class="sk skl" style="height:40px;margin:10px 0"></div>'.repeat(4)}</div>`;
   let p;
   try { p = await resolveProduct(id); } catch (e) {
     app.innerHTML = `<div class="card empty"><b>Couldn't load this product</b>The food databases didn't answer (${esc(e.message)}). Check your connection and retry.<div class="actions"><button class="btn pri" onclick="route()">Retry</button><a class="btn" href="#/">Home</a></div></div>`; return;
   }
   if (location.hash.replace(/^#\/product\//, '') !== id && !location.hash.endsWith(encodeURIComponent(id))) return;
   if (!p) { app.innerHTML = `${searchBox()}<div class="card empty" style="margin-top:14px"><b>Barcode ${esc(id)} not found</b>It isn't in Lumi's index, Open Food Facts or USDA. Try searching by name, or <a style="color:var(--acc)" href="https://world.openfoodfacts.org/cgi/product.pl?type=add&code=${esc(id)}" target="_blank" rel="noopener">add it to Open Food Facts</a>.</div>`; bindSearch(); return; }
-  memo.set(p.id, p);
+  memo.set(p.id, p); pushHist('viewed', p);
+  const scanned = sessionStorage.getItem('lumi.scanned') === id; if (scanned) { sessionStorage.removeItem('lumi.scanned'); pushHist('scans', p, 50); }
   const s = S.score(p), n = p.n, unit = p.liquid ? 'ml' : 'g';
   const doc = p.code ? engine.byCode(p.code) : null; const keys = doc ? doc.keys : C.match(p.cats || '');
   document.title = `${p.name} — ${s.score ?? '?'}/100 · Lumi`;
@@ -376,9 +416,11 @@ async function viewProduct(id) {
     <div class="ph">${thumb(p.img, p.name, keys, p.cat, true)}
       <div class="ph-t"><h1>${esc(p.name)}</h1><div class="b">${esc(p.brand)}${p.qty ? ' · ' + esc(p.qty) : ''}</div>${p.meta ? `<div class="srcline">Source: ${esc(p.meta.src)}${p.meta.date ? ', ' + esc(p.meta.date) : ''}</div>` : ''}
         <div class="sline"><span class="sdot bg-${s.band}"></span><div><b>${s.score ?? '?'}<span>/100</span></b><div class="slab">${esc(s.label)}</div></div></div></div></div>
+    ${mascotReact(s.score)}
     ${issues ? `<div class="note"><b>Not scored:</b> ${esc(issues.join(', '))}. The label data in the database looks wrong — check the package.</div>` : s.missing ? `<div class="note">No carbohydrate data — Lumi won't guess. Check the package.</div>` : (s.missingFields.length ? `<div class="note">Missing: ${esc(s.missingFields.join(', '))} (treated as zero).</div>` : '')}
     ${s.netNote && s.netNote.includes('implausible') ? `<div class="note">${esc(s.netNote)}.</div>` : ''}
-    <div class="actions"><button class="btn pri" id="share">↗ Share</button><button class="btn" id="save">${isSaved(p.id) ? '♥ Saved' : '♡ Save'}</button></div>
+    ${scanned && n.carbs != null ? `<div class="scanned"><span>✓ Scanned</span><button class="btn pri" id="quickLog">＋ Add to log</button></div>` : ''}
+    <div class="actions"><button class="btn pri" id="share">↗ Share</button><button class="btn" id="save">${isSaved(p.id) ? '♥ Saved' : '♡ Save'}</button><button class="btn" id="cmp">${cmpIds().includes(p.id) ? '✓ Comparing' : '⇆ Compare'}</button></div>
   </div>
   ${F ? `<div class="card fxcard">${F.neg.length ? `<div class="fx-h"><h2>Negatives</h2><span class="small">${p.meta && p.meta.perItem ? 'per item' : 'per 100' + unit}</span></div><ul class="fxl">${F.neg.map(factLi).join('')}</ul>` : ''}
     ${F.pos.length ? `<div class="fx-h"><h2>Positives</h2><span class="small">${p.meta && p.meta.perItem ? 'per item' : 'per 100' + unit}</span></div><ul class="fxl">${F.pos.map(factLi).join('')}</ul>` : ''}</div>` : ''}
@@ -397,6 +439,8 @@ async function viewProduct(id) {
   $('#save').onclick = () => { const on = toggleSave(p); $('#save').textContent = on ? '♥ Saved' : '♡ Save'; toast(on ? 'Saved — available offline' : 'Removed'); };
   if (p.code && p.src !== 'off') offProduct(p.code).then(o => { if (o && o.img && (!p.img || !/\.400\.jpg$/.test(p.img))) { p.img = o.img; const el = document.querySelector('.ph .thumb'); if (el) el.outerHTML = thumb(o.img, p.name, keys, p.cat, true); } }).catch(() => {});
   if (n.carbs != null) bindPortion(p);
+  $('#cmp').onclick = () => { const on = toggleCompare(p); $('#cmp').textContent = on ? '✓ Comparing' : '⇆ Compare'; toast(on ? (cmpIds().length >= 2 ? 'Added — tap Compare at the bottom' : 'Added — pick one more to compare') : 'Removed from compare'); };
+  if ($('#quickLog')) $('#quickLog').onclick = () => $('#addLog').click();
   if (!s.missing) renderSwaps(p, s);
 }
 function swapsFor(doc, cur, limit = 6) {
@@ -431,11 +475,18 @@ async function share(p, s) {
 }
 function viewSaved() {
   const sv = saved(); document.title = 'Saved — Lumi';
-  app.innerHTML = `<h1>Saved</h1><p class="lead">Stored on this device and available offline.</p>${sv.length ? `<div class="list">${sv.map(x => rowHTML(itemFromProduct(x.p))).join('')}</div>` : `<div class="card empty"><b>Nothing saved yet</b>Tap ♡ Save on any product.</div>`}`;
+  const sc = histItems('scans'), vw = histItems('viewed');
+  app.innerHTML = `<h1>Saved</h1><p class="lead">Stored on this device and available offline.</p>
+  <div class="seg wide" id="svTab"><button data-t="saved" class="on">♥ Saved</button><button data-t="scans">Scans</button><button data-t="viewed">Viewed</button></div><div id="svList"></div>`;
+  const draw = t => { const L = t === 'saved' ? sv.map(x => itemFromProduct(x.p)) : t === 'scans' ? sc : vw;
+    $('#svList').innerHTML = L.length ? `<div class="list">${L.map(rowHTML).join('')}</div>${t !== 'saved' ? `<button class="more" id="hClr">Clear ${t === 'scans' ? 'scan' : 'view'} history</button>` : ''}` : `<div class="card empty">${MASCOT(96, 'big')}<b>${t === 'saved' ? 'Nothing saved yet' : t === 'scans' ? 'No scans yet' : 'Nothing viewed yet'}</b>${t === 'saved' ? 'Tap ♡ Save on any product.' : t === 'scans' ? 'Tap Scan below, point at a barcode, then add it to your log in one tap.' : 'Products you open show up here.'}</div>`;
+    if ($('#hClr')) $('#hClr').onclick = () => { store.set(t, []); viewSaved(); }; };
+  document.querySelectorAll('#svTab button').forEach(b => b.onclick = () => { document.querySelectorAll('#svTab button').forEach(x => x.classList.toggle('on', x === b)); draw(b.dataset.t); });
+  draw('saved');
 }
 function viewAbout() {
   document.title = 'About — Lumi';
-  app.innerHTML = `<h1>About Lumi</h1><p class="lead">A carb-first food score, tuned for insulin dosing decisions. v${VERSION}</p>
+  app.innerHTML = `<div class="about-hero">${MASCOT(120, 'big')}<div><h1>About Lumi</h1><p class="small">Lumi is named after, and drawn from, Joe's white husky.</p></div></div><p class="lead">A carb-first food score, tuned for insulin dosing decisions. v${VERSION}</p>
   <div class="card"><h2>Formula</h2><pre>score = clamp(0, 100, 100 + Σ terms)
 
 GLYCEMIC CORE
@@ -481,7 +532,7 @@ async function startScan() {
     const F = Html5QrcodeSupportedFormats;
     scanner = new Html5Qrcode('reader', { formatsToSupport: [F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E], useBarCodeDetectorIfSupported: true, verbose: false });
     await scanner.start({ facingMode: 'environment' }, { fps: 15, qrbox: (w, h) => ({ width: Math.floor(Math.min(320, w * 0.85)), height: Math.floor(Math.min(180, h * 0.4)) }), aspectRatio: 1.333 },
-      async txt => { const c = txt.replace(/\D/g, ''); if (c.length < 8) return; if (navigator.vibrate) navigator.vibrate(50); await stopScan(); go('#/product/' + c); }, () => {});
+      async txt => { const c = txt.replace(/\D/g, ''); if (c.length < 8) return; if (navigator.vibrate) navigator.vibrate(50); await stopScan(); sessionStorage.setItem('lumi.scanned', c); go('#/product/' + c); }, () => {});
   } catch (e) { await stopScan(); toast(/Permission|NotAllowed/i.test(e && (e.name || e.message || e)) ? 'Camera permission denied' : 'Camera unavailable'); }
 }
 async function stopScan() { const ov = $('#scanner'); if (scanner) { try { await scanner.stop(); } catch {} try { scanner.clear(); } catch {} scanner = null; } ov.hidden = true; $('#reader').innerHTML = ''; }
@@ -494,8 +545,9 @@ $('#theme').onclick = () => { const cur = document.documentElement.dataset.theme
 function route() {
   if (scanner) stopScan();
   rs = null; window.scrollTo(0, 0); document.title = 'Lumi — food scanner';
+  if (typeof closeSheet === 'function' && !document.querySelector('.onb')) closeSheet(); app.classList.remove('enter'); void app.offsetWidth; app.classList.add('enter'); setTimeout(drawCmpTray, 0);
   const h = location.hash.replace(/^#\/?/, ''); const i = h.indexOf('/'); const view = i < 0 ? h : h.slice(0, i); const arg = i < 0 ? '' : decodeURIComponent(h.slice(i + 1));
-  document.querySelectorAll('.tabbar a').forEach(a => a.classList.toggle('on', a.dataset.v === (['search', 'browse', 'product', ''].includes(view) ? 'home' : view === 'favorites' ? 'saved' : ['about', 'custom'].includes(view) ? 'settings' : view)));
+  document.querySelectorAll('.tabbar a').forEach(a => a.classList.toggle('on', a.dataset.v === (['search', 'browse', 'product', ''].includes(view) ? 'home' : view === 'favorites' ? 'saved' : ['about', 'custom'].includes(view) ? 'settings' : ['compare', 'meal'].includes(view) ? 'home' : view)));
   if (view === 'product' && arg) return viewProduct(/^\d+$/.test(arg.replace(/\s/g, '')) ? arg.replace(/\s/g, '') : arg);
   if (view === 'search' && arg) return viewSearch(arg);
   if (view === 'browse' && arg) return viewBrowse(arg);
@@ -504,6 +556,8 @@ function route() {
   if (view === 'log') return viewLog(arg);
   if (view === 'settings') return viewSettings();
   if (view === 'custom') return viewCustom();
+  if (view === 'compare') return viewCompare();
+  if (view === 'meal') return viewMeal();
   viewHome();
 }
 window.addEventListener('hashchange', route);

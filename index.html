@@ -4,22 +4,21 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Lumi — food scanner</title>
 <meta name="description" content="Scan or search packaged foods and get a transparent, carb-first score.">
-<meta name="theme-color" content="#fffaf3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#ff8a3d" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#14121a" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/favicon.ico" sizes="48x48"><link rel="icon" href="icons/favicon-32.png" type="image/png" sizes="32x32"><link rel="icon" href="icons/favicon-16.png" type="image/png" sizes="16x16">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Lumi">
-<meta property="og:title" content="Lumi — food scanner"><meta property="og:description" content="Carb-first food scores from Open Food Facts + USDA."><meta property="og:image" content="icons/icon-512.png">
+<meta property="og:title" content="Lumi — food scanner"><meta property="og:description" content="Carb-first food scores for packaged foods, whole foods and restaurants."><meta property="og:image" content="icons/icon-512.png">
 <link rel="stylesheet" href="css/app.css">
 <script>try{const t=localStorage.getItem('lumi.theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
 </head><body>
 <header class="bar">
   <a href="#/" class="logo" aria-label="Lumi home">
-    <svg viewBox="0 0 40 40" width="30" height="30" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffb347"/><stop offset="1" stop-color="#ff6a3d"/></linearGradient></defs>
-    <circle cx="20" cy="20" r="15" fill="none" stroke="url(#lg)" stroke-width="6" stroke-linecap="round" stroke-dasharray="70.7 100" transform="rotate(135 20 20)"/><circle cx="20" cy="20" r="5" fill="url(#lg)"/></svg>
+    <img class="hdr-mascot" src="icons/mascot-128.png" width="34" height="34" alt="">
     <span class="wordmark">lumi</span></a>
   <nav><button id="theme" class="icon" aria-label="Toggle theme">◐</button></nav>
 </header>
@@ -37,5 +36,6 @@
 <script src="js/cats.js"></script>
 <script src="js/search.js"></script>
 <script src="js/log.js"></script>
+<script src="js/v5.js"></script>
 <script src="js/app.js"></script>
 </body></html>

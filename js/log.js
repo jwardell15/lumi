@@ -39,7 +39,7 @@ function portionCard(p) {
     <label class="slab2"><span>How much I ate</span><b id="porG"></b></label>
     <input id="porSlider" type="range" min="0" max="${Math.round(Math.max(def[1] * 4, perItem ? 400 : 500))}" step="${perItem ? 25 : 1}" value="${def[1]}" aria-label="Amount eaten">
     <div class="por-grid" id="porGrid"></div><div class="note" id="porSpeed"></div><div id="porIcr"></div>
-    <div class="actions"><button class="btn pri" id="addLog">＋ Add to log</button></div></div>`;
+    <div class="actions"><button class="btn pri" id="addLog">＋ Add to log</button><button class="btn" id="addPlate">🍽 Add to plate</button></div></div>`;
 }
 function bindPortion(p) {
   const n100 = per100(p), perItem = p.meta && p.meta.perItem, unit = perItem ? 'item' : p.liquid ? 'ml' : 'g';
@@ -59,6 +59,7 @@ function bindPortion(p) {
   document.querySelectorAll('.qty button').forEach(b => b.onclick = () => { qty.value = Math.max(0, Math.round(((+qty.value || 0) + 0.25 * +b.dataset.q) * 100) / 100); qty.oninput(); });
   sl.oninput = () => { grams = +sl.value; qty.value = Math.round(grams / +sel.value * 100) / 100; render(); };
   $('#addLog').onclick = () => openAddSheet(p, grams, perItem ? `${r1(grams / 100)} item` : `${r1(grams)} ${unit}`);
+  if ($('#addPlate')) $('#addPlate').onclick = () => addToPlate(p, grams, perItem ? `${r1(grams / 100)} item` : `${r1(grams)} ${unit}`);
   render();
 }
 /* ---------- add-to-log sheet ---------- */
@@ -172,7 +173,7 @@ function onboarding(force) {
   if (!force && settings().onboarded) return;
   let step = 0; const st = settings();
   const steps = [
-    () => `<div class="onb-ic">${'<svg viewBox="0 0 40 40" width="56" height="56"><circle cx="20" cy="20" r="15" fill="none" stroke="#ff6a3d" stroke-width="6" stroke-linecap="round" stroke-dasharray="70.7 100" transform="rotate(135 20 20)"/><circle cx="20" cy="20" r="5" fill="#ff6a3d"/></svg>'}</div><h2>Welcome to Lumi</h2><p>Every food gets a <b>carb-first score out of 100</b>. Net carbs and sugar weigh the most, then fiber and protein (good), and saturated fat, sodium, ultra-processing and additives (bad).</p>
+    () => `<div class="onb-ic">${MASCOT(120, 'big wave')}</div><h2>Welcome to Lumi</h2><p>Every food gets a <b>carb-first score out of 100</b>. Net carbs and sugar weigh the most, then fiber and protein (good), and saturated fat, sodium, ultra-processing and additives (bad).</p>
       <div class="bands"><span><i class="bg-ex"></i>75+ Excellent</span><span><i class="bg-gd"></i>50–74 Good</span><span><i class="bg-pr"></i>25–49 Poor</span><span><i class="bg-bd"></i>0–24 Bad</span></div><p class="small">Informational only — not medical advice.</p>`,
     () => `<h2>Daily carb target</h2><p>Optional. Shows a progress ring on your Today log.</p><label class="field"><span>Grams per day</span><input id="onbT" type="number" inputmode="numeric" min="0" value="${st.target ?? ''}" placeholder="Skip"></label>`,
     () => `<h2>Insulin-to-carb ratio</h2><p>Optional and off by default. If you enter your own ratio (e.g. 1:10), product pages show carbs ÷ ratio as an <b>estimate only — confirm on your pump</b>. No corrections, no dosing advice.</p><label class="field"><span>Grams per unit</span><input id="onbI" type="number" inputmode="decimal" min="0" step="0.1" value="${st.icr ?? ''}" placeholder="Skip"></label>`,
