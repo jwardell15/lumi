@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '3.0.1';
+const VERSION = '4.0.0';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -34,15 +34,25 @@ function pruneCache() { try { const ks = Object.keys(localStorage).filter(k => k
 
 /* ---------------- local index ---------------- */
 const engine = new LumiSearch.Engine();
-let tier0 = null, tier1 = null; const tierWaiters = [];
+let tier0 = null, tier1 = null, tier2 = null; const tierWaiters = [];
+const getData = u => fetch(u).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
 function loadIndex() {
-  if (!tier0) tier0 = fetch('data/index-0.json').then(r => r.json()).then(d => { engine.add(d); notifyTier(); });
+  if (!tier0) tier0 = Promise.all([getData('data/index-g.json').catch(() => null), getData('data/index-0.json')]).then(([g, d]) => {
+    if (g) { (g.chains || []).forEach(([k, l]) => C.register(k, l, 'rest')); engine.add(g); }
+    engine.add(d); notifyTier(); });
   return tier0;
 }
 function loadIndexFull() {
-  if (!tier1) tier1 = loadIndex().then(() => fetch('data/index-1.json')).then(r => r.json()).then(d => { engine.add(d); notifyTier(); });
+  if (!tier1) tier1 = loadIndex().then(() => getData('data/index-1.json')).then(d => { engine.add(d); notifyTier(); });
   return tier1;
 }
+function loadIndexAll() {
+  if (!tier2) tier2 = loadIndexFull().then(() => getData('data/index-2.json')).then(d => { engine.add(d); notifyTier(); });
+  return tier2;
+}
+const ghash = id => { let h = 0; for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h % 40; };
+const gshardCache = new Map();
+async function genericProduct(id) { const k = ghash(id); if (!gshardCache.has(k)) gshardCache.set(k, getData(`data/g/${k}.json`).catch(() => ({}))); const sh = await gshardCache.get(k); return sh[id] ? S.fromCompact(sh[id]) : null; }
 function notifyTier() { tierWaiters.forEach(f => f()); }
 const shardCache = new Map();
 function shard(code) { const k = code.slice(-2); if (!shardCache.has(k)) shardCache.set(k, fetch(`data/d/${k}.json`).then(r => r.ok ? r.json() : {}).catch(() => ({}))); return shardCache.get(k); }
@@ -99,7 +109,7 @@ function thumb(img, name, keys, cat, big) {
   const src = img ? S.imgSize(img, big ? 400 : 200) : '';
   return `<div class="thumb${big ? ' big' : ''}"><span class="ic">${catIcon(keys, cat)}</span>${src ? `<img src="${esc(src)}" alt="" loading="lazy" decoding="async" onload="this.classList.add('ok')" onerror="this.remove()">` : ''}</div>`;
 }
-const SRC = { local: '', off: '<span class="tag">OFF</span>', usda: '<span class="tag">USDA</span>' };
+const SRC = { local: '', off: '<span class="tag">OFF</span>', usda: '<span class="tag">USDA</span>', whole: '<span class="tag t-whole">Whole food</span>', rest: '<span class="tag t-rest">Restaurant</span>', chain: '<span class="tag t-rest">Restaurant</span>', custom: '<span class="tag">My food</span>' };
 function rowHTML(it) { return `<a class="row" href="#/product/${esc(it.id)}">${thumb(it.img, it.name, it.keys, it.cat)}<div class="t"><div class="n">${esc(it.name)}</div><div class="b">${SRC[it.src] || ''}${esc(it.brand || '')}${it.score == null ? ' · <span class="c-pr">data incomplete</span>' : it.net != null ? ` · ${r1(it.net)}g net carbs/100` : ''}</div></div>${mini(it.score)}</a>`; }
 const skel = n => `<div class="list">${Array.from({ length: n }, () => `<div class="row skel"><div class="thumb sk"></div><div class="t"><div class="sk skl" style="width:80%"></div><div class="sk skl" style="width:45%"></div></div><div class="sk" style="width:44px;height:44px;border-radius:50%"></div></div>`).join('')}</div>`;
 function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 2200); }
@@ -143,12 +153,14 @@ function viewHome() {
   <form class="bc" id="bform"><input id="bc" inputmode="numeric" pattern="[0-9]*" placeholder="…or type a barcode" aria-label="Barcode"><button>Look up</button></form>
   ${rec.length ? `<div class="sec-h"><h2>Recent searches</h2><button id="clrRec">Clear</button></div><div class="chips" style="margin-top:0">${rec.map(r => `<a class="chip" href="#/search/${encodeURIComponent(r)}">🕘 ${esc(r)}</a>`).join('')}</div>` : ''}
   ${sv.length ? `<div class="sec-h"><h2>Saved</h2><a href="#/saved">See all</a></div><div class="list">${sv.slice(0, 3).map(x => rowHTML(itemFromProduct(x.p))).join('')}</div>` : ''}
+  <div id="foryou"></div>
   <div class="sec-h"><h2>Top-scoring picks</h2></div><div id="picks">${skel(3)}</div>
   <p class="foot">Informational only — not medical advice.</p>`;
   bindSearch();
   $('#heroScan').onclick = startScan;
   $('#bform').onsubmit = e => { e.preventDefault(); const c = $('#bc').value.replace(/\D/g, ''); if (c.length >= 8) go('#/product/' + c); else toast('Enter an 8–14 digit barcode'); };
   if ($('#clrRec')) $('#clrRec').onclick = () => { store.set('recent', []); viewHome(); };
+  loadIndex().then(loadIndexFull).then(renderForYou).catch(() => {});
   loadIndex().then(() => { const el = $('#picks'); if (!el) return; const p = topPicks(); el.innerHTML = `<div class="list">${p.map(d => rowHTML(itemFromDoc(d))).join('')}</div>`; })
     .catch(() => { const el = $('#picks'); if (el) el.innerHTML = ''; });
   setTimeout(() => loadIndexFull().catch(() => {}), 1500);
@@ -167,6 +179,19 @@ function topPicks() {
     if (out.length >= 6) break;
   }
   return out;
+}
+function renderForYou() {
+  const el = $('#foryou'); if (!el) return;
+  const since = Date.now() - 30 * 864e5, cnt = {};
+  LOG.all().filter(e => e.ts > since).forEach(e => { cnt[e.pid] = cnt[e.pid] || { n: 0, e }; cnt[e.pid].n++; });
+  const top = Object.values(cnt).sort((a, b) => b.n - a.n).slice(0, 8); const rows = [];
+  for (const { e, n } of top) {
+    const doc = engine.byCode(e.pid); if (!doc || doc.score == null || doc.score >= 80) continue;
+    const sw = swapsFor(doc, { score: doc.score, net: doc.net, sugar: doc.sugar }, 1)[0]; if (!sw) continue;
+    rows.push(`<a class="row fy" href="#/product/${esc(sw.code)}">${thumb(sw.img, sw.name, sw.keys, sw.cat)}<div class="t"><div class="b">Instead of ${esc(doc.name)} <span class="small">(logged ${n}×)</span></div><div class="n">${esc(sw.name)}</div><div class="b why">${esc(sw.reason)}</div></div>${mini(sw.score)}</a>`);
+    if (rows.length >= 3) break;
+  }
+  el.innerHTML = rows.length ? `<div class="sec-h"><h2>For you</h2><a href="#/log">Your log</a></div><div class="list">${rows.join('')}</div>` : '';
 }
 let rs = null; // current result state
 function resultsShell(title, q) {
@@ -216,7 +241,8 @@ function viewSearch(q) {
   const my = rs = { q, items: new Map(), src: { local: 'load', usda: 'load', off: 'load' }, counts: {} };
   const done = (k, list, err) => { if (rs !== my) return; my.src[k] = err ? 'err' : 'ok'; if (list) { my.counts[k] = list.length; mergeItems(list); } renderResults(); };
   const runLocal = () => { const r = engine.search(q, { limit: 120 }).map(itemFromDoc); for (const it of r) my.items.delete(it.id); done('local', r); };
-  loadIndex().then(() => { runLocal(); return loadIndexFull(); }).then(() => runLocal()).catch(e => { if (!engine.docs.length) done('local', null, e); });
+  loadIndex().then(() => { runLocal(); return loadIndexFull(); }).then(() => { runLocal(); return loadIndexAll(); }).then(() => runLocal()).catch(e => { if (!engine.docs.length) done('local', null, e); else runLocal(); });
+  const cf = customFoods().filter(c => textRel(q, c.name, c.brand) >= 50).map(c => itemFromProduct(c, textRel(q, c.name, c.brand) + 30)); if (cf.length) mergeItems(cf);
   usdaSearch(q).then(ps => done('usda', ps.map(p => itemFromProduct(p, textRel(q, p.name, p.brand) - 6)))).catch(e => done('usda', null, e));
   offSearch(q).then(ps => done('off', ps.map(p => itemFromProduct(p, textRel(q, p.name, p.brand) - 3)))).catch(e => done('off', null, e));
   renderResults();
@@ -236,9 +262,13 @@ function viewBrowse(key) {
 
 /* ---------------- product ---------------- */
 async function resolveProduct(id) {
+  if (/^(fdc-|r-)/.test(id)) { const g = await genericProduct(id); if (g) return g; }
   if (memo.has(id)) return memo.get(id);
   const sv = saved().find(s => s.p.id === id); if (sv) return sv.p;
-  if (/^fdc-\d+$/.test(id)) return usdaFood(id.slice(4));
+  if (/^c-/.test(id)) { const c = customFoods().find(x => x.id === id); if (c) return c; }
+  const mem = store.get('foods', {})[id];
+  if (/^(fdc-|r-)/.test(id)) { const g = await genericProduct(id); if (g) return g; if (mem) return mem; if (/^fdc-\d+$/.test(id)) return usdaFood(id.slice(4)); return null; }
+  if (mem && !/^\d+$/.test(id)) return mem;
   const loc = await localProduct(id);
   if (loc) return loc;
   let off = null, offErr = null;
@@ -299,20 +329,21 @@ async function viewProduct(id) {
   const fmt = (v, u = 'g') => v == null ? '<span class="small">—</span>' : u === 'mg' ? Math.round(v) + ' mg' : u === 'kcal' ? Math.round(v) : r1(v) + ' g';
   const row = (lab, v, u, key) => `<tr class="${key ? 'key' : ''}"><td>${lab}</td><td>${fmt(v, u)}</td>${ps ? `<td>${fmt(v == null ? null : v * ps, u)}</td>` : ''}</tr>`;
   const maxAbs = Math.max(10, ...s.items.map(i => Math.abs(i.pts)));
-  const srcLink = p.src === 'usda' ? `<a style="color:var(--acc)" href="https://fdc.nal.usda.gov/food-details/${p.fdcId}/nutrients" target="_blank" rel="noopener">USDA FoodData Central</a>` : `<a style="color:var(--acc)" href="https://world.openfoodfacts.org/product/${esc(p.code)}" target="_blank" rel="noopener">Open Food Facts</a>`;
+  const srcLink = p.meta && p.meta.url ? `<a style="color:var(--acc)" href="${esc(p.meta.url)}" target="_blank" rel="noopener">${esc(p.meta.src)}</a>${p.meta.date ? ', ' + esc(p.meta.date) : ''}` : p.src === 'custom' ? 'your custom food' : p.src === 'usda' ? `<a style="color:var(--acc)" href="https://fdc.nal.usda.gov/food-details/${p.fdcId}/nutrients" target="_blank" rel="noopener">USDA FoodData Central</a>` : `<a style="color:var(--acc)" href="https://world.openfoodfacts.org/product/${esc(p.code)}" target="_blank" rel="noopener">Open Food Facts</a>`;
   const F = s.missing ? null : factRows(p, s);
   const issues = s.quality && s.quality.issues.length ? s.quality.issues : null;
   app.innerHTML = `
   <div class="card">
     <div class="ph">${thumb(p.img, p.name, keys, p.cat, true)}
-      <div class="ph-t"><h1>${esc(p.name)}</h1><div class="b">${esc(p.brand)}${p.qty ? ' · ' + esc(p.qty) : ''}</div>
+      <div class="ph-t"><h1>${esc(p.name)}</h1><div class="b">${esc(p.brand)}${p.qty ? ' · ' + esc(p.qty) : ''}</div>${p.meta ? `<div class="srcline">Source: ${esc(p.meta.src)}${p.meta.date ? ', ' + esc(p.meta.date) : ''}</div>` : ''}
         <div class="sline"><span class="sdot bg-${s.band}"></span><div><b>${s.score ?? '?'}<span>/100</span></b><div class="slab">${esc(s.label)}</div></div></div></div></div>
     ${issues ? `<div class="note"><b>Not scored:</b> ${esc(issues.join(', '))}. The label data in the database looks wrong — check the package.</div>` : s.missing ? `<div class="note">No carbohydrate data — Lumi won't guess. Check the package.</div>` : (s.missingFields.length ? `<div class="note">Missing: ${esc(s.missingFields.join(', '))} (treated as zero).</div>` : '')}
     ${s.netNote && s.netNote.includes('implausible') ? `<div class="note">${esc(s.netNote)}.</div>` : ''}
     <div class="actions"><button class="btn pri" id="share">↗ Share</button><button class="btn" id="save">${isSaved(p.id) ? '♥ Saved' : '♡ Save'}</button></div>
   </div>
-  ${F ? `<div class="card fxcard">${F.neg.length ? `<div class="fx-h"><h2>Negatives</h2><span class="small">per 100${unit}</span></div><ul class="fxl">${F.neg.map(factLi).join('')}</ul>` : ''}
-    ${F.pos.length ? `<div class="fx-h"><h2>Positives</h2><span class="small">per 100${unit}</span></div><ul class="fxl">${F.pos.map(factLi).join('')}</ul>` : ''}</div>` : ''}
+  ${F ? `<div class="card fxcard">${F.neg.length ? `<div class="fx-h"><h2>Negatives</h2><span class="small">${p.meta && p.meta.perItem ? 'per item' : 'per 100' + unit}</span></div><ul class="fxl">${F.neg.map(factLi).join('')}</ul>` : ''}
+    ${F.pos.length ? `<div class="fx-h"><h2>Positives</h2><span class="small">${p.meta && p.meta.perItem ? 'per item' : 'per 100' + unit}</span></div><ul class="fxl">${F.pos.map(factLi).join('')}</ul>` : ''}</div>` : ''}
+  ${n.carbs != null ? portionCard(p) : ''}
   <div id="swapsCard"></div>
   ${n.carbs != null ? `<div class="card"><h2>Nutrition</h2><table><tr><th></th><th>per 100${unit}</th>${ps ? `<th>per serving<br>${esc(p.serv || p.servQ + unit)}</th>` : ''}</tr>
     ${row('Total carbohydrate', n.carbs, 'g', 1)}${row('Net carbs', s.net, 'g', 1)}${row('Sugars', n.sugars)}${n.added != null ? row('Added sugars', n.added) : ''}${row('Fiber', n.fiber)}${n.polyols ? row('Polyols', n.polyols) : ''}${row('Protein', n.protein)}${row('Fat', n.fat)}${row('Saturated fat', n.sat)}${n.trans != null ? row('Trans fat', n.trans) : ''}${row('Sodium', n.sodiumMg, 'mg')}${row('Energy (kcal)', n.kcal, 'kcal')}</table>
@@ -326,17 +357,30 @@ async function viewProduct(id) {
   $('#share').onclick = () => share(p, s);
   $('#save').onclick = () => { const on = toggleSave(p); $('#save').textContent = on ? '♥ Saved' : '♡ Save'; toast(on ? 'Saved — available offline' : 'Removed'); };
   if (p.code && p.src !== 'off') offProduct(p.code).then(o => { if (o && o.img && (!p.img || !/\.400\.jpg$/.test(p.img))) { p.img = o.img; const el = document.querySelector('.ph .thumb'); if (el) el.outerHTML = thumb(o.img, p.name, keys, p.cat, true); } }).catch(() => {});
+  if (n.carbs != null) bindPortion(p);
   if (!s.missing) renderSwaps(p, s);
+}
+function swapsFor(doc, cur, limit = 6) {
+  const leaf = (doc.keys || []).slice(-1)[0]; if (leaf == null || cur.score == null || ['whole', 'rest'].includes(C.KEYS[leaf])) return [];
+  const out = [];
+  for (const d of engine.docs) {
+    if (!d.keys.includes(leaf) || d.code === doc.code || d.score == null || d.net == null) continue;
+    const gain = d.score - cur.score, red = (cur.net ?? d.net) - d.net;
+    if (gain < 5 || red < -2 || (cur.net >= 10 && d.net < cur.net * 0.35)) continue;
+    out.push({ d, gain, red, sug: cur.sugar != null && d.sugar != null ? cur.sugar - d.sugar : 0, rank: gain + 0.6 * red - d.rank / engine.docs.length * 5 });
+  }
+  out.sort((a, b) => b.rank - a.rank);
+  const seen = new Set(); return out.filter(x => { const k = LumiSearch.norm(x.d.name + x.d.brand); if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, limit)
+    .map(x => Object.assign({}, x.d, { reason: [x.red >= 1 ? `−${Math.round(x.red)}g net carbs` : '', x.sug >= 3 ? 'less sugar' : '', `+${x.gain} pts`].filter(Boolean).join(', ') }));
 }
 async function renderSwaps(p, s) {
   try { await loadIndex(); } catch { return; }
   const draw = () => {
     const el = $('#swapsCard'); if (!el) return;
-    const doc = engine.byCode(p.code) || { code: p.code, name: p.name, cat: p.cat, score: s.score, keys: C.match(p.cats || '') };
-    if (!doc.cat && p.cat) doc.cat = p.cat;
-    const sw = engine.similar(Object.assign({}, doc, { score: s.score }));
-    el.innerHTML = sw.length ? `<div class="card"><h2>Better swaps</h2><div class="swaps">${sw.map(d => `<a class="swap" href="#/product/${esc(d.code)}">${thumb(d.img, d.name, d.keys, d.cat)}<div class="n">${esc(d.name)}</div><div class="s"><span>${esc((d.brand || '').slice(0, 14))}</span><span class="pill bg-${BAND(d.score)}">${d.score}</span></div></a>`).join('')}</div></div>`
-      : (s.score >= 75 ? '' : '');
+    const doc = engine.byCode(p.code || p.id) || { code: p.code || p.id, name: p.name, keys: C.match(p.cats || '') };
+    const sw = swapsFor(doc, { score: s.score, net: s.net, sugar: p.n.sugars });
+    const leaf = (doc.keys || []).slice(-1)[0];
+    el.innerHTML = sw.length ? `<div class="card"><h2>Better swaps</h2><div class="small" style="margin:-6px 0 8px">Same category${leaf != null ? ': ' + esc(C.CATS[C.KEYS[leaf]][1]) : ''} · per 100${p.liquid ? 'ml' : 'g'}</div><div class="swaps">${sw.map(d => `<a class="swap" href="#/product/${esc(d.code)}">${thumb(d.img, d.name, d.keys, d.cat)}<div class="n">${esc(d.name)}</div><div class="s"><span>${esc((d.brand || '').slice(0, 14))}</span><span class="pill bg-${BAND(d.score)}">${d.score}</span></div><div class="why">${esc(d.reason)}</div></a>`).join('')}</div></div>` : '';
   };
   draw(); loadIndexFull().then(draw).catch(() => {});
 }
@@ -381,7 +425,7 @@ SECONDARY
 
 Bands: 75+ Excellent · 50–74 Good · 25–49 Poor · &lt;25 Bad</pre>
   <h2 style="margin-top:14px">Net carbs</h2><p class="small">US labels (and all USDA data) include fiber in total carbohydrate, so net = carbs − fiber. EU-style labels already exclude fiber. Declared polyols are subtracted (only half for maltitol).</p>
-  <h2>Data sources</h2><p class="small">1) Lumi's bundled index: 70k popular US products from the Open Food Facts bulk export, pre-scored and searchable offline-fast with typo tolerance. 2) USDA FoodData Central (Branded + generic foods) via the public demo key. 3) Live Open Food Facts search across country mirrors. Results are merged and de-duplicated by barcode. Product links: <code>#/product/&lt;barcode&gt;</code> or <code>#/product/fdc-&lt;USDA id&gt;</code>.</p>
+  <h2>Data sources</h2><p class="small">1) Lumi's bundled index: 165k US products (lazy-loaded tiers) from the Open Food Facts bulk export, pre-scored and searchable offline-fast with typo tolerance. 2) USDA FoodData Central (Branded + generic foods) via the public demo key. 3) Live Open Food Facts search across country mirrors. Results are merged and de-duplicated by barcode. 4) Whole foods: USDA Foundation, SR Legacy and FNDDS. 5) Restaurants: official nutrition published by Chick-fil-A, Subway, Arby's, Dunkin' and Five Guys (fetched once, cached, robots.txt respected; preferred over USDA), plus USDA SR Legacy restaurant items for other chains. Chains that block automated access were skipped. A free FatSecret or Nutritionix key could add many more chains and branded restaurant items, but Lumi does not use one. Product links: <code>#/product/&lt;barcode&gt;</code> or <code>#/product/fdc-&lt;USDA id&gt;</code>.</p>
   <h2>Limits</h2><p class="small">Crowd-sourced and label data can be wrong or stale. There is no measured GI/GL; ingredients are used as proxies. Fat/protein-heavy meals (delayed rises) are only reflected via saturated fat. USDA's demo key is rate-limited per device.</p>
   <div class="note"><b>Informational only — not medical advice.</b> Always dose from the physical label and your own CGM data.</div></div>
   <div class="card small">Data © Open Food Facts contributors (ODbL) and USDA FoodData Central (public domain).</div>`;
@@ -412,16 +456,20 @@ function route() {
   if (scanner) stopScan();
   rs = null; window.scrollTo(0, 0); document.title = 'Lumi — food scanner';
   const h = location.hash.replace(/^#\/?/, ''); const i = h.indexOf('/'); const view = i < 0 ? h : h.slice(0, i); const arg = i < 0 ? '' : decodeURIComponent(h.slice(i + 1));
-  document.querySelectorAll('.tabbar a').forEach(a => a.classList.toggle('on', a.dataset.v === (['search', 'browse', 'product', ''].includes(view) ? 'home' : view === 'favorites' ? 'saved' : view)));
+  document.querySelectorAll('.tabbar a').forEach(a => a.classList.toggle('on', a.dataset.v === (['search', 'browse', 'product', ''].includes(view) ? 'home' : view === 'favorites' ? 'saved' : ['about', 'custom'].includes(view) ? 'settings' : view)));
   if (view === 'product' && arg) return viewProduct(/^\d+$/.test(arg.replace(/\s/g, '')) ? arg.replace(/\s/g, '') : arg);
   if (view === 'search' && arg) return viewSearch(arg);
   if (view === 'browse' && arg) return viewBrowse(arg);
   if (view === 'saved' || view === 'favorites') return viewSaved();
   if (view === 'about') return viewAbout();
+  if (view === 'log') return viewLog(arg);
+  if (view === 'settings') return viewSettings();
+  if (view === 'custom') return viewCustom();
   viewHome();
 }
 window.addEventListener('hashchange', route);
 route();
+setTimeout(() => onboarding(false), 400);
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
   const hadController = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.addEventListener('controllerchange', () => {

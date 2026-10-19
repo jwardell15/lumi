@@ -29,10 +29,11 @@ function imgURL(code, v) {
 class Engine {
   constructor() { this.docs = []; this.post = new Map(); this.buckets = new Map(); this.cats = []; this.tiers = 0; }
   add(data) {
-    if (data.cats) this.cats = data.cats;
+    if (data.cats && !data.generic) this.cats = data.cats;
+    const cats = data.generic ? data.cats : this.cats; const KC = root.LumiCats;
     for (const d of data.docs) {
       const i = this.docs.length;
-      const doc = { code: d[0], name: d[1], brand: d[2] || '', score: d[3] < 0 ? null : d[3], net: d[4] < 0 ? null : d[4], cat: this.cats[d[5]] || '', img: imgURL(d[0], d[6]), keys: d[7] ? d[7].split('.').map(Number) : [], src: 'local', rank: i };
+      const doc = { code: d[0], name: d[1], brand: d[2] || '', score: d[3] < 0 ? null : d[3], net: d[4] < 0 ? null : d[4], cat: cats[d[5]] || '', img: data.generic ? '' : imgURL(d[0], d[6]), keys: d[7] ? d[7].split('.').map(k => /^\d+$/.test(k) ? +k : (KC ? KC.KEYS.indexOf(k) : -1)).filter(k => k >= 0) : [], sugar: d[8] == null || d[8] < 0 ? null : d[8], src: data.generic ? (d[7] && d[7].startsWith('rest') ? 'rest' : 'whole') : 'local', rank: i };
       doc.nn = norm(doc.name + ' ' + doc.brand);
       this.docs.push(doc);
       const seen = new Map();
@@ -77,6 +78,7 @@ class Engine {
       let r = (s / qt.length) * 100 * (c / qt.length);
       if (d.nn.includes(nq)) r += 25; if (norm(d.name).startsWith(nq)) r += 10;
       r += 18 * (1 - d.rank / N);
+      if (d.src === 'whole') { const nn = norm(d.name), w = nn.split(' '); if (nn.startsWith(qt[0])) r += 14; if (/\braw\b/.test(nn)) r += 6; r -= Math.min(10, Math.max(0, w.length - qt.length - 1) * 1.5); }
       res.push([r, d]);
     }
     res.sort((a, b) => b[0] - a[0]);

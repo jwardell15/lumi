@@ -14,7 +14,7 @@ def num(v):
     try:
         x=float(v); return x if x==x and 0<=x<10000 else None
     except: return None
-heap=[]; N=70000; n=0; kept=0
+heap=[]; N=200000; n=0; kept=0
 with gzip.open('products.csv.gz','rt',encoding='utf-8',errors='replace',newline='') as f:
     rd=csv.DictReader(f,delimiter='\t',quoting=csv.QUOTE_NONE)
     for r in rd:
@@ -29,9 +29,9 @@ with gzip.open('products.csv.gz','rt',encoding='utf-8',errors='replace',newline=
         comp=num(F(r,'completeness')) or 0
         pri=scans*10+comp*5+(1 if F(r,'image_small_url') else 0)
         rec={'code':code,'name':name[:120],'brand':(F(r,'brands_en') or F(r,'brand_owner')).split(',')[0][:60],'qty':F(r,'quantity')[:30],
-         'img':F(r,'image_small_url'),'servQ':num(F(r,'serving_quantity')),'serv':F(r,'serving_size')[:40],
+         'img':F(r,'image_url') or F(r,'image_small_url'),'servQ':num(F(r,'serving_quantity')),'serv':F(r,'serving_size')[:40],
          'nova':num(F(r,'nova_group')),'add':F(r,'additives_tags'),'ing':F(r,'ingredients_text')[:500],
-         'cat':F(r,'main_category_en')[:50],'cats':F(r,'categories_tags')[-300:],'cty':F(r,'countries_tags'),
+         'cat':F(r,'main_category_en')[:50],'cats':F(r,'categories_tags'),'cty':F(r,'countries_tags'),
          'n':{k:num(F(r,k+'_100g')) for k in ['carbohydrates','sugars','added-sugars','fiber','proteins','fat','saturated-fat','trans-fat','sodium','energy-kcal','polyols']}}
         kept+=1
         item=(pri,n,rec)

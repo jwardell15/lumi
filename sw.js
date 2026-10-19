@@ -1,6 +1,6 @@
 /* Lumi service worker: network-first for same-origin (fresh updates), cache fallback for offline; SWR for images. */
-const V = 'lumi-v3.0.1';
-const SHELL = ['./', 'index.html', 'css/app.css', 'js/score.js', 'js/cats.js', 'js/search.js', 'js/app.js', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'icons/apple-touch-icon.png', 'data/index-0.json'];
+const V = 'lumi-v4.0.0';
+const SHELL = ['./', 'index.html', 'css/app.css', 'js/score.js', 'js/cats.js', 'js/search.js', 'js/log.js', 'js/app.js', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'icons/apple-touch-icon.png', 'data/index-0.json', 'data/index-g.json'];
 self.addEventListener('install', e => e.waitUntil(caches.open(V).then(c => c.addAll(SHELL.map(u => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== V && k !== 'lumi-img').map(k => caches.delete(k)))).then(() => self.clients.claim())));
 async function networkFirst(req) {

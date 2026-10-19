@@ -42,6 +42,13 @@ const CATS = {
   'nuts-nuts': ['', 'Nuts', T('nuts'), [], 'nuts'],
   'nuts-butter': ['', 'Nut butters', T('nut-butters peanut-butters'), [], 'nuts'],
 };
+// v4: whole foods + restaurants (keys assigned by the USDA/chain build, not tag-matched)
+Object.assign(CATS, {
+  whole: ['🥦', 'Whole foods', [], []], 'whole-fruit': ['', 'Fruit', [], [], 'whole'], 'whole-veg': ['', 'Vegetables', [], [], 'whole'], 'whole-grains': ['', 'Rice, grains & pasta', [], [], 'whole'],
+  'whole-meat': ['', 'Meat & poultry', [], [], 'whole'], 'whole-fish': ['', 'Fish & seafood', [], [], 'whole'], 'whole-legumes': ['', 'Beans & legumes', [], [], 'whole'], 'whole-dairy': ['', 'Dairy & eggs', [], [], 'whole'],
+  'whole-nuts': ['', 'Nuts & seeds', [], [], 'whole'], 'whole-dishes': ['', 'Meals & dishes', [], [], 'whole'],
+  rest: ['🍔', 'Restaurants', [], []], 'rest-other': ['', 'Other restaurant foods', [], [], 'rest'],
+});
 const KEYS = Object.keys(CATS);
 function match(tagStr) {
   const tags = new Set(String(tagStr || '').split(',').map(t => t.trim().replace(/^\w\w:/, '').toLowerCase()));
@@ -50,7 +57,9 @@ function match(tagStr) {
   // subcategories require the parent to match too
   return out.filter(i => { const p = CATS[KEYS[i]][4]; return !p || out.includes(KEYS.indexOf(p)); });
 }
-const TOP = KEYS.filter(k => !CATS[k][4]);
-const subs = k => KEYS.filter(x => CATS[x][4] === k);
-return { CATS, KEYS, TOP, subs, match };
+const ORDER = ['rest', 'whole'];
+const TOP = ORDER.concat(KEYS.filter(k => !CATS[k][4] && !ORDER.includes(k)));
+function register(key, label, parent) { if (CATS[key]) return KEYS.indexOf(key); CATS[key] = ['', label, [], [], parent]; KEYS.push(key); return KEYS.length - 1; }
+const subs = k => { const r = KEYS.filter(x => CATS[x][4] === k); return k === 'rest' ? r.filter(x => x !== 'rest-other').concat(r.includes('rest-other') ? ['rest-other'] : []) : r; };
+return { CATS, KEYS, TOP, subs, match, register };
 });

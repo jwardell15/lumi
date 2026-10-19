@@ -9,3 +9,8 @@ Static PWA hosted on GitHub Pages: https://jwardell15.github.io/lumi/
 
 Rebuild data: run `tools/extract.py` (in the folder with `products.csv.gz`) then `node tools/build.js us.jsonl`.
 Local dev: `python3 serve.py 8765`.
+
+## v4.0.0
+- Whole foods (USDA Foundation, SR Legacy, FNDDS) and restaurants (official data from Chick-fil-A, Subway, Arby's, Dunkin', Five Guys via `tools/chains.py`; USDA SR for other chains). Build: `python3 tools/build_generic.py && node tools/build.js <off.jsonl> <generic.jsonl>`.
+- Portion helper, optional carb ratio estimate (off by default), food log with targets, a 7-day chart, custom foods, saved meals and CSV/JSON export. All of it is stored on this device.
+- Swaps from the same subcategory with reasons, and a "For you" section.
