@@ -82,7 +82,7 @@ class Engine {
     res.sort((a, b) => b[0] - a[0]);
     return res.slice(0, limit).map(([r, d]) => Object.assign({ rel: r }, d));
   }
-  browse(keyIdx, limit = 600) { const r = []; for (const d of this.docs) { if (d.keys.includes(keyIdx)) { r.push(Object.assign({ rel: 100 - d.rank / this.docs.length * 50 }, d)); if (r.length >= limit) break; } } return r; }
+  browse(keyIdx, limit = 5000) { const r = []; for (const d of this.docs) { if (d.keys.includes(keyIdx)) { r.push(Object.assign({ rel: 100 - d.rank / this.docs.length * 50 }, d)); if (r.length >= limit) break; } } return r; }
   similar(doc, limit = 6) {
     const cur = doc.score ?? 0; let pool = [];
     const leaf = (doc.keys || []).slice(-1)[0];
