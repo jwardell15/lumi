@@ -14,7 +14,9 @@ async function getJSON(url, ms = 12000) {
 async function searchProducts(q) {
   const enc = encodeURIComponent(q);
   const tries = [
-    async () => (await getJSON(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${enc}&search_simple=1&action=process&json=1&page_size=24&fields=${FIELDS}`)).products,
+    // OFF's legacy search sends CORS headers when healthy but is often overloaded (503 HTML page);
+    // country mirrors hit different capacity, so try several before giving up.
+    ...['world', 'us', 'uk', 'ca', 'fr'].map(cc => async () => (await getJSON(`https://${cc}.openfoodfacts.org/cgi/search.pl?search_terms=${enc}&search_simple=1&action=process&json=1&page_size=24&fields=${FIELDS}`, 8000)).products),
     async () => (await getJSON(`https://search.openfoodfacts.org/search?q=${enc}&page_size=24&fields=${FIELDS}`)).hits,
     // Optional same-origin proxy (serve.py) for when OFF endpoints lack CORS / are down
     async () => (await getJSON(`api/search?q=${enc}&fields=${FIELDS}`)).hits,
@@ -177,7 +179,7 @@ async function viewSearch(q) {
     const ps = (await searchProducts(q)).filter(p => p.code);
     const rows = ps.map(p => { const s = scoreProduct(p); const a = s.N.per100; return { code: p.code, name: pname(p), brand: (p.brands || '').toString().split(',')[0], img: img(p), s, sub: a.net != null ? `${r1(a.net)}g net carbs/100g` : 'no nutrition data' }; });
     $('#res').innerHTML = rows.length ? `<h2>${rows.length} results</h2>${listHTML(rows)}` : `<div class="spin">No products found. Try a brand + product name, or scan the barcode.</div>`;
-  } catch (e) { $('#res').innerHTML = `<div class="warn">Search failed (${esc(e.message)}). Open Food Facts search is sometimes overloaded — retry, or use barcode lookup.</div><div class="row"><button onclick="route()">Retry</button></div>`; }
+  } catch (e) { $('#res').innerHTML = `<div class="warn"><b>Name search is unavailable right now.</b> Open Food Facts' search servers are overloaded or blocking browser requests (${esc(e.message)}). Barcode lookup and scanning still work — use 📷 Scan or type the barcode above, or retry in a minute.</div><div class="row"><button onclick="route()">Retry</button></div>`; }
 }
 function nutRow(label, k, N, unit = 'g', key) {
   const v1 = N.per100[k], v2 = N.perServ ? N.perServ[k] : null;
