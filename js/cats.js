@@ -47,6 +47,8 @@ Object.assign(CATS, {
   whole: ['🥦', 'Whole foods', [], []], 'whole-fruit': ['', 'Fruit', [], [], 'whole'], 'whole-veg': ['', 'Vegetables', [], [], 'whole'], 'whole-grains': ['', 'Rice, grains & pasta', [], [], 'whole'],
   'whole-meat': ['', 'Meat & poultry', [], [], 'whole'], 'whole-fish': ['', 'Fish & seafood', [], [], 'whole'], 'whole-legumes': ['', 'Beans & legumes', [], [], 'whole'], 'whole-dairy': ['', 'Dairy & eggs', [], [], 'whole'],
   'whole-nuts': ['', 'Nuts & seeds', [], [], 'whole'], 'whole-dishes': ['', 'Meals & dishes', [], [], 'whole'],
+  'whole-bakery': ['', 'Breads & bakery', [], [], 'whole'], 'whole-drinks': ['', 'Drinks', [], [], 'whole'], 'whole-sweets': ['', 'Sweets & desserts', [], [], 'whole'],
+  'whole-snacks': ['', 'Snacks', [], [], 'whole'], 'whole-sauces': ['', 'Sauces, oils & spices', [], [], 'whole'],
   rest: ['🍔', 'Restaurants', [], []], 'rest-other': ['', 'Other restaurant foods', [], [], 'rest'],
 });
 const KEYS = Object.keys(CATS);

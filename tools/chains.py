@@ -79,10 +79,84 @@ def five_guys():
 # Taco Bell, Chipotle, Starbucks, Wendy's (US), Burger King, Popeyes, Domino's, Pizza Hut, Sonic, Jersey Mike's
 # (nutrition only rendered by JS apps/private APIs or no US nutrition file linked) — not worked around.
 CHAINS = {'Chick-fil-A': chick_fil_a, 'Subway': subway, "Arby's": arbys, "Dunkin'": dunkin, 'Five Guys': five_guys}
+
+# ---- v4.1: more official PDFs (column maps read from each PDF's header) ----
+def fetch_pdf(url, name):
+    path = os.path.join(CACHE, name)
+    if not os.path.exists(path):
+        if not allowed(url): raise RuntimeError('robots.txt disallows ' + url)
+        time.sleep(2); req = urllib.request.Request(url, headers={'User-Agent': UA})
+        body = urllib.request.urlopen(req, timeout=60).read()
+        if not body.startswith(b'%PDF'): raise RuntimeError('not a PDF (JS page)')
+        open(path, 'wb').write(body)
+    return path
+NUMRE = re.compile(r'(<?\d+(\.\d+)?|\.\d+|N/A|--|-)$')
+def table_rows(path, n, raw=False):
+    txt = subprocess.run(['pdftotext', '-raw' if raw else '-layout', path, '-'], capture_output=True, text=True).stdout
+    lines = txt.splitlines()
+    if raw:  # join "Name 3 6" + "520 290 ..." split lines
+        j = []
+        for ln in lines:
+            if j and re.match(r'^[\d.]', ln) and len(ln.split()) >= n and len(j[-1].split()) and not re.search(r'([\d.]+\s+){%d}' % (n - 1), j[-1]): j[-1] = re.sub(r'(\s+\d{1,2})+$', '', j[-1]) + '  ' + ln
+            else: j.append(ln)
+        lines = [re.sub(r'\s+', '  ', re.sub(r'^(.*?[A-Za-z\)®™\]])\s+(?=[\d.]+\s)', r'\1  ', l)) for l in j]
+    for line in lines:
+        fields = [x.strip() for x in re.split(r'\s{2,}|\t+', line.strip()) if x.strip()]
+        name, nums = [], []
+        def flush():
+            if name and len(nums) >= n: return (' '.join(name), [None if x in ('N/A', '--', '-') else num(x) for x in nums[:n]])
+        for f in fields:
+            toks = f.split()
+            if all(NUMRE.match(t) for t in toks):
+                nums += toks
+            else:
+                r = flush()
+                if r: yield r
+                if nums: name, nums = [], []
+                name.append(f)
+        r = flush()
+        if r: yield r
+def pdf_chain(chain, url, file, n, m, raw=False, serv=None, clean=None):
+    out = []
+    for nm, x in table_rows(fetch_pdf(url, file), n, raw):
+        nm = re.sub(r'\s+(\d{1,2}\s*)+$', '', nm) if raw else nm
+        if clean: nm = clean(nm)
+        nm = re.sub(r'^[-–•\s]+|\s+[A-Z]{1,2}(,[A-Z]{1,2})+$', '', nm).strip()
+        if not nm or len(nm) < 3 or re.search(r'calorie|serving size|^total', nm, re.I): continue
+        g = lambda k: x[m[k]] if k in m and x[m[k]] is not None else None
+        out.append(rec(chain, nm, f"{g('g'):g} g" if 'g' in m and g('g') else (serv or ''), g('cal'), g('fat'), g('sat'), g('sod'), g('carb'), g('fib'), g('sug'), g('pro'), url))
+    return out
+STD10 = dict(cal=0, fat=1, sat=2, sod=5, carb=6, fib=7, sug=8, pro=9)
+STD11 = dict(cal=0, fat=2, sat=3, sod=6, carb=7, fib=8, sug=9, pro=10)
+MORE = {
+ "Culver's": ('https://cdn.culvers.com/menu/docs/guide-nutrition-allergen.pdf', 'culvers.pdf', 10, STD10, {}),
+ 'Shake Shack': ('https://shakeshack.com/sites/default/files/2026-01/_Master%20Nut%20%26%20Allergen%201.6.26.pdf', 'shakeshack.pdf', 10, STD10, {'clean': lambda s: re.sub(r'\s*Contains:.*', '', s)}),
+ 'Sonic': ('https://assets.ctfassets.net/whnlxz6bna9d/665Hn9SdgyT53pJgF9cmkK/090ae5fe05d8cd9643fb98fcde32ef1a/61667-1_FEE_0926_NUTBRO_SEPTEMBER_FA_rg_WCAG.pdf', 'sonic.pdf', 10, STD10, {'clean': lambda s: s.title()}),
+ 'Jack in the Box': ('https://assets.ctfassets.net/a9odgsv44wmq/2TASloFvjca2Yk6z62XQY2/07218b7c9dcbb4c70abb102720087106/2022_Nutrition_Facts.PDF', 'jitb.pdf', 13, dict(g=0, cal=1, fat=3, sat=4, sod=7, carb=9, fib=10, sug=11, pro=12), {}),
+ 'Qdoba': ('https://assets.ctfassets.net/0tc4847zqy12/bQFJBCmsAk4ww4qzdfAOm/258189ce59b58cd3f717b577e1247c34/Nutrition-Brochure_6.15.26.pdf', 'qdoba.pdf', 12, dict(g=0, cal=1, fat=3, sat=4, carb=7, fib=8, sug=9, pro=10, sod=11), {}),
+ 'Whataburger': ('https://wbimageserver.whataburger.com/Nutrition.pdf', 'whataburger.pdf', 11, STD11, {}),
+ "Jimmy John's": ('https://resources.jimmyjohns.com/downloadable-files/NutritionGuide.pdf', 'jj.pdf', 11, STD11, {}),
+ 'Little Caesars': ('https://littlecaesars.com/static/usnutritionguide.pdf', 'lc.pdf', 11, STD11, {'serv': 'whole item'}),
+ "Carl's Jr.": ('https://www.carlsjr.com/getContentAsset/86ac3f5e-5c97-4a18-9e27-7a6d62a9148f/dfc3d011-8f63-43f6-9ed8-4b444333a1d0/cj-25w5-sys_np-dig-1120x3000_r0.pdf?language=en-US', 'carls.pdf', 12, dict(g=0, cal=1, fat=3, sat=4, sod=7, carb=8, fib=9, sug=10, pro=11), {}),
+ 'Tropical Smoothie Cafe': ('https://www.tropicalsmoothiecafe.com/nutrition/nutrition-guide.pdf', 'tsc.pdf', 14, dict(cal=0, fat=3, sat=4, sod=7, carb=8, fib=10, sug=11, pro=13), {'raw': True}),
+}
+for _k, (_u, _f, _n, _m, _o) in MORE.items():
+    CHAINS[_k] = (lambda k=_k, u=_u, f=_f, n=_n, m=_m, o=_o: pdf_chain(k, u, f, n, m, **o))
+# Checked 2026-10-19 (v4.1) and skipped: Panda Express, Raising Cane's, Zaxby's, Dairy Queen, Cava, McDonald's (HTTP 403);
+# Starbucks, Chipotle, Taco Bell, Panera, Sweetgreen, Smoothie King, In-N-Out, Wingstop, Burger King, Popeyes, Pizza Hut, KFC, Jersey Mike's
+# (nutrition only in JS apps, or no official US nutrition file found on the chain's own domain/CDN);
+# Wendy's (official PDF found is the UK menu), Domino's and Noodles & Company (PDF layouts not reliably machine-readable), Papa John's (table text not extractable).
+
+def sane(x):
+    e = (x['carbs'] or 0) * 4 + (x['protein'] or 0) * 4 + (x['fat'] or 0) * 9; k = x['kcal']
+    if (x['fiber'] or 0) > (x['carbs'] or 0) or (x['sugar'] or 0) > (x['carbs'] or 0) + 1: return False
+    if k is not None and e > 1.3 * k + 25: return False
+    x['item'] = re.sub(r'^[∆*†\s]+|\s+[SEMWPTFCG]{1,5}$|\*+$', '', x['item']).strip()
+    return True
 if __name__ == '__main__':
     out = []; report = {}
     for name, fn in CHAINS.items():
-        try: r = fn(); r = [x for x in r if x['carbs'] is not None and x['item']]; out += r; report[name] = len(r)
+        try: r = fn(); r = [x for x in r if x['carbs'] is not None and x['item'] and sane(x)]; out += r; report[name] = len(r)
         except Exception as e: report[name] = 'skipped: ' + str(e)[:120]
     with open(sys.argv[1] if len(sys.argv) > 1 else 'chains.jsonl', 'w') as f:
         for x in out: f.write(json.dumps(x) + '\n')

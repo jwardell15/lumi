@@ -19,7 +19,7 @@ function quality(p) {
   const c = n.carbs, f = n.fiber, su = n.sugars, pr = n.protein, fa = n.fat, k = n.kcal;
   if (c == null) issues.push('carbs unknown');
   if (c != null && su != null && su > c + 1) issues.push('sugars exceed carbs');
-  if (c != null && (c + (pr || 0) + (fa || 0)) > 105) issues.push('macros exceed 100 g');
+  if (!(p.meta && p.meta.perItem) && c != null && (c + (pr || 0) + (fa || 0)) > 105) issues.push('macros exceed 100 g');
   if (c != null && f != null && c > 5 && f > c * 0.6) { dropFiber = true; }
   if (c != null && k != null && k > 0 && pr != null && fa != null) {
     const est = 4 * c + 4 * pr + 9 * fa; // fiber/polyols/alcohol make this a loose check

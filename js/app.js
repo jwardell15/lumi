@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '4.0.0';
+const VERSION = '4.1.0';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -50,12 +50,17 @@ function loadIndexAll() {
   if (!tier2) tier2 = loadIndexFull().then(() => getData('data/index-2.json')).then(d => { engine.add(d); notifyTier(); });
   return tier2;
 }
+let tierX = null;
+function loadIndexX() { // USDA Branded extras (tiers 3+), only fetched when the user searches
+  if (!tierX) tierX = Promise.all([loadIndexAll(), loadMeta()]).then(async ([, m]) => { for (let i = 3; i < ((m && m.tiers) || 3); i++) { engine.add(await getData(`data/index-${i}.json`)); notifyTier(); } });
+  return tierX;
+}
 const ghash = id => { let h = 0; for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h % 40; };
 const gshardCache = new Map();
 async function genericProduct(id) { const k = ghash(id); if (!gshardCache.has(k)) gshardCache.set(k, getData(`data/g/${k}.json`).catch(() => ({}))); const sh = await gshardCache.get(k); return sh[id] ? S.fromCompact(sh[id]) : null; }
 function notifyTier() { tierWaiters.forEach(f => f()); }
 const shardCache = new Map();
-function shard(code) { const k = code.slice(-2); if (!shardCache.has(k)) shardCache.set(k, fetch(`data/d/${k}.json`).then(r => r.ok ? r.json() : {}).catch(() => ({}))); return shardCache.get(k); }
+function shard(code) { const k = code.slice(-3); if (!shardCache.has(k)) shardCache.set(k, fetch(`data/d/${k}.json`).then(r => r.ok ? r.json() : {}).catch(() => ({}))); return shardCache.get(k); }
 const codeVariants = c => { c = String(c).replace(/\D/g, ''); const s = c.replace(/^0+/, ''); return [...new Set([c, s, s.padStart(12, '0'), s.padStart(13, '0'), s.padStart(8, '0')])].filter(x => x.length >= 8); };
 const gtinKey = c => c ? String(c).replace(/\D/g, '').replace(/^0+/, '') : '';
 async function localProduct(code) {
@@ -87,7 +92,7 @@ async function usdaByGtin(code) { const r = await usdaSearch(gtinKey(code)); ret
 
 /* ---------------- result items ---------------- */
 function itemFromProduct(p, rel) { const s = S.score(p); memo.set(p.id, p); return { id: p.id, code: p.code, name: p.name, brand: p.brand, score: s.score, net: s.score == null ? null : s.net, img: p.img, src: p.src, cat: p.cat, rel }; }
-function itemFromDoc(d) { return { id: d.code, code: d.code, name: d.name, brand: d.brand, score: d.score, net: d.score == null ? null : d.net, img: d.img, src: 'local', cat: d.cat, keys: d.keys, rel: d.rel }; }
+function itemFromDoc(d) { return { id: d.code, code: d.code, name: d.name, brand: d.brand, score: d.score, net: d.score == null ? null : d.net, img: d.img, src: d.src || 'local', cat: d.cat, keys: d.keys, rel: d.rel }; }
 function textRel(q, name, brand) {
   const qt = LumiSearch.toks(q), nt = new Set(LumiSearch.toks(name + ' ' + brand)); if (!qt.length) return 0;
   let hit = 0; for (const t of qt) if (nt.has(t) || [...nt].some(x => x.startsWith(t) || (t.length > 4 && LumiSearch.dl(t, x, 1) <= 1))) hit++;
@@ -146,7 +151,7 @@ function bindSearch() {
 /* ---------------- views ---------------- */
 function viewHome() {
   const rec = store.get('recent', []), sv = saved();
-  app.innerHTML = `<h1>What are you eating?</h1><p class="lead">Carb-first scores for 70,000+ US products, plus USDA & Open Food Facts live.</p>
+  app.innerHTML = `<h1>What are you eating?</h1><p class="lead" id="lead">${leadText(META)}</p>
   ${searchBox()}
   <div class="chips">${C.TOP.map(k => `<a class="chip" href="#/browse/${k}">${C.CATS[k][0]} ${C.CATS[k][1]}</a>`).join('')}</div>
   <button class="hero-scan" id="heroScan"><div class="ic"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10 8v8M13 8v8M17 8v8"/></svg></div><div><b>Scan a barcode</b><span>Instant score from the package</span></div></button>
@@ -154,32 +159,66 @@ function viewHome() {
   ${rec.length ? `<div class="sec-h"><h2>Recent searches</h2><button id="clrRec">Clear</button></div><div class="chips" style="margin-top:0">${rec.map(r => `<a class="chip" href="#/search/${encodeURIComponent(r)}">🕘 ${esc(r)}</a>`).join('')}</div>` : ''}
   ${sv.length ? `<div class="sec-h"><h2>Saved</h2><a href="#/saved">See all</a></div><div class="list">${sv.slice(0, 3).map(x => rowHTML(itemFromProduct(x.p))).join('')}</div>` : ''}
   <div id="foryou"></div>
-  <div class="sec-h"><h2>Top-scoring picks</h2></div><div id="picks">${skel(3)}</div>
+  <div class="sec-h"><h2>Top-scoring picks</h2></div><div id="picks">${skel(4)}</div>
+  <div class="sec-h"><h2>Best at restaurants</h2><a href="#/browse/rest">All chains</a></div><div id="restBest"><div class="swaps">${'<div class="swap skel"></div>'.repeat(4)}</div></div>
   <p class="foot">Informational only — not medical advice.</p>`;
   bindSearch();
   $('#heroScan').onclick = startScan;
   $('#bform').onsubmit = e => { e.preventDefault(); const c = $('#bc').value.replace(/\D/g, ''); if (c.length >= 8) go('#/product/' + c); else toast('Enter an 8–14 digit barcode'); };
   if ($('#clrRec')) $('#clrRec').onclick = () => { store.set('recent', []); viewHome(); };
   loadIndex().then(loadIndexFull).then(renderForYou).catch(() => {});
-  loadIndex().then(() => { const el = $('#picks'); if (!el) return; const p = topPicks(); el.innerHTML = `<div class="list">${p.map(d => rowHTML(itemFromDoc(d))).join('')}</div>`; })
-    .catch(() => { const el = $('#picks'); if (el) el.innerHTML = ''; });
+  loadMeta().then(m => { const el = $('#lead'); if (el && m) el.textContent = leadText(m); });
+  const drawPicks = () => {
+    const el = $('#picks'); if (!el) return;
+    let p = []; try { p = topPicks(); } catch (e) { console.warn('picks', e); }
+    const items = p.length >= 4 ? p.map(itemFromDoc) : FALLBACK_PICKS.map(x => ({ id: x[0], code: x[0], name: x[1], brand: x[2], score: x[3], net: x[4], img: '', src: x[5] || 'local', keys: [], cat: '' }));
+    el.innerHTML = `<div class="list">${items.map(rowHTML).join('')}</div>`;
+    const rb = $('#restBest'); if (rb) { const r = bestAtRestaurants(); rb.innerHTML = r.length ? `<div class="swaps">${r.map(d => `<a class="swap" href="#/product/${esc(d.code)}">${thumb(d.img, d.name, d.keys, d.cat)}<div class="b chain">${esc(d.brand)}</div><div class="n">${esc(d.name)}</div><div class="s"><span>${d.net}g net</span><span class="pill bg-${BAND(d.score)}">${d.score}</span></div></a>`).join('')}</div>` : '<p class="small">Restaurant data is loading or unavailable offline.</p>'; }
+  };
+  const fb = setTimeout(drawPicks, 6000); // never leave the section empty
+  loadIndex().then(() => { clearTimeout(fb); drawPicks(); return loadIndexFull(); }).then(drawPicks).catch(() => { clearTimeout(fb); drawPicks(); });
   setTimeout(() => loadIndexFull().catch(() => {}), 1500);
 }
 
 const NONEN = /\b(le|la|les|du|des|de|et|au|aux|avec|sans|nature|fromage|lait|sucre|chocolat|yaourt|leche|con|sin|del|azucar|queso|und|mit|vanille|fraise|eau|pain|beurre|creme|natur|saveur|parfum|sabor|blanc|petit|recette|aceite|agua|bebida|dulce|avena)\b/i;
 const usEnglish = d => /^[\x20-\x7e]+$/.test(d.name + d.brand) && !NONEN.test(d.name) && ((d.code.length === 12) || (d.code.length === 13 && /^[01]/.test(d.code)));
+// Picks: varied, US/English packaged foods (one per category/brand) + whole foods + official restaurant items.
 function topPicks() {
-  const order = ['yogurt', 'cereal', 'snacks', 'bars', 'dairy', 'nuts', 'bread', 'sauces', 'drinks', 'sweets'];
-  const pool = engine.docs.slice(0, 6000).filter(d => usEnglish(d) && d.score != null && d.score >= 72 && d.img && d.brand && d.net != null && d.net >= 2 && /^[\x20-\x7e]+$/.test(d.name + d.brand) && /^[01]/.test(d.code.padStart(13, '0')) && !/\bwater\b/i.test(d.name));
-  const out = [], brands = new Set(), codes = new Set(), cats = new Set();
-  for (const name of order) {
-    const ki = C.KEYS.indexOf(name);
-    const d = pool.find(x => x.keys.includes(ki) && !codes.has(x.code) && !cats.has(x.cat) && !brands.has(x.brand.toLowerCase().split(' ')[0]));
-    if (d) { out.push(d); cats.add(d.cat); brands.add(d.brand.toLowerCase().split(' ')[0]); codes.add(d.code); }
-    if (out.length >= 6) break;
+  const off = [], whole = [], rest = [];
+  for (const d of engine.docs) {
+    if (d.score == null || d.net == null) continue;
+    if (d.src === 'whole') { if (d.score >= 70 && d.net >= 5) whole.push(d); continue; }
+    if (d.src === 'rest') { if (d.score >= 65 && d.net >= 8 && /^r-/.test(d.code) && !NOTMEAL.test(d.name)) rest.push(d); continue; }
+    if (d.rank < 40000 && d.score >= 72 && d.net >= 2 && d.brand && usEnglish(d) && !/\bwater\b/i.test(d.name)) off.push(d);
   }
-  return out;
+  const out = [], brands = new Set(), cats = new Set();
+  const bkey = d => d.src === 'whole' ? d.code : (d.brand || '').toLowerCase().split(/[\s,]/)[0];
+  const take = (pool, pred) => { const d = pool.find(x => pred(x) && !brands.has(bkey(x)) && !out.includes(x)); if (d) { out.push(d); brands.add(bkey(d)); } return d; };
+  const order = ['yogurt', 'cereal', 'snacks', 'bars', 'dairy', 'nuts', 'bread', 'sauces', 'drinks', 'sweets'];
+  const withImg = off.filter(d => d.img); const pool = withImg.length >= 20 ? withImg : off;
+  for (const name of order) { const ki = C.KEYS.indexOf(name); const d = take(pool, x => x.keys.includes(ki) && !cats.has(x.cat)); if (d) cats.add(d.cat); if (out.length >= 8) break; }
+  const wsub = ['whole-fruit', 'whole-veg', 'whole-legumes', 'whole-grains'].map(k => C.KEYS.indexOf(k));
+  whole.sort((a, b) => a.name.length - b.name.length); // simple, recognizable names first
+  let w = 0; for (const ki of wsub) { if (w >= 2) break; if (take(whole, x => x.keys.includes(ki) && /raw|cooked|boiled|^[^,]+,?[^,]*$/i.test(x.name))) w++; }
+  rest.sort((a, b) => (MAIN.test(b.name) - MAIN.test(a.name)) || b.score - a.score); take(rest, () => true); take(rest, () => true);
+  return out.slice(0, 12);
 }
+const NOTMEAL = /sauce|syrup|dressing|dip\b|onion|lemon|lime\b|crouton|nut blend|applesauce|slice\b|packet|add-?in|topping|pickle|ketchup|mayo|mustard|lettuce|tomato|jalape|pepper|seasoning|creamer|sweetener|sugar|\bzero\b|diet|water|\btea\b|coffee|espresso|americano|\bbun\b|tortilla|patty|bacon\b|cheese$|butter\b|jelly|jam\b|honey|salsa|guac|sour cream|ice\b|lid|extra\b|xtra|side of|substitute|\boz\.?\)$|sprinkle|shot\b|flavor|mints?\b|relish|shell|^add\b/i;
+const MAIN = /sandwich|burger|wrap|bowl|salad|tender|nugget|chicken|taco|burrito|quesadilla|pizza|\bsub\b|melt|club|grilled|egg|omelet|platter|wings?\b|steak|turkey|ham\b|italian|slice of|unwich|chili|soup/i;
+function bestAtRestaurants() {
+  const best = new Map();
+  for (const d of engine.docs) {
+    if (d.src !== 'rest' || d.score == null || d.net == null || d.net < 8 || NOTMEAL.test(d.name)) continue;
+    const k = d.keys.find(x => C.KEYS[x] && C.KEYS[x].startsWith('rest-') && C.KEYS[x] !== 'rest-other'); if (k == null) continue;
+    const b = best.get(k); const mv = x => MAIN.test(x.name) ? 1 : 0; if (!b || mv(d) > mv(b) || (mv(d) === mv(b) && d.score > b.score)) best.set(k, d);
+  }
+  return [...best.values()].sort((a, b) => (/^r-/.test(b.code) - /^r-/.test(a.code)) || b.score - a.score).slice(0, 24);
+}
+const FALLBACK_PICKS = [["0096619483556", "organic GREEK YOGURT plain", "KIRKLAND Signature", 96, 4, "local"], ["0850017468993", "Catalina Crunch Cinnamon Toast Protein Cereal", "Catalina Crunch", 74, 25, "local"], ["0071146002456", "HARVEST SNAPS Lightly Salted Crispy Baked Veggie Snacks", "Calbee", 73, 57, "local"], ["0888849000012", "Chocolate Chip Cookie Dough", "Quest", 73, 27, "local"], ["0051500255650", "PEANUT BUTTER SPREAD", "Jif", 75, 24, "local"], ["0013764027282", "Powerseed Organic Bread", "Dave's Killer Bread", 77, 31, "local"], ["0747479000413", "Marinara", "Rao's Homemade", 86, 5, "local"], ["fdc-2709240", "Lychee", "USDA (FNDDS)", 80, 15, "whole"], ["fdc-2709935", "Leeks", "USDA (FNDDS)", 84, 13, "whole"], ["r-arbys-chicken-tenders-2", "Chicken Tenders (2)", "Arby's", 90, 9, "rest"]]; // shown if the index can't load
+let META = null;
+function loadMeta() { return META ? Promise.resolve(META) : getData('data/meta.json').then(m => (META = m)).catch(() => null); }
+const fmtK = n => n >= 1000 ? (Math.floor(n / 1000)).toLocaleString() + ',000+' : String(n);
+function leadText(m) { return m && m.products ? `Carb-first scores for ${fmtK(m.products)} US products, ${fmtK(m.whole)} whole foods and ${m.chains} restaurant chains, plus USDA & Open Food Facts live.` : 'Carb-first scores for US packaged foods, whole foods and restaurant meals, plus USDA & Open Food Facts live.'; }
 function renderForYou() {
   const el = $('#foryou'); if (!el) return;
   const since = Date.now() - 30 * 864e5, cnt = {};
@@ -241,7 +280,7 @@ function viewSearch(q) {
   const my = rs = { q, items: new Map(), src: { local: 'load', usda: 'load', off: 'load' }, counts: {} };
   const done = (k, list, err) => { if (rs !== my) return; my.src[k] = err ? 'err' : 'ok'; if (list) { my.counts[k] = list.length; mergeItems(list); } renderResults(); };
   const runLocal = () => { const r = engine.search(q, { limit: 120 }).map(itemFromDoc); for (const it of r) my.items.delete(it.id); done('local', r); };
-  loadIndex().then(() => { runLocal(); return loadIndexFull(); }).then(() => { runLocal(); return loadIndexAll(); }).then(() => runLocal()).catch(e => { if (!engine.docs.length) done('local', null, e); else runLocal(); });
+  loadIndex().then(() => { runLocal(); return loadIndexFull(); }).then(() => { runLocal(); return loadIndexAll(); }).then(() => { runLocal(); return loadIndexX(); }).then(() => runLocal()).catch(e => { if (!engine.docs.length) done('local', null, e); else runLocal(); });
   const cf = customFoods().filter(c => textRel(q, c.name, c.brand) >= 50).map(c => itemFromProduct(c, textRel(q, c.name, c.brand) + 30)); if (cf.length) mergeItems(cf);
   usdaSearch(q).then(ps => done('usda', ps.map(p => itemFromProduct(p, textRel(q, p.name, p.brand) - 6)))).catch(e => done('usda', null, e));
   offSearch(q).then(ps => done('off', ps.map(p => itemFromProduct(p, textRel(q, p.name, p.brand) - 3)))).catch(e => done('off', null, e));
@@ -425,7 +464,7 @@ SECONDARY
 
 Bands: 75+ Excellent · 50–74 Good · 25–49 Poor · &lt;25 Bad</pre>
   <h2 style="margin-top:14px">Net carbs</h2><p class="small">US labels (and all USDA data) include fiber in total carbohydrate, so net = carbs − fiber. EU-style labels already exclude fiber. Declared polyols are subtracted (only half for maltitol).</p>
-  <h2>Data sources</h2><p class="small">1) Lumi's bundled index: 165k US products (lazy-loaded tiers) from the Open Food Facts bulk export, pre-scored and searchable offline-fast with typo tolerance. 2) USDA FoodData Central (Branded + generic foods) via the public demo key. 3) Live Open Food Facts search across country mirrors. Results are merged and de-duplicated by barcode. 4) Whole foods: USDA Foundation, SR Legacy and FNDDS. 5) Restaurants: official nutrition published by Chick-fil-A, Subway, Arby's, Dunkin' and Five Guys (fetched once, cached, robots.txt respected; preferred over USDA), plus USDA SR Legacy restaurant items for other chains. Chains that block automated access were skipped. A free FatSecret or Nutritionix key could add many more chains and branded restaurant items, but Lumi does not use one. Product links: <code>#/product/&lt;barcode&gt;</code> or <code>#/product/fdc-&lt;USDA id&gt;</code>.</p>
+  <h2>Data sources</h2><p class="small">1) Lumi's bundled index: 449k US products (165k from Open Food Facts plus 284k from USDA Branded Foods, lazy-loaded in tiers) from the Open Food Facts bulk export, pre-scored and searchable offline-fast with typo tolerance. 2) USDA FoodData Central (Branded + generic foods) via the public demo key. 3) Live Open Food Facts search across country mirrors. Results are merged and de-duplicated by barcode. 4) Whole foods: USDA Foundation, SR Legacy and FNDDS. 5) Restaurants: official nutrition published by Chick-fil-A, Subway, Arby's, Dunkin', Five Guys, Culver's, Shake Shack, Sonic, Jack in the Box, Qdoba, Whataburger, Jimmy John's, Little Caesars, Carl's Jr. and Tropical Smoothie Cafe (fetched once, cached, robots.txt respected; preferred over USDA), plus USDA SR Legacy restaurant items for other chains. 6) USDA Branded Foods: about 284k extra US barcoded products, with no photos. Chains that block automated access were skipped. A free FatSecret or Nutritionix key could add many more chains and branded restaurant items, but Lumi does not use one. Product links: <code>#/product/&lt;barcode&gt;</code> or <code>#/product/fdc-&lt;USDA id&gt;</code>.</p>
   <h2>Limits</h2><p class="small">Crowd-sourced and label data can be wrong or stale. There is no measured GI/GL; ingredients are used as proxies. Fat/protein-heavy meals (delayed rises) are only reflected via saturated fat. USDA's demo key is rate-limited per device.</p>
   <div class="note"><b>Informational only — not medical advice.</b> Always dose from the physical label and your own CGM data.</div></div>
   <div class="card small">Data © Open Food Facts contributors (ODbL) and USDA FoodData Central (public domain).</div>`;
