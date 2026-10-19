@@ -11,8 +11,34 @@ const r1 = v => v == null ? null : Math.round(v * 10) / 10;
 const num = v => (v === '' || v == null || isNaN(+v)) ? null : +v;
 
 /* Normalized product: {id, code, name, brand, qty, img, servQ, serv, nova, additives:[e...], ing, cat, cats, naLabel, liquid, src, n:{carbs,sugars,added,fiber,protein,fat,sat,trans,sodiumMg,kcal,polyols}} */
+/* Data sanity: never treat missing/implausible carbs as zero. Returns {ok, issues, dropFiber}. */
+const DRY = /breakfast-cereals|breakfast cereals|granola|muesli|crisps|chips|crackers|biscuits|cookies|pretzel|puff/i;
+const CARBY = /cereal|bread|biscuit|cookie|cracker|crisps|chips|pasta|noodle|\brice\b|cake|cand(y|ies)|granola|muesli|\bbars?\b|pretzel|tortilla|flour|oat|puff/i;
+function quality(p) {
+  const n = p.n || {}, issues = []; let dropFiber = false;
+  const c = n.carbs, f = n.fiber, su = n.sugars, pr = n.protein, fa = n.fat, k = n.kcal;
+  if (c == null) issues.push('carbs unknown');
+  if (c != null && su != null && su > c + 1) issues.push('sugars exceed carbs');
+  if (c != null && (c + (pr || 0) + (fa || 0)) > 105) issues.push('macros exceed 100 g');
+  if (c != null && f != null && c > 5 && f > c * 0.6) { dropFiber = true; }
+  if (c != null && k != null && k > 0 && pr != null && fa != null) {
+    const est = 4 * c + 4 * pr + 9 * fa; // fiber/polyols/alcohol make this a loose check
+    if (Math.abs(est - k) > Math.max(70, 0.4 * k)) issues.push('energy doesn’t match macros');
+  }
+  if (c === 0 && (su || 0) > 0.5) issues.push('0 carbs but has sugar');
+  if (c != null && c > 2 && k === 0) issues.push('0 calories but has carbs');
+  if (c != null && f != null && p.naLabel && f > c + 1) issues.push('fiber exceeds total carbs');
+  const carby = p.carby != null ? p.carby : CARBY.test((p.cats || '') + ' ' + (p.cat || ''));
+  if (c != null && c < 3 && carby && !/keto|low.?carb|zero.?carb/i.test(p.name || '')) issues.push('carbs implausibly low for category');
+  if (c === 0 && k == null) issues.push('zero carbs unverified (no energy value)');
+  const dry = (p.dry != null ? p.dry : DRY.test((p.cats || '') + ' ' + (p.cat || ''))) && !p.liquid && !/ready.to.eat|overnight|\bcups?\b|pouch|cooked|prepared|soup/i.test(p.name || '');
+  if (dry && k != null && k < 250) issues.push('values look per serving, not per 100 g (too few calories for a dry food)');
+  if (dry && k == null && c != null && c < 20 && !/keto|protein|grain.?free|nut granola|low.?carb/i.test(p.name || '')) issues.push('carbs implausibly low for a dry food');
+  return { ok: issues.length === 0, issues, dropFiber };
+}
 function netCarbs(p) {
   const n = p.n; if (n.carbs == null) return { net: null, note: '' };
+  if (quality(p).dropFiber) { return { net: n.carbs, note: 'Fiber value implausible (> 60% of carbs) — ignored; net = total carbs', fiberDropped: true }; }
   let net = n.carbs, note;
   if (p.naLabel && n.fiber != null) { net = Math.max(0, n.carbs - n.fiber); note = 'US label: net = total carbs − fiber'; }
   else if (p.naLabel) note = 'US label, fiber unknown: net = total carbs';
@@ -23,10 +49,12 @@ function netCarbs(p) {
 
 function score(p) {
   const n = p.n || {}, items = [];
-  const { net, note } = netCarbs(p);
+  const { net, note, fiberDropped } = netCarbs(p);
   const base = { net, netNote: note, perServ: null, servQ: p.servQ || null };
   if (p.servQ) base.perServ = { net: net == null ? null : net * p.servQ / 100 };
-  if (net == null && n.sugars == null) return Object.assign(base, { score: null, band: 'na', label: 'Not enough data', items, missing: true });
+  const q = quality(p); base.quality = q;
+  if (net == null) return Object.assign(base, { score: null, band: 'na', label: 'Carbs unknown', items, missing: true });
+  if (!q.ok) return Object.assign(base, { score: null, band: 'na', label: 'Data inconsistent', items, missing: true, bad: true });
   const ing = (p.ing || '').toLowerCase();
   const add = (key, label, pts, detail) => { if (Math.abs(pts) >= 0.5) items.push({ key, label, pts: Math.round(pts * 10) / 10, detail }); };
   const nc = net != null ? net : n.sugars;
@@ -53,7 +81,7 @@ function score(p) {
   if (st.length) { gi += Math.min(8, st.length * 4); hits.push(...st); }
   if (gi) add('gi', 'Glycemic proxies (syrups, refined starch)', -Math.min(18, gi), hits.slice(0, 4).join(', '));
   // --- buffers
-  if (n.fiber != null) {
+  if (n.fiber != null && !fiberDropped) {
     add('fiber', 'Fiber', Math.min(10, n.fiber), r1(n.fiber) + ' g/100');
     if (nc > 5 && n.fiber / (nc + n.fiber) >= 0.2) add('fiberRatio', 'High fiber relative to carbs', 3, '≥20%');
   }
@@ -90,7 +118,7 @@ function fromOFF(p) {
   let sod = g('sodium'); if (sod == null && g('salt') != null) sod = g('salt') / 2.5;
   const cats = (p.categories_tags || []).join(',');
   return { id: p.code, code: p.code, src: 'off', name: p.product_name || p.product_name_en || p.generic_name || 'Unnamed product', brand: String(p.brands || '').split(',')[0], qty: p.quantity || '',
-    img: p.image_front_small_url || p.image_front_url || p.image_small_url || p.image_url || '', servQ: num(p.serving_quantity) || null, serv: p.serving_size || '', nova: num(p.nova_group),
+    img: p.image_front_url || p.image_url || p.image_front_small_url || p.image_small_url || '', servQ: num(p.serving_quantity) || null, serv: p.serving_size || '', nova: num(p.nova_group),
     additives: addTags(p.additives_tags), ing: p.ingredients_text_en || p.ingredients_text || '', cat: (p.categories_tags || []).slice(-1)[0]?.replace(/^\w\w:/, '').replace(/-/g, ' ') || '', cats,
     naLabel: isNA(p.countries_tags || []), liquid: isLiquid(cats, p.serving_size, p.product_name),
     n: { carbs: g('carbohydrates'), sugars: g('sugars'), added: g('added-sugars'), fiber: g('fiber'), protein: g('proteins'), fat: g('fat'), sat: g('saturated-fat'), trans: g('trans-fat'), sodiumMg: sod != null ? sod * 1000 : null, kcal: g('energy-kcal') ?? (g('energy') != null ? g('energy') / 4.184 : null), polyols: g('polyols') } };
@@ -114,8 +142,9 @@ const titleCase = s => String(s || '').toLowerCase().replace(/\b([a-z])/g, c => 
 /* compact local-index record (see tools/build.js) */
 const DK = ['carbs', 'sugars', 'added', 'fiber', 'protein', 'fat', 'sat', 'trans', 'sodiumMg', 'kcal', 'polyols'];
 function fromCompact(a) {
-  const [code, name, brand, qty, img, servQ, serv, nova, nut, adds, ing, cat, flags] = a; const n = {}; DK.forEach((k, i) => n[k] = nut[i] == null ? null : nut[i]);
-  return { id: code, code, src: 'local', name, brand, qty, img: img ? (img.startsWith('http') ? img : 'https://images.openfoodfacts.org/images/products/' + img) : '', servQ, serv, nova, additives: adds ? adds.split(',') : [], ing, cat, cats: cat, naLabel: !!(flags & 1), liquid: !!(flags & 2), n };
+  const [code, name, brand, qty, img, servQ, serv, nova, nut, adds, ing, cat, flags] = a; const fl = flags || 0; const n = {}; DK.forEach((k, i) => n[k] = nut[i] == null ? null : nut[i]);
+  return { id: code, code, src: 'local', name, brand, qty, img: img ? (img.startsWith('http') ? img : 'https://images.openfoodfacts.org/images/products/' + img) : '', servQ, serv, nova, additives: adds ? adds.split(',') : [], ing, cat, cats: cat, naLabel: !!(fl & 1), liquid: !!(fl & 2), carby: fl & 16 ? !!(fl & 4) : undefined, dry: fl & 16 ? !!(fl & 8) : undefined, n };
 }
-return { score, fromOFF, fromUSDA, fromCompact, band, label, netCarbs, addTags, isNA, isLiquid, DK, ADDITIVES };
+const imgSize = (u, n) => u ? u.replace(/\.(100|200|400|full)\.jpg$/, '.' + n + '.jpg') : '';
+return { DRY, CARBY, imgSize, score, quality, fromOFF, fromUSDA, fromCompact, band, label, netCarbs, addTags, isNA, isLiquid, DK, ADDITIVES };
 });

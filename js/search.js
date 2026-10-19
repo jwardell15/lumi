@@ -20,13 +20,19 @@ function dl(a, b, max) { // bounded Damerau-Levenshtein
   }
   return prev[lb];
 }
+const IMGBASE = 'https://images.openfoodfacts.org/images/products/';
+function imgURL(code, v) {
+  if (!v) return '';
+  if (v[0] === '~') { const parts = code.length > 8 ? code.padStart(13, '0').match(/^(...)(...)(...)(.*)$/).slice(1).join('/') : code; return IMGBASE + parts + '/' + v.slice(1) + '.200.jpg'; }
+  return v.startsWith('http') ? v : IMGBASE + v;
+}
 class Engine {
   constructor() { this.docs = []; this.post = new Map(); this.buckets = new Map(); this.cats = []; this.tiers = 0; }
   add(data) {
     if (data.cats) this.cats = data.cats;
     for (const d of data.docs) {
       const i = this.docs.length;
-      const doc = { code: d[0], name: d[1], brand: d[2] || '', score: d[3], net: d[4] < 0 ? null : d[4], cat: this.cats[d[5]] || '', img: d[6] ? (d[6].startsWith('http') ? d[6] : 'https://images.openfoodfacts.org/images/products/' + d[6]) : '', src: 'local', rank: i };
+      const doc = { code: d[0], name: d[1], brand: d[2] || '', score: d[3] < 0 ? null : d[3], net: d[4] < 0 ? null : d[4], cat: this.cats[d[5]] || '', img: imgURL(d[0], d[6]), keys: d[7] ? d[7].split('.').map(Number) : [], src: 'local', rank: i };
       doc.nn = norm(doc.name + ' ' + doc.brand);
       this.docs.push(doc);
       const seen = new Map();
@@ -76,14 +82,16 @@ class Engine {
     res.sort((a, b) => b[0] - a[0]);
     return res.slice(0, limit).map(([r, d]) => Object.assign({ rel: r }, d));
   }
-  browse(re, limit = 120) { const r = []; for (const d of this.docs) { if (re.test(d.cat) || re.test(d.name)) { r.push(Object.assign({ rel: 100 - d.rank / this.docs.length * 50 }, d)); if (r.length >= limit) break; } } return r; }
+  browse(keyIdx, limit = 600) { const r = []; for (const d of this.docs) { if (d.keys.includes(keyIdx)) { r.push(Object.assign({ rel: 100 - d.rank / this.docs.length * 50 }, d)); if (r.length >= limit) break; } } return r; }
   similar(doc, limit = 6) {
     const cur = doc.score ?? 0; let pool = [];
-    if (doc.cat) pool = this.docs.filter(d => d.cat === doc.cat && d.code !== doc.code);
+    const leaf = (doc.keys || []).slice(-1)[0];
+    if (leaf != null) pool = this.docs.filter(d => d.keys.includes(leaf) && d.code !== doc.code);
+    if (pool.length < 4 && doc.cat) pool = pool.concat(this.docs.filter(d => d.cat === doc.cat && d.code !== doc.code));
     if (pool.length < 4) { const kw = toks(doc.name).slice(-2).join(' '); if (kw) pool = pool.concat(this.search(kw, { limit: 60 }).filter(d => d.code !== doc.code)); }
-    const seen = new Set(); return pool.filter(d => d.score >= cur + 5 && !seen.has(d.code) && seen.add(d.code)).sort((a, b) => b.score - a.score || a.rank - b.rank).slice(0, limit);
+    const seen = new Set(); return pool.filter(d => d.score != null && d.net != null && d.score >= cur + 5 && !seen.has(d.code) && seen.add(d.code)).sort((a, b) => b.score - a.score || a.rank - b.rank).slice(0, limit);
   }
   byCode(code) { if (!this._codes) { this._codes = new Map(); } if (this._codes.size !== this.docs.length) { this._codes.clear(); this.docs.forEach(d => this._codes.set(d.code, d)); } return this._codes.get(code); }
 }
-root.LumiSearch = { Engine, norm, toks, dl };
+root.LumiSearch = { Engine, norm, toks, dl, imgURL };
 })(typeof self !== "undefined" ? self : globalThis);
