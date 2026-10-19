@@ -1,7 +1,11 @@
-# Lumi — food scanner (T1D-weighted scoring)
-Static SPA: index.html, style.css, app.js. Data: Open Food Facts (client-side).
-Run locally: `python3 serve.py 8765` (static + optional /api/search proxy fallback).
-Any static host works (GitHub Pages, Netlify, Cloudflare Pages); product barcode lookup works everywhere.
-Text search uses OFF's cgi search (CORS-enabled when healthy) then search.openfoodfacts.org; the same-origin
-proxy in serve.py is only available when served by serve.py.
-Routes: #/, #/search/<q>, #/product/<barcode>, #/favorites, #/about.
+# Lumi v2 — food scanner with a carb-first (T1D-weighted) score
+Static PWA hosted on GitHub Pages: https://jwardell15.github.io/lumi/
+
+- `index.html`, `css/app.css`, `js/app.js` (UI/router), `js/score.js` (scoring, shared with the build), `js/search.js` (typo-tolerant local search)
+- `data/` bundled index built from the Open Food Facts bulk CSV: top 70k US products with nutrition (`index-0.json` = 15k most popular, loaded first; `index-1.json` = rest; `d/NN.json` = detail shards by last 2 barcode digits)
+- `sw.js` + `manifest.webmanifest` + `icons/` for install/offline
+- Search layers: local index → USDA FoodData Central (DEMO_KEY) → live Open Food Facts mirrors; merged & de-duplicated by barcode.
+- Links: `#/product/<barcode>` or `#/product/fdc-<USDA fdcId>`
+
+Rebuild data: run `tools/extract.py` (in the folder with `products.csv.gz`) then `node tools/build.js us.jsonl`.
+Local dev: `python3 serve.py 8765`.
