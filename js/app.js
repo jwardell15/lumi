@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '2.0.2';
+const VERSION = '2.0.3';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -148,9 +148,11 @@ function viewHome() {
   setTimeout(() => loadIndexFull().catch(() => {}), 1500);
 }
 
+const NONEN = /\b(le|la|les|du|des|de|et|au|aux|avec|sans|nature|fromage|lait|sucre|chocolat|yaourt|leche|con|sin|del|azucar|queso|und|mit|vanille|fraise|eau|pain|beurre|creme|natur|saveur|parfum|sabor|blanc|petit|recette|aceite|agua|bebida|dulce|avena)\b/i;
+const usEnglish = d => /^[\x20-\x7e]+$/.test(d.name + d.brand) && !NONEN.test(d.name) && ((d.code.length === 12) || (d.code.length === 13 && /^[01]/.test(d.code)));
 function topPicks() {
   const order = ['Yogurt', 'Cereal', 'Snacks', 'Bars', 'Dairy', 'Nuts', 'Bread', 'Sauces', 'Drinks', 'Sweets'];
-  const pool = engine.docs.slice(0, 6000).filter(d => d.score >= 72 && d.img && d.brand && d.net != null && d.net >= 2 && /^[\x20-\x7e]+$/.test(d.name + d.brand) && /^[01]/.test(d.code.padStart(13, '0')) && !/\bwater\b/i.test(d.name));
+  const pool = engine.docs.slice(0, 6000).filter(d => usEnglish(d) && d.score >= 72 && d.img && d.brand && d.net != null && d.net >= 2 && /^[\x20-\x7e]+$/.test(d.name + d.brand) && /^[01]/.test(d.code.padStart(13, '0')) && !/\bwater\b/i.test(d.name));
   const out = [], brands = new Set(), codes = new Set(), cats = new Set();
   for (const name of order) {
     const re = CHIPS.find(c => c[1] === name)[2];
@@ -377,4 +379,12 @@ function route() {
 }
 window.addEventListener('hashchange', route);
 route();
-if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController) return; // first install: nothing stale to replace
+    if (sessionStorage.getItem('lumi.reloaded') === VERSION) return; // loop guard
+    sessionStorage.setItem('lumi.reloaded', VERSION); location.reload();
+  });
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(r => r.update()).catch(() => {});
+}
