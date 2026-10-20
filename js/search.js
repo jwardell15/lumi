@@ -25,8 +25,25 @@ const SIZEW = /\b\d+(\.\d+)?\s*(fl\.? ?oz|oz|ounces?|ct|count|pk|pack|packs|g|gr
 const groupKey = (name, brand) => { const b = norm(String(brand || '').toLowerCase().replace(/[’']/g, '')); let n = norm(String(name || '').toLowerCase().replace(/[’']/g, '').replace(SIZEW, ' '));
   const bw = b.split(' ').filter(w => w.length > 2); n = n.split(' ').filter(w => !bw.includes(w)).map(w => w.length > 3 ? w.replace(/(es|s)$/, '') : w).join(' '); return b + '|' + n; };
 let WATER_; const water = () => WATER_ ?? (WATER_ = typeof self !== 'undefined' && self.LumiAisles ? self.LumiAisles.BYID['bv-water'] : -2); // plain/sparkling water with ~0 carbs counts as filler even when the name doesn't say "water"
+const OFFAL = /\b(liver|livers|gizzards?|hearts?|kidneys?|tongue|tripe|giblets?|feet|paws|necks?|brains?|spleen|lungs?|chitterlings|offal|mechanically separated|separable fat|skin only|backs?|frames?|testes|sweetbreads?|blood|marrow|ears?|snouts?)\b/;
+const MEATQ = /\b(chicken|beef|pork|turkey|lamb|steak)\b/;
+const COMMON = /\b(breasts?|thighs?|tenders?|tenderloins?|nuggets?|rotisserie|wings?|drumsticks?|ground|strips?|grilled|patties|sirloin|ribeye|chops?|loin)\b/;
 const fixName = s => String(s || '').replace(/([A-Za-z])['’]S\b/g, "$1's");
-function dedupe(list, get = x => x) { const seen = new Map(), out = []; for (const x of list) { const d = get(x); const k = groupKey(d.name, d.brand); const bk = norm(String(d.brand || '').toLowerCase()).split(' ').slice(0, 2).join(' '); const k2 = d.score != null && d.net != null ? `v|${bk}|${d.score}|${d.h}|${d.net}|${d.sugar}|${d.cat}` : null; const f = seen.get(k) || (k2 && seen.get(k2)); if (k2 && !f) seen.set(k2, d); if (f) { f.sizes = (f.sizes || 1) + 1; continue; } seen.set(k, d); out.push(x); } return out; }
+/* v6.3.3 fuzzy near-duplicate grouping: same brand (first brand word), token-set similarity >= 0.85 after
+   stemming/singularizing and removing size/pack/store/brand/filler words, and nutrition within ~10% */
+const DSTOP = new Set('fresh costco walmart target kroger kirkland signature the and with of a an in for by brand pack value family size count ct oz lb fl organic natural all premium original classic new 100 product boneless skinless wild caught farm farmed raised antibiotic free range grade usda'.split(' '));
+const dstem = w => w.length > 4 && w.endsWith('ies') ? w.slice(0, -3) + 'y' : w.length > 3 && /(ches|shes|xes|sses)$/.test(w) ? w.slice(0, -2) : w.length > 3 && w.endsWith('s') && !w.endsWith('ss') ? w.slice(0, -1) : w.length > 5 && w.endsWith('ing') ? w.slice(0, -3) : w;
+function dtoks(d) { const bw = new Set(norm(String(d.brand || '').toLowerCase()).split(' ')); const W = norm(String(d.name || '').toLowerCase().replace(/[’']/g, '').replace(SIZEW, ' ')).split(' ').filter(w => w && !DSTOP.has(w) && !/^\d+$/.test(w)); const W2 = W.filter(w => !bw.has(w)); return new Set((W2.length ? W2 : W).map(dstem)); }
+const near = (a, b, tol = 0.1, abs = 1) => a == null || b == null ? a == b : Math.abs(a - b) <= Math.max(abs, tol * Math.max(a, b));
+function simTok(A, B) { if (!A.size || !B.size) return A.size === B.size ? 1 : 0; let k = 0; for (const t of A) if (B.has(t)) k++; const m = Math.min(A.size, B.size); return (m < 2 && A.size !== B.size) ? k / Math.max(A.size, B.size) : k / m; }
+function sameNut(a, b) { return near(a.net, b.net) && near(a.sugar, b.sugar) && near(a.score, b.score, 0.1, 3) && near(a.h, b.h, 0.1, 5); }
+function dedupe(list, get = x => x, max = Infinity) { const seen = new Map(), buck = new Map(), out = [];
+  for (const x of list) { if (out.length >= max) break; const d = get(x); const k = groupKey(d.name, d.brand);
+    let f = seen.get(k); const bk = (norm(String(d.brand || '').toLowerCase()).split(' ')[0] || '?'); const T = dtoks(d);
+    if (!f) { const B = buck.get(bk) || []; for (let i = 0; i < B.length && i < 400; i++) { const [t2, d2] = B[i]; if (simTok(T, t2) >= 0.85 && sameNut(d, d2)) { f = d2; break; } } }
+    if (f) { f.sizes = (f.sizes || 1) + 1; continue; }
+    d.sizes = 0; seen.set(k, d); if (!buck.has(bk)) buck.set(bk, []); buck.get(bk).push([T, d]); out.push(x); }
+  return out; }
 const IMGBASE = 'https://images.openfoodfacts.org/images/products/';
 function imgURL(code, v) {
   if (!v) return '';
@@ -86,6 +103,10 @@ class Engine {
       let r = (s / qt.length) * 100 * (c / qt.length);
       if (d.nn.includes(nq)) r += 25; if (norm(d.name).startsWith(nq)) r += 10;
       r += 18 * (1 - d.rank / N);
+      // v6.3.3: common cuts first, offal last (unless asked for), and blend in the rating
+      if (!OFFAL.test(nq) && OFFAL.test(d.nn)) r -= 30;
+      if (MEATQ.test(nq) && COMMON.test(d.nn)) r += 12;
+      if (d.score != null) r += 0.08 * d.score;
       if (d.src === 'whole') { const nn = norm(d.name), w = nn.split(' '); if (nn.startsWith(qt[0])) r += 14; if (/\braw\b/.test(nn)) r += 6; r -= Math.min(10, Math.max(0, w.length - qt.length - 1) * 1.5); }
       res.push([r, d]);
     }

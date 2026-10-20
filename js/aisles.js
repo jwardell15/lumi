@@ -1,7 +1,7 @@
 /* Lumi v6.3 grocery aisles: precise subcategories from OFF category tags and USDA branded_food_category. Shared by build (node) and app. */
 (function (root, f) { if (typeof module === 'object' && module.exports) module.exports = f(); else root.LumiAisles = f(); })(typeof self !== 'undefined' ? self : this, function () {
 'use strict';
-const AISLES = [['produce', 'Produce', '🥬'], ['meat', 'Meat & seafood', '🥩'], ['dairy', 'Dairy & eggs', '🥛'], ['bakery', 'Bakery', '🍞'], ['frozen', 'Frozen', '🧊'], ['pantry', 'Pantry', '🥫'], ['snacks', 'Snacks', '🍿'], ['bev', 'Beverages', '🥤'], ['bfast', 'Breakfast', '🥣'], ['cond', 'Condiments & sauces', '🍅'], ['baking', 'Baking', '🧁'], ['canned', 'Canned goods', '🥫'], ['deli', 'Deli', '🥪'], ['baby', 'Baby', '🍼']];
+const AISLES = [['produce', 'Produce', '🥬'], ['meat', 'Meat & seafood', '🥩'], ['dairy', 'Dairy & eggs', '🥛'], ['bakery', 'Bakery', '🍞'], ['frozen', 'Frozen', '🧊'], ['pantry', 'Pantry', '🥫'], ['snacks', 'Snacks', '🍿'], ['bev', 'Beverages', '🥤'], ['bfast', 'Breakfast', '🥣'], ['cond', 'Condiments & sauces', '🍅'], ['baking', 'Baking', '🧁'], ['canned', 'Canned goods', '🥫'], ['deli', 'Deli', '🥪'], ['baby', 'Baby', '🍼'], ['supp', 'Supplements & powders', '💊']];
 // [id, aisle, label, OFF tag regex (on categories_tags), USDA category regex, name regex (fallback)]
 const SUB = [
   // frozen first: "frozen" beats the food type
@@ -30,7 +30,7 @@ const SUB = [
   ['dl-prep', 'deli', 'Prepared meals, sandwiches & salads', /en:sandwiches|en:prepared-salads|en:meals\b/, /deli salads|other deli|prepared subs|sandwiches\/filled|prepared wraps|lunch snacks & combinations|entrees, sides & small meals|cooked & prepared|ready-made combination meals$|prepared meals|deli and chilled|antipasto/i, null],
   // dairy & eggs
   ['dy-eggs', 'dairy', 'Eggs', /en:eggs\b|en:chicken-eggs/, /eggs/i, null],
-  ['dy-plantmilk', 'dairy', 'Plant-based milk', /en:plant-based-milk|en:(almond|oat|soy)-milks?/, /plant based milk/i, null],
+  ['dy-plantmilk', 'bev', 'Plant-based milk & creamers', /en:plant-based-milk|en:(almond|oat|soy)-milks?/, /plant based milk/i, null],
   ['dy-milk', 'dairy', 'Milk', /en:milks\b|en:(whole|skimmed|semi-skimmed|flavoured|chocolate)-milks?/, /^milk$|milk\/milk substitutes|milk\/cream/i, null],
   ['dy-yogurt', 'dairy', 'Yogurt', /en:yogurts|en:yoghurts/, /yogurt|dairy foods\/yoghurts/i, null],
   ['dy-cheese', 'dairy', 'Cheese', /en:cheeses/, /cheese(?!.*sauce)|frozen food made from the curd/i, null],
@@ -105,7 +105,9 @@ const SUB = [
   ['pt-spice', 'pantry', 'Spices & seasonings', /en:spices|en:seasonings|en:herbs|en:salts|en:condiment-mixes/, /seasoning mixes|herbs & spices|herbs\/spices|herbs and spices|extracts\/salt/i, null],
   // baby
   ['by-formula', 'baby', 'Baby formula', /en:infant-formulas|en:baby-milks/, /children's nutritional/i, /\binfant formula\b/],
-  ['by-food', 'baby', 'Baby food & snacks', /en:baby-foods|en:baby-food/, /baby\/infant/i, null]
+  ['by-food', 'baby', 'Baby food & snacks', /en:baby-foods|en:baby-food/, /baby\/infant/i, null],
+  // v6.3.3 (appended so stored indexes stay valid)
+  ['sp-powder', 'supp', 'Protein, greens & supplement powders', /en:protein-powders|en:bodybuilding-supplements|en:dietary-supplements/, /vitamins|herbal supplements|^supplements|sport supplements/i, /\b(protein powder|greens powder|superfood (blend|powder)|collagen (peptides|powder)|whey (protein|isolate)|pre-?workout|creatine|supplement)\b/]
 ];
 const BYID = Object.fromEntries(SUB.map((s, i) => [s[0], i]));
 // name keyword fallback (only when no category tag or USDA category matched), most specific first
@@ -125,7 +127,12 @@ const NAMEMAP = [[/\bfrozen\b.*\bpizza|\bpizza\b.*\bfrozen/, 'fz-pizza'], [/\bic
   [/\bmac(aroni)? (and|&) cheese|\bramen\b|instant noodles|\bhelper\b|rice mix|stuffing/, 'pt-boxed'], [/\bpasta\b|spaghetti|penne|macaroni|fettuccine|linguine|rotini|lasagna noodles|\bnoodles\b/, 'pt-pasta'], [/\brice\b|quinoa|couscous|farro|barley/, 'pt-rice'], [/\blentils|split peas|dry beans/, 'pt-beans'],
   [/\boil\b|vinegar/, 'pt-oil'], [/\bseasoning|\bspices?\b|\bsalt\b|pepper(corns)?\b|\bpaprika|cinnamon|\boregano|\bcumin|\brub\b/, 'pt-spice'], [/\bflour\b|cornmeal/, 'bk2-flour'], [/\bsugar\b|sweetener|stevia|monk fruit/, 'bk2-sugar'], [/\b(cake|brownie|muffin|cookie|pancake) mix/, 'bk2-mix'], [/chocolate chips|sprinkles|frosting|icing/, 'bk2-chips'], [/baking (soda|powder)|\bextract\b|\byeast\b/, 'bk2-other'],
   [/\bbaby\b|\binfant|toddler/, 'by-food'], [/\b(apples?|bananas?|oranges?|grapes|berries|strawberries|blueberries|avocados?|lemons?|limes?|peaches|pears|mangos?|pineapple|watermelon|cherries)\b/, 'pr-fruit'], [/\b(lettuce|spinach|kale|salad|carrots?|broccoli|onions?|potatoes|peppers?|cucumbers?|celery|mushrooms?|tomatoes|zucchini|cauliflower|cabbage)\b/, 'pr-veg']];
-const OVR = [[/\b(peanut|almond|cashew|sunflower( seed)?|pumpkin seed|seed|nut|hazelnut|pecan|walnut|pistachio|macadamia|soy ?nut|watermelon seed) butter\b|\btahini\b/, 'pt-nutbutter', /\b(cookies?|cups?|bars?|crackers?|pretzels?|filled|sandwich|wafers?|candy|bites|ice cream|frozen|gelato|pies?|fudge|chocolate|cheesecake|cereal|granola|puffs|eggs?|balls|protein (shake|drink|powder)|shakes?|trail|mix|clusters|popcorn|dessert|cakes?|brownies?|bread|swirl|squares|truffles?|nougat|bark|treats?|dog|oats|oatmeal|yogurt|smoothie|creamer|syrup|sauce)\b/],
+const EGGSUB = /\b(egg (substitute|replacer|alternative)s?|vegan egg|plant[- ]based egg|just egg|egg[- ]free egg|eggless)\b/;
+const OVR = [[/\b((almond|oat|coconut|soy|cashew|plant[- ]based|pea|macadamia|hemp|non-?dairy|dairy[- ]free|vegan)( milk)? (coffee )?creamers?|(almond|oat|soy|cashew|coconut|pea|macadamia|hemp|rice) (milk|beverage|drink)|non-?dairy (milk|beverage))\b/, 'dy-plantmilk', /\b(chocolate bar|ice cream|frozen|yogurt|cheese)\b/],
+  [/\b(egg (substitute|replacer|alternative)s?|vegan egg|plant[- ]based egg|just egg|egg[- ]free egg|eggless)\b/, 'mt-plant', null],
+  [/\b(greens? (powder|blend|superfood)|organic greens|super ?greens|superfood (blend|powder|greens)|protein powder|collagen (peptides|powder)|whey (protein|isolate)|pre-?workout|creatine|plant protein powder|meal replacement powder)\b/, 'sp-powder', /\b(bars?|cookies?|chips|shakes? ready|ready to drink|rtd|yogurt|cereal|pasta)\b/],
+  [/\b(bubly|la ?croix|spindrift|sparkling (mineral |spring )?water|seltzer( water)?|perrier|san pellegrino|s\.? ?pellegrino|topo chico|polar seltzer|waterloo|aha sparkling|klarbrunn|schweppes seltzer|vintage seltzer|canada dry seltzer)\b/, 'bv-water', /\b(hard|vodka|tequila|alcohol|alcoholic|spiked|truly|white claw|high noon|coors|smirnoff|bud light|corona|bon (&|and) viv|vizzy|michelob|bacardi|ketel|cutwater|nutrl|beer|abv|proof|cocktail|rum|gin|whiskey|malt)\b/],
+[/\b(peanut|almond|cashew|sunflower( seed)?|pumpkin seed|seed|nut|hazelnut|pecan|walnut|pistachio|macadamia|soy ?nut|watermelon seed) butter\b|\btahini\b/, 'pt-nutbutter', /\b(cookies?|cups?|bars?|crackers?|pretzels?|filled|sandwich|wafers?|candy|bites|ice cream|frozen|gelato|pies?|fudge|chocolate|cheesecake|cereal|granola|puffs|eggs?|balls|protein (shake|drink|powder)|shakes?|trail|mix|clusters|popcorn|dessert|cakes?|brownies?|bread|swirl|squares|truffles?|nougat|bark|treats?|dog|oats|oatmeal|yogurt|smoothie|creamer|syrup|sauce)\b/],
   [/\b(chips|crisps)\b/, 'sn-chips', /\b(chocolate|baking|cookies?|ice cream|mint chip|ahoy|pickles?)\b/],
   [/\b(almonds|cashews|peanuts|pistachios|pecans|walnuts|mixed nuts|trail mix|sunflower seeds|pumpkin seeds)\b/, 'sn-nuts', /\b(milk|butter|bars?|chocolate covered|flour|cereal|granola|beverage|creamer|yogurt|cheese)\b/],
   [/\b(egg noodles|noodles)\b/, 'pt-pasta', /\b(soup|ramen|instant|cup|bowl|meal|frozen|with|alfredo|stroganoff|chicken)\b/],
@@ -141,10 +148,29 @@ function classify(r) {
   const refine = i => { const a = SUB[i][1]; for (let j = 0; j < SUB.length; j++) if (j !== i && SUB[j][1] === a && SUB[j][5] && SUB[j][5].test(n)) return j; return i; };
   // v6.3.1 strong name overrides: items whose identity is unambiguous beat loose category tags (seed butters were landing in Dairy, beans/tempeh in Snacks)
   const base = classify0(c, u, n, refine);
-  if (base >= 0 && (SUB[base][1] === 'frozen' || /^(pt-beans|cn-beans|pt-nutbutter|cn-soup|dl-dips|cd-pickles|sn-bars)$/.test(SUB[base][0]))) return base;
+  if (base >= 0 && SUB[base][1] === 'dairy' && EGGSUB.test(n)) return BYID['mt-plant'];
+  if (base >= 0 && (SUB[base][1] === 'frozen' || /^(pt-beans|cn-beans|pt-nutbutter|cn-soup|dl-dips|cd-pickles|sn-bars|bv-alcohol)$/.test(SUB[base][0]))) return base;
   for (const [re, id, not] of OVR) if (re.test(n) && !(not && not.test(n))) return BYID[id];
-  return base;
+  return gate(base, n, c, u);
 }
+/* v6.3.3 aisle gates: a "type" aisle only keeps items whose name says what they are; misfits fall back to the name map (outside that aisle) or to uncategorized */
+const GATES = {
+  dairy: /\b(milks?|cheeses?|cheddar|mozzarella|parmesan|parmigiano|provolone|swiss|gouda|brie|feta|ricotta|cottage|colby|jack|havarti|queso|mascarpone|burrata|halloumi|paneer|string|yog(h)?urts?|skyr|kefir|lassi|butter|ghee|cream|creamer|half (&|and) half|eggs?|egg whites|whites|curds?|whey|dairy|custard|pudding|margarine|spread|buttermilk|lactose|ultra-filtered|a2|chobani|fage|oikos|siggi|fairlife|horizon|almond|oat|soy|coconut|cashew|rice|pea|plant|nog|frozen yogurt|flan|mousse|dessert|tapioca|rice pudding|crema|labneh|quark|neufchatel|fromage|chevre|goat|sheep|blue|bleu|camembert|muenster|asiago|romano|pecorino|manchego|gruyere|fontina|emmental|pepper jack|monterey|american|velveeta|singles|slices|shredded|crumbles|block)\b/,
+  meat: /\b(chicken|beef|pork|turkey|lamb|veal|bison|venison|duck|goose|game|steak|steaks|ribeye|sirloin|brisket|roast|ribs?|chops?|loin|tenderloin|ground|burgers?|patties|meatballs?|sausages?|bratwurst|kielbasa|franks?|hot dogs?|bacon|ham|jerky|salami|pepperoni|prosciutto|chorizo|fish|salmon|tuna|cod|tilapia|halibut|trout|catfish|pollock|haddock|mahi|swordfish|sardines?|anchov|mackerel|shrimp|prawns?|crab|lobster|scallops?|clams?|mussels?|oysters?|squid|calamari|octopus|crawfish|seafood|surimi|krab|sushi|rolls?|maki|nigiri|sashimi|poke|tempura|ceviche|plant[- ]based|meatless|vegan|vegetarian|veggie|tofu|tempeh|seitan|beyond|impossible|gardein|morningstar|egg|wings?|drumsticks?|thighs?|breasts?|legs?|quarters|whole|fillets?|filets?|strips|tenders|nuggets|cutlets?|kabobs?|carnitas|barbacoa|pulled|rotisserie|smoked|cured|deli|meat|poultry|links|crumbles)\b/,
+  produce: /\b(fruits?|vegetables?|veggies?|salads?|greens|lettuce|spinach|kale|arugula|cabbage|broccoli|cauliflower|carrots?|celery|cucumbers?|tomato(es)?|peppers?|onions?|garlic|potato(es)?|sweet potato|squash|zucchini|mushrooms?|corn|peas|beans|asparagus|brussels|beets?|radish|herbs?|cilantro|parsley|basil|mint|apples?|bananas?|oranges?|grapes?|berries|strawberr|blueberr|raspberr|blackberr|cherr|peach|pears?|plums?|mangos?|mangoes|pineapple|melon|watermelon|cantaloupe|kiwi|lemons?|limes?|avocados?|grapefruit|clementines?|mandarins?|dates|figs|raisins|apricots?|cranberr|prunes|coconut|papaya|pomegranate|dried|slaw|sprouts|stir fry|medley|florets|edamame|ginger|jalape|chiles?|leeks?|shallots?|scallions?|bok choy|chard|collard|romaine|spring mix|microgreens|okra|eggplant|artichoke|fennel|yams?|plantains?|jicama|turnips?|parsnips?|rutabaga|tomatillo)\b/
+};
+const TRUST = { dairy: /en:(dairies|yogurts|yoghurts|cheeses|milks|creams|butters|eggs|fermented-milk|plant-based-milk)|yogurt|cheese|^milk|dairy|cream|butter|eggs|plant based milk/i,
+  meat: /en:(meats|poultr|fishes|seafood|sausages|hams|bacons|meat-analogues)|meat|poultry|chicken|turkey|beef|pork|fish|seafood|shellfish|sausage|bacon|frankfurt|substitutes/i,
+  produce: /en:(fresh-fruits|fresh-vegetables|dried-fruits|fruits|vegetables)|fruit|vegetable|produce|salads|berries|peppers/i };
+const NOTDAIRY = /\b(lettuce|squash|lima|butter beans|(peanut|almond|cashew|nut|seed|apple|cookie) butter|butternut|butterscotch|buttermilk (biscuits?|pancakes?|bread|ranch)|cream of (mushroom|chicken|celery)|ice cream cones?|cream crackers|eggplant|egg (rolls?|noodles))\b/;
+function fallback(a, n) { for (const [re, id] of NAMEMAP) if (SUB[BYID[id]][1] !== a && re.test(n)) return BYID[id]; return -1; }
+function gate(i, n, c = '', u = '') {
+  if (i < 0) return i; const a = SUB[i][1], g = GATES[a]; if (a === 'dairy' && NOTDAIRY.test(n)) return fallback(a, n); if (!g || g.test(n)) return i;
+  if (TRUST[a] && (TRUST[a].test(c) || TRUST[a].test(u))) return i; // the category tag itself says it belongs (e.g. "Blended Strawberry" tagged en:yogurts)
+  for (const [re, id] of NAMEMAP) if (SUB[BYID[id]][1] !== a && re.test(n)) return BYID[id];
+  return -1;
+}
+function misfit(i, n) { if (i < 0) return false; const g = GATES[SUB[i][1]]; return !!g && !g.test(String(n || '').toLowerCase()); } // name-only check, used by the audit
 function classify0(c, u, n, refine) {
   if (c) for (let i = 0; i < SUB.length; i++) if (SUB[i][3] && SUB[i][3].test(c)) return i;
   if (u) for (let i = 0; i < SUB.length; i++) if (SUB[i][4] && SUB[i][4].test(u)) return refine(i);
@@ -152,5 +178,5 @@ function classify0(c, u, n, refine) {
   return -1;
 }
 const isPet = cats => PET.test(cats || '');
-return { AISLES, SUB, BYID, WHOLE, classify, isPet };
+return { AISLES, SUB, BYID, WHOLE, GATES, classify, isPet, misfit };
 });

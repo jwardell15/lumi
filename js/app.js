@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '6.3.2';
+const VERSION = '6.3.3';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -228,7 +228,7 @@ function topPicks() {
   whole.sort((a, b) => a.name.length - b.name.length); // simple, recognizable names first
   let w = 0; for (const ki of wsub) { if (w >= 2) break; if (take(whole, x => x.keys.includes(ki) && /raw|cooked|boiled|^[^,]+,?[^,]*$/i.test(x.name))) w++; }
   rest.sort((a, b) => (MAIN.test(b.name) - MAIN.test(a.name)) || b.score - a.score); take(rest, () => true); take(rest, () => true);
-  return out.slice(0, 12);
+  return (typeof diversify === 'function' ? diversify(out) : out).slice(0, 12);
 }
 const NOTMEAL = /sauce|syrup|dressing|dip\b|onion|lemon|lime\b|crouton|nut blend|applesauce|slice\b|packet|add-?in|topping|pickle|ketchup|mayo|mustard|lettuce|tomato|jalape|pepper|seasoning|creamer|sweetener|sugar|\bzero\b|diet|water|\btea\b|coffee|espresso|americano|\bbun\b|tortilla|patty|bacon\b|cheese$|butter\b|jelly|jam\b|honey|salsa|guac|sour cream|ice\b|lid|extra\b|xtra|side of|substitute|\boz\.?\)$|sprinkle|shot\b|flavor|mints?\b|relish|shell|^add\b/i;
 const MAIN = /sandwich|burger|wrap|bowl|salad|tender|nugget|chicken|taco|burrito|quesadilla|pizza|\bsub\b|melt|club|grilled|egg|omelet|platter|wings?\b|steak|turkey|ham\b|italian|slice of|unwich|chili|soup/i;
@@ -486,17 +486,24 @@ async function viewProduct(id) {
   if (!s.missing) renderSwaps(p, s);
   drawBetter(p, s, hr);
 }
+function orTryWater(doc, limit = 4) {
+  if (doc.ai !== LumiAisles.BYID['bv-soda']) return [];
+  const W = LumiAisles.BYID['bv-water'], sp = /\b(sparkling|seltzer|bubly|la ?croix|spindrift|pellegrino|perrier|topo chico|polar)\b/i;
+  return LumiSearch.dedupe(engine.docs.filter(d => d.ai === W && d.score != null && sp.test(d.name + ' ' + d.brand)).sort((a, b) => (b.img ? 1 : 0) - (a.img ? 1 : 0) || a.rank - b.rank), x => x, limit);
+}
 function swapsFor(doc, cur, limit = 6) {
   const leaf = (doc.keys || []).slice(-1)[0]; if (leaf == null || cur.score == null || ['whole', 'rest'].includes(C.KEYS[leaf])) return [];
   const out = [];
+  const SODA = LumiAisles.BYID['bv-soda'], soda = doc.ai === SODA;
   for (const d of engine.docs) {
     if (!d.keys.includes(leaf) || d.code === doc.code || d.score == null || d.net == null || d.fl) continue;
+    if (soda && d.ai !== SODA) continue; // a soda's swaps are sodas; sparkling water is offered separately
     const gain = d.score - cur.score, red = (cur.net ?? d.net) - d.net;
     if (gain < 5 || red < -2 || (cur.net >= 10 && d.net < cur.net * 0.35)) continue;
     out.push({ d, gain, red, sug: cur.sugar != null && d.sugar != null ? cur.sugar - d.sugar : 0, rank: gain + 0.6 * red - d.rank / engine.docs.length * 5 });
   }
   out.sort((a, b) => Math.abs(a.d.score - b.d.score) <= 5 ? (a.d.net - b.d.net) || b.rank - a.rank : b.rank - a.rank); // within ~5 points, lower net carbs wins
-  const seen = new Set(); return out.filter(x => { const k = LumiSearch.groupKey(x.d.name, x.d.brand); if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, limit)
+  return LumiSearch.dedupe(out, x => x.d, limit)
     .map(x => Object.assign({}, x.d, { reason: [x.red >= 1 ? `−${Math.round(x.red)}g net carbs` : '', x.sug >= 3 ? 'less sugar' : '', `+${x.gain} pts`].filter(Boolean).join(', ') }));
 }
 async function renderSwaps(p, s) {
@@ -506,8 +513,9 @@ async function renderSwaps(p, s) {
     const doc = engine.byCode(p.code || p.id) || { code: p.code || p.id, name: p.name, keys: C.match(p.cats || '') };
     const sw = swapsFor(doc, { score: s.score, net: s.net, sugar: p.n.sugars });
     const leaf = (doc.keys || []).slice(-1)[0];
-    el.innerHTML = sw.length ? `<div class="card"><h2>Better swaps</h2><div class="small" style="margin:-6px 0 8px">Same category${leaf != null ? ': ' + esc(C.CATS[C.KEYS[leaf]][1]) : ''} · per 100${p.liquid ? 'ml' : 'g'}</div><div class="swaps">${sw.map(d => `<a class="swap" href="#/product/${esc(d.code)}">${thumb(d.img, d.name, d.keys, d.cat, false, d.brand)}<div class="n">${esc(d.name)}</div><div class="s"><span>${esc((d.brand || '').slice(0, 14))}</span><span class="pills">${pills(d)}</span></div><div class="why">${esc(d.reason)}</div></a>`).join('')}</div></div>` : '';
+    el.innerHTML = sw.length ? `<div class="card"><h2>Better swaps</h2><div class="small" style="margin:-6px 0 8px">Same category${leaf != null ? ': ' + esc(C.CATS[C.KEYS[leaf]][1]) : ''} · per 100${p.liquid ? 'ml' : 'g'}</div><div class="swaps">${sw.map(d => `<a class="swap" href="#/product/${esc(d.code)}">${thumb(d.img, d.name, d.keys, d.cat, false, d.brand)}<div class="n">${esc(d.name)}</div><div class="s"><span>${esc((d.brand || '').slice(0, 14))}</span><span class="pills">${pills(d)}</span></div><div class="why">${esc(d.reason)}</div></a>`).join('')}</div>${orTry(doc)}</div>` : orTry(doc) ? `<div class="card">${orTry(doc)}</div>` : '';
   };
+  const orTry = doc => { const w = orTryWater(doc); return w.length ? `<h3 class="ortry">Or try sparkling water</h3><div class="swaps" id="orTry">${w.map(d => `<a class="swap" href="#/product/${esc(d.code)}">${thumb(d.img, d.name, d.keys, d.cat, false, d.brand)}<div class="n">${esc(d.name)}</div><div class="s"><span>${esc((d.brand || '').slice(0, 14))}</span><span class="pills">${pills(d)}</span></div><div class="why">0 g sugar, no sweetener needed</div></a>`).join('')}</div>` : ''; };
   draw(); loadIndexFull().then(draw).catch(() => {});
 }
 async function share(p, s) {

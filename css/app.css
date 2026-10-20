@@ -288,3 +288,4 @@ td.neg{color:#c0392b;font-weight:700}
 }
 @media (min-width:1400px){.list{grid-template-columns:repeat(4,minmax(0,1fr))}}
 #app.prodv .list{grid-template-columns:1fr}
+.ortry{font-size:15px;margin:14px 0 8px}

@@ -101,11 +101,12 @@ function betterFor(p, s, hr, limit = 10) {
   const val = d => hp ? d.h : d.score; const leaf = (doc.keys || []).filter(k => !['whole', 'rest'].includes(C.KEYS[k])).slice(-1)[0];
   let pool = leaf != null ? engine.docs.filter(d => d.keys.includes(leaf)) : [];
   if (pool.length < 4 && doc.cat) pool = pool.concat(engine.docs.filter(d => d.cat === doc.cat));
+  const SODA = LumiAisles.BYID['bv-soda']; if (doc.ai === SODA) pool = pool.filter(d => d.ai === SODA); // soda → sodas; sparkling water is a separate "or try"
   const need = Math.max(50, cur + 10); const seen = new Set();
   const c = pool.filter(d => d.code !== doc.code && !d.fl && val(d) != null && val(d) >= need && d.score != null && !conflicts(d) && (d.src !== 'local' || usEnglish(d)))
     .sort((a, b) => Math.abs(val(a) - val(b)) <= 5 && a.net != null && b.net != null && a.net !== b.net ? a.net - b.net : (val(b) + (b.img ? 6 : 0) - b.rank / 4000) - (val(a) + (a.img ? 6 : 0) - a.rank / 4000))
-    .filter(d => { const k = LumiSearch.groupKey(d.name, d.brand); if (seen.has(k)) return false; seen.add(k); return true; });
-  return { cur, hp, leaf, items: c.slice(0, limit) };
+    ;
+  return { cur, hp, leaf, items: LumiSearch.dedupe(c, x => x, limit) };
 }
 async function drawBetter(p, s, hr) {
   const el = $('#better'); if (!el) return; try { await loadIndex(); } catch { return; }
