@@ -22,6 +22,17 @@ Local dev: `python3 serve.py 8765`.
 - v5.1: every item also gets a Yuka-style Health rating (js/health.js: Nutri-Score 2023 ~60%, additive risk tiers ~30%, organic ~10%; nutrition-only when ingredients are unknown). Precomputed in tools/build.js; organic/fruit-veg share come from `offdata/side.py`.
 - v6: additive & cosmetic-ingredient pages with cited sources (`js/encyc.js`; every link checked), allergen/diet alerts (`js/diet.js`, OFF allergen/traces/analysis tags via `tools/side2.py` plus ingredient text), cosmetics from the Open Beauty Facts bulk export (`tools/extract_obf.py`, then `node tools/build_cos.js`; run it after `tools/build.js`, which clears `data/`), better options after a scan, and a local Overview.
 
+## v8.0
+- **Blood sugar impact card.** When the product name matches a food in Atkinson, Foster-Powell & Brand-Miller, *International tables of glycemic index and glycemic load values: 2008*, Diabetes Care 31(12):2281–3, doi:10.2337/dc08-1239, Table 1 (`ref/gi2008.json`), it uses that GI and the estimated glycemic load per serving. Otherwise it shows a labeled heuristic based on net carbs, sugar share, fiber, fat and protein. Informational only; no dosing.
+- **Label photo scanning** (`#/label`). OCR runs on-device with Tesseract.js 5 from jsDelivr; the photo isn't uploaded. Values go into editable fields, then the food is saved as a local custom product marked "user-entered". The barcode-not-found page links here.
+- **Log.** Day / Week (carbs by meal) / Report tabs. The report (`#/report/7|14|30`) is printable with averages, per-meal averages, daily totals and top carb sources, and has CSV export. It contains no doses.
+- **Share cards** (canvas PNG via the Web Share API with files, or download plus a copied link) for products, swaps (Compare) and lists. Static Open Graph image at `icons/og.png`.
+- **Search.**
+  - Category matching: "cereal" also matches category-tagged products like Cheerios.
+  - At most 3 results per brand in the top 30.
+- **Ingredient watchlist** (`#/alerts`): hidden sugars, maltodextrin, seed oils, artificial sweeteners, plus custom words. Matches are highlighted on product pages and flagged in results when ingredients are known.
+- **Offline.** Viewed, saved, logged and list products are kept locally, and lookups fall back to those copies when the network fails. The service worker caches the app shell and the OCR engine.
+
 ## v7.5 (Yuka-style rows)
 - Hazardous-substances row:
   - No additives → Positives shows "No additives / No hazardous substances ✓".

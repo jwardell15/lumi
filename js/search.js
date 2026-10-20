@@ -44,6 +44,7 @@ function fixBrand(b, name) {
 /* well-known US consumer brands get a relevance boost */
 const KNOWNB = /^(chobani|fage|oikos|siggi'?s|two good|ratio|yoplait|dannon|danone|activia|light \+ fit|kirkland|kirkland signature|great value|good & gather|market pantry|365|365 by whole foods market|kroger|private selection|simple truth|simple truth organic|trader joe'?s|stonyfield|stonyfield organic|noosa|tillamook|horizon|horizon organic|organic valley|fairlife|lactaid|silk|oatly|califia farms|kraft|sargento|cabot|philadelphia|daisy|breakstone'?s|kerrygold|general mills|cheerios|kellogg'?s|post|quaker|kashi|nature'?s path|magic spoon|catalina crunch|coca[- ]cola|pepsi|sprite|dr pepper|mountain dew|zevia|olipop|poppi|la croix|lacroix|sparkling ice|canada dry|a&w|lay'?s|frito ?lay|doritos|tostitos|kettle brand|cape cod|siete|ruffles|pringles|sun ?chips|pepperidge farm|dave'?s killer bread|nature'?s own|sara lee|wonder|arnold|oroweat|thomas'?|friendly farms|clancy'?s|h-e-b|heb|publix|wegmans|hy-vee|meijer|signature select|o organics|lucerne|bellwether farms|nancy'?s|maple hill|icelandic provisions|lifeway|ellenos|wallaby|brown cow|clover|alexandre|painterland|quest|premier protein|core power)$/i;
 /* known non-US labels that show up in OFF */
+const CATQ = { cereal: 'cereal', cereals: 'cereal', 'breakfast cereal': 'cereal', granola: 'cereal-granola', oatmeal: 'cereal-hot', chips: 'snacks-chips', crisps: 'snacks-chips', crackers: 'snacks-crackers', popcorn: 'snacks-popcorn', soda: 'drinks-soda', sodas: 'drinks-soda', pop: 'drinks-soda', juice: 'drinks-juice', yogurt: 'yogurt', yoghurt: 'yogurt', 'greek yogurt': 'yogurt-greek', bread: 'bread', tortillas: 'bread-tortilla', bagels: 'bread-bagel', cheese: 'dairy-cheese', milk: 'dairy-milk', cookies: 'sweets-cookies', chocolate: 'sweets-choc', candy: 'sweets-candy', 'ice cream': 'sweets-ice', 'protein bar': 'bars-protein', 'protein bars': 'bars-protein', 'granola bar': 'bars-granola', bars: 'bars', 'peanut butter': 'nuts-butter', nuts: 'nuts-nuts', 'pasta sauce': 'sauces-pasta', dressing: 'sauces-dressing', 'salad dressing': 'sauces-dressing', 'hot sauce': 'sauces-hot' };
 const NONUSB = /\b(sojade|yeo valley|olympic|alpro|onken|m[uü]ller|pr[eé]sident|lactalis|carrefour|auchan|leclerc|monoprix|tesco|sainsbury'?s|asda|waitrose|morrisons|marks (&|and) spencer|lidl|milbona|libert[eé]|iogo|astro|natrel|qu[eé]bon|sealtest|neilson|president'?s choice|no name|compliments|arla|la laiti[eè]re|st hubert|bonduelle|gerbl[eé]|bjorg|les 2 vaches|malo|candia|lactel|bridel|paysan breton|soignon|andros|ehrmann|zott|emmi|mlekovita|valio|dux|pozuelo|rovira)\b/i;
 /* query word → patterns meaning "a different product that merely contains the word" */
 const OFFTOPIC = { soda: /\b(crackers?|sherbet|saltines?|baking soda|bicarbonate|cakes?|cookies?|soda bread|candy)\b/, chips: /\b(carrots?|pickles?|dill|hamburger|banana|coconut|kale|apple|cereal|chips ahoy|chocolate chips?|baking chips|morsels|fish|cookies?|bread (&|and) butter|toffee|mint chip|butterscotch|white chips|chips? (&|and) (salsa|queso|guac\w*|pico))\b/, bread: /\b(crisp ?bread|crispbread|crackers?|flour|crumbs?|chips|pickles?|mix|machine|pudding|stuffing|bowl|dip|panko|yeast|starter)\b/, cereal: /\b(bars?|cookies?|treats)\b/, milk: /\b(mozzarella|ricotta|cheddar|string|cheese|siggi'?s|chobani|oikos|fage|icelandic|ice cream|coconut|almond|oat|oats|soy|cashew|rice milk|pea|hemp|skyr|shakes?|coffee|latte|protein|yogurt|kefir|cheese|creamer|milk chocolate|chocolate (bar|candy|chips?)|chocolates|caramels?|candy|cookies?|bars?|toffee|truffles?|lotion|soap|body)\b/, cheese: /\b(pasta sauce|sauce|spread|croutons?|ravioli|tortellini|bakes|burgers?|crisps|enchiladas?|straws|cheesecake|cheese (puffs|balls|curls|crackers|nips)|cheez|cheetos|goldfish|crackers?|pizza|cheeseburger|mac(aroni)?|dip|bread|danish|filled|bagels?|biscuits?)\b/, yogurt: /\b(covered|coated|pretzels|raisins|granola|parfaits?|bites|cereal|dressing|dip|tzatziki|bark|melts|starter)\b/ };
@@ -132,6 +133,11 @@ class Engine {
     });
     const acc = new Map();
     per.forEach(m => { for (const [i, s] of m) { const a = acc.get(i) || [0, 0]; a[0] += s; a[1]++; acc.set(i, a); } });
+    // v8.0 category matching: "cereal" also finds Cheerios / Frosted Flakes (category tags), not only names containing the word
+    let catKi = -1;
+    { const KC = root.LumiCats, ck = KC && CATQ[norm(query)]; const ki = ck ? KC.KEYS.indexOf(ck) : -1; catKi = ki;
+      if (ki >= 0) { if (!this.byKey) this.byKey = new Map(); let L = this.byKey.get(ki); if (!L || L.n !== this.docs.length) { L = []; this.docs.forEach((d, i) => { if (d.keys.includes(ki)) L.push(i); }); L.n = this.docs.length; this.byKey.set(ki, L); }
+        for (const i of L) if (!acc.has(i)) acc.set(i, [0.78 * qt.length, qt.length]); } }
     const need = qt.length <= 2 ? qt.length : qt.length - 1;
     const nq = norm(query); const N = this.docs.length || 1; const res = [];
     for (const [i, [s, c]] of acc) {
@@ -147,6 +153,7 @@ class Engine {
       if (d.score != null) r += (pop ? 0.13 : 0.03) * (d.score - 50);
       // v7.2: known mainstream US brands first; brandless/non-US labels and off-topic products down
       if (KNOWNB.test(d.brand)) r += 22;
+      if (catKi >= 0 && d.keys.includes(catKi)) r += d.nn.includes(nq) ? 18 : 40; // v8.0: in the asked-for category
       if (d.src === 'local' && !d.brand) r -= 22;
       if (NONUSB.test(d.brand) || NONEN2.test(d.nn)) r -= 30;
       for (const w of nq.split(" ")) { const o = OFFTOPIC[w] || OFFTOPIC[w + "s"]; if (o && o.test(d.nn) && !o.test(nq)) { r -= 55; break; } }
@@ -159,6 +166,8 @@ class Engine {
       res.push([r, d]);
     }
     res.sort((a, b) => b[0] - a[0]);
+    // v8.0 brand diversity: at most 3 per brand in the top 30 (extras move down, nothing is dropped)
+    { const top = [], rest = [], cnt = new Map(); for (const x of res) { const b = norm(x[1].brand || '').split(' ')[0] || ('#' + x[1].code); const n = cnt.get(b) || 0; if (top.length < 30 && (n < 3 || x[1].src === 'whole')) { top.push(x); cnt.set(b, n + 1); } else rest.push(x); } res.length = 0; res.push(...top, ...rest); }
     this.mergeBrands(res.slice(0, limit * 2).map(x => x[1]));
     return res.slice(0, limit).map(([r, d]) => Object.assign({ rel: r }, d));
   }

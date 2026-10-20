@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '7.5.1';
+const VERSION = '8.0';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -91,7 +91,7 @@ async function usdaFood(fdcId) { const f = await cached('fdc:' + fdcId, 7 * 864e
 async function usdaByGtin(code) { const r = await usdaSearch(gtinKey(code)); return r.find(p => gtinKey(p.code) === gtinKey(code)) || null; }
 
 /* ---------------- result items ---------------- */
-function itemFromProduct(p, rel) { const s = S.score(p); memo.set(p.id, p); const hr = HR(p); return { m: p.src === 'cos' ? null : dietM(p), h: hr.score, hn: hr.basis === 'nutrition', id: p.id, code: p.code, name: p.name, brand: LumiSearch.fixBrand(p.brand, p.name), score: s.score, net: s.score == null ? null : s.net, img: p.img, src: p.src, cat: p.cat, rel }; }
+function itemFromProduct(p, rel) { const s = S.score(p); memo.set(p.id, p); const hr = HR(p); const wh = typeof watchHits === 'function' ? watchHits(p) : null; return { wa: wh && wh.length ? wh.map(h => h.label).join(', ') : '', m: p.src === 'cos' ? null : dietM(p), h: hr.score, hn: hr.basis === 'nutrition', id: p.id, code: p.code, name: p.name, brand: LumiSearch.fixBrand(p.brand, p.name), score: s.score, net: s.score == null ? null : s.net, img: p.img, src: p.src, cat: p.cat, rel }; }
 function itemFromDoc(d) { return { ai: d.ai, bad: d.bad, sizes: d.sizes, fl: d.fl, al: d.al, df: d.df, h: d.h, hn: d.hn, id: d.code, code: d.code, name: d.name, brand: d.brand, score: d.score, net: d.score == null ? null : d.net, img: d.img, src: d.src || 'local', cat: d.cat, keys: d.keys, rel: d.rel }; }
 function textRel(q, name, brand) {
   const qt = LumiSearch.toks(q), nt = new Set(LumiSearch.toks(name + ' ' + brand)); if (!qt.length) return 0;
@@ -122,7 +122,7 @@ function thumb(img, name, keys, cat, big, brand) {
   return `<div class="thumb${big ? ' big' : ''}">${bg}${src ? `<img src="${esc(src)}" alt="" ${big ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async" onload="LumiImg.ok(this)" onerror="LumiImg.err(this)">` : ''}</div>`;
 }
 const SRC = { local: '', off: '<span class="tag">OFF</span>', usda: '<span class="tag">USDA</span>', whole: '<span class="tag t-whole">Whole food</span>', rest: '<span class="tag t-rest">Restaurant</span>', chain: '<span class="tag t-rest">Restaurant</span>', custom: '<span class="tag">My food</span>' };
-function rowHTML(it) { return `<a class="row" href="#/product/${esc(it.id)}">${thumb(it.img, it.name, it.keys, it.cat, false, it.brand)}<div class="t"><div class="n">${alertIcon(it)}${esc(it.name)}</div><div class="b">${/^usda\b/i.test(it.brand || '') && it.src === 'usda' ? '' : SRC[it.src] || ''}${it.src === 'whole' ? esc(/^usda/i.test(it.brand || '') ? 'USDA' : /^cnf|canad/i.test(it.brand || '') ? 'CNF' : String(it.brand || '').split(' ')[0]) : esc(LumiSearch.fixBrand ? LumiSearch.fixBrand(it.brand, it.name) : it.brand || '')}${it.sizes > 1 ? ` · ${it.sizes} sizes` : ''}${it.bad ? ' · <span class="c-bd badchip" title="Calories don\'t add up from carbs, protein and fat (4/4/9), so this label data is probably wrong">⚠ data looks wrong</span>' : it.score == null ? ' · <span class="c-pr">data incomplete</span>' : it.net != null ? ` · ${r1(it.net)}g net carbs/100` : ''}</div></div>${mini(it)}</a>`; }
+function rowHTML(it) { return `<a class="row" href="#/product/${esc(it.id)}">${thumb(it.img, it.name, it.keys, it.cat, false, it.brand)}<div class="t"><div class="n">${alertIcon(it)}${esc(it.name)}</div><div class="b">${/^usda\b/i.test(it.brand || '') && it.src === 'usda' ? '' : SRC[it.src] || ''}${it.src === 'whole' ? esc(/^usda/i.test(it.brand || '') ? 'USDA' : /^cnf|canad/i.test(it.brand || '') ? 'CNF' : String(it.brand || '').split(' ')[0]) : esc(LumiSearch.fixBrand ? LumiSearch.fixBrand(it.brand, it.name) : it.brand || '')}${it.sizes > 1 ? ` · ${it.sizes} sizes` : ''}${it.wa ? ` · <span class="wa8" title="Watchlist: ${esc(it.wa)}">⚠ ${esc(it.wa)}</span>` : ''}${it.bad ? ' · <span class="c-bd badchip" title="Calories don\'t add up from carbs, protein and fat (4/4/9), so this label data is probably wrong">⚠ data looks wrong</span>' : it.score == null ? ' · <span class="c-pr">data incomplete</span>' : it.net != null ? ` · ${r1(it.net)}g net carbs/100` : ''}</div></div>${mini(it)}</a>`; }
 const skel = n => `<div class="list">${Array.from({ length: n }, () => `<div class="row skel"><div class="thumb sk"></div><div class="t"><div class="sk skl" style="width:80%"></div><div class="sk skl" style="width:45%"></div></div><div class="sk" style="width:44px;height:44px;border-radius:50%"></div></div>`).join('')}</div>`;
 function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 2200); }
 const go = h => { if (location.hash !== h) location.hash = h; else route(); };
@@ -294,6 +294,7 @@ function renderResults() {
   else if (sort === 'health') items.sort((a, b) => b.h - a.h || b.rel - a.rel);
   else if (sort === 'carb') items.sort((a, b) => (a.net ?? 999) - (b.net ?? 999) || b.score - a.score);
   else items.sort((a, b) => b.rel - a.rel);
+  if (sort === 'rel') { const top = [], rest = [], cnt = new Map(); for (const x of items) { const b = String(x.brand || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(' ')[0] || x.id; const n = cnt.get(b) || 0; if (top.length < 30 && (n < 3 || x.src === 'whole' || x.src === 'rest')) { top.push(x); cnt.set(b, n + 1); } else rest.push(x); } items = top.concat(rest); } // v8.0: max 3 per brand in top results
   items = items.concat(unknown);
   const pending = Object.values(st).includes('load');
   if (!items.length) {
@@ -356,7 +357,7 @@ function viewBrowse(key) {
 }
 
 /* ---------------- product ---------------- */
-async function resolveProduct(id) { const p = await resolveProduct0(id); if (p && p.name) p.name = LumiSearch.fixName(p.name); if (p && p.brand && window.LumiStores) { const a = LumiStores.alias(p.brand); if (a) p.brand = a; } return p; }
+async function resolveProduct(id) { const mem8 = () => store.get('foods', {})[id] || null; if (!navigator.onLine && mem8()) return mem8(); let p; try { p = await resolveProduct0(id); } catch (e) { const m = mem8(); if (m) return m; throw e; } if (!p) p = mem8(); if (p && p.name) p.name = LumiSearch.fixName(p.name); if (p && p.brand && window.LumiStores) { const a = LumiStores.alias(p.brand); if (a) p.brand = a; } return p; }
 async function resolveProduct0(id) {
   if (/^(fdc-|r-|ms-|cnf-)/.test(id)) { const g = await genericProduct(id); if (g) return g; }
   if (memo.has(id)) return memo.get(id);
@@ -434,7 +435,7 @@ async function viewProduct(id) {
   }
   if (location.hash.replace(/^#\/product\//, '') !== id && !location.hash.endsWith(encodeURIComponent(id))) return;
   if (!p && /^\d{8,14}$/.test(id)) { const cp = await cosProduct(id).catch(() => null); if (cp) { const sc = sessionStorage.getItem('lumi.scanned') === id; if (sc) sessionStorage.removeItem('lumi.scanned'); return viewCosProduct(id, cp, sc); } }
-  if (!p) { app.innerHTML = `${searchBox()}<div class="card empty" style="margin-top:14px"><b>Barcode ${esc(id)} not found</b>It isn't in Lumi's index, Open Food Facts, USDA or Open Beauty Facts. Try searching by name, or <a style="color:var(--acc)" href="https://world.openfoodfacts.org/cgi/product.pl?type=add&code=${esc(id)}" target="_blank" rel="noopener">add it to Open Food Facts</a>.</div>`; bindSearch(); return; }
+  if (!p) { app.innerHTML = `${searchBox()}<div class="card empty" style="margin-top:14px"><b>Barcode ${esc(id)} not found</b>It isn't in Lumi's index, Open Food Facts, USDA or Open Beauty Facts. Try searching by name, or <a style="color:var(--acc)" href="https://world.openfoodfacts.org/cgi/product.pl?type=add&code=${esc(id)}" target="_blank" rel="noopener">add it to Open Food Facts</a>.<div class="actions"><a class="btn pri" href="#/label/${esc(id)}">📷 Scan its Nutrition Facts label</a></div></div>`; bindSearch(); return; }
   memo.set(p.id, p); pushHist('viewed', p);
   const scanned = sessionStorage.getItem('lumi.scanned') === id; if (scanned) { sessionStorage.removeItem('lumi.scanned'); pushHist('scans', p, 50); }
   const s = S.score(p), n = p.n, unit = p.liquid ? 'ml' : 'g'; const hr = HR(p), hp = PRIM() === 'health';
@@ -487,7 +488,7 @@ async function viewProduct(id) {
   if ($('#quickLog')) $('#quickLog').onclick = () => $('#addLog').click();
   if (!s.missing) renderSwaps(p, s);
   drawBetter(p, s, hr);
-  bindProduct7(p); bind75(p, s, hr, hp);
+  bindProduct7(p); bind75(p, s, hr, hp); bind8(p, s);
 }
 function orTryWater(doc, limit = 4) {
   if (doc.ai !== LumiAisles.BYID['bv-soda']) return [];
@@ -626,6 +627,9 @@ function route() {
   if (view === 'lists') return viewLists();
   if (view === 'list' && arg) return viewList(arg);
   if (view === 'whatsnew') return viewWhatsNew();
+  if (view === 'label') return viewLabel(arg);
+  if (view === 'alerts') return viewAlerts();
+  if (view === 'report') return viewReport(arg);
   viewHome();
 }
 window.addEventListener('hashchange', route);

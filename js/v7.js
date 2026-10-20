@@ -9,6 +9,13 @@ function typeBarcode(msg) {
 }
 document.addEventListener('click', e => { if (e.target && e.target.id === 'scanType') { if (typeof stopScan === 'function') stopScan(); typeBarcode(''); } });
 const V7_NEWS = [
+  ['🩸', 'Blood sugar impact (8.0)', 'Each product has a Low/Medium/High, fast/slow estimate. It uses published glycemic index values (International Tables 2008) when one matches; otherwise it is a clearly labeled heuristic from net carbs, sugar, fiber, fat and protein. No dosing math.'],
+  ['📷', 'Scan a Nutrition Facts label (8.0)', 'Barcode not found? Photograph the label. Lumi reads it on your device, lets you check every number, then saves and scores it as a user-entered food.'],
+  ['📒', 'Smarter log (8.0)', 'Day and week views by meal, CSV export, and a printable summary for your endo.'],
+  ['🖼', 'Share cards (8.0)', 'Share an image card for a product, a swap (from Compare) or a shopping list.'],
+  ['🔎', 'Search finds by category (8.0)', '"cereal" now also finds Cheerios and other cereals without the word in their name, with at most 3 results per brand at the top.'],
+  ['⚠️', 'Ingredient alerts (8.0)', 'Watch for hidden sugars, maltodextrin, seed oils, artificial sweeteners or your own words. Matches are highlighted on product pages.'],
+  ['📴', 'Works offline (8.0)', 'Favorites, recent, lists, your log and custom foods open without a connection.'],
   ['🧪', 'Hazardous substances & expandable rows (7.5)', 'Products now show "No additives / No hazardous substances" or how many additives they have and the risk level of each, with fiber and protein rows. Tap any row to see where the product falls on a scale, and switch between per 100 g and per serving.'],
   ['🏠', 'A calmer home (7.4)', 'Search and Scan up top, five shortcuts, and six everyday top picks. Stores, aisles, Meal builder, Cosmetics, Overview and Additives are now on the new Browse page.'],
   ['🩸', 'Diabetes-aware search (7.3)', 'Among popular brands, lower-carb options rank first: Chobani and Oikos plain Greek for "yogurt", Magic Spoon and Catalina Crunch for "cereal", zero-sugar sodas for "soda". The search word can appear anywhere in the name. Misspelled brands are merged automatically.'],
@@ -22,9 +29,9 @@ const V7_NEWS = [
   ['☰', 'Shopping lists', 'Make lists (Costco run, school snacks…), check items off, see the carb total and share the list.'],
   ['💊', 'Supplements, sorted', 'Protein & collagen, greens powders, creatine & hydration, vitamins. Fresh "super greens" salads moved to Produce.'],
   ['🔎', 'Smarter search filters', 'Ready-to-eat, has photo and hide bad data, plus better near-duplicate grouping (one row per product).']];
-function whatsNewCard() { if (store.get('seen73', false)) return ''; return `<div class="card news7"><div class="n7h"><b>✨ New in Lumi ${VERSION}</b><button class="icon" id="n7x" aria-label="Dismiss">✕</button></div><ul>${V7_NEWS.slice(0, 3).map(n => `<li><span>${n[0]}</span><div><b>${esc(n[1])}</b> <span class="d">${esc(n[2])}</span></div></li>`).join('')}</ul><a class="lnk" href="#/whatsnew">Everything new ›</a></div>`; }
-document.addEventListener('click', e => { if (e.target && e.target.id === 'n7x') { store.set('seen73', true); const c = document.querySelector('.news7'); if (c) c.remove(); } });
-function viewWhatsNew() { document.title = 'New in 7.0 — Lumi'; store.set('seen73', true);
+function whatsNewCard() { if (store.get('seen80', false)) return ''; return `<div class="card news7"><div class="n7h"><b>✨ New in Lumi ${VERSION}</b><button class="icon" id="n7x" aria-label="Dismiss">✕</button></div><ul>${V7_NEWS.slice(0, 3).map(n => `<li><span>${n[0]}</span><div><b>${esc(n[1])}</b> <span class="d">${esc(n[2])}</span></div></li>`).join('')}</ul><a class="lnk" href="#/whatsnew">Everything new ›</a></div>`; }
+document.addEventListener('click', e => { if (e.target && e.target.id === 'n7x') { store.set('seen80', true); const c = document.querySelector('.news7'); if (c) c.remove(); } });
+function viewWhatsNew() { document.title = 'New in 7.0 — Lumi'; store.set('seen80', true);
   app.innerHTML = `<h1>New in Lumi ${VERSION}</h1><div class="card news7 full"><ul>${V7_NEWS.map(n => `<li><span>${n[0]}</span><div><b>${esc(n[1])}</b> ${esc(n[2])}</div></li>`).join('')}</ul></div><p class="foot">Informational only, not medical advice. Dose from the physical label.</p>`; }
 /* ready-to-eat: index docs use the aisle + staple rules; outside items (USDA/OFF live) use the name rules only */
 function readyToEat(i) { if (i.src === 'whole' || i.src === 'rest' || i.src === 'chain') return true; const d = { name: i.name || '', ai: i.ai == null ? -1 : i.ai }; return !isStaple(d) && !RAW.has(d.ai); }
@@ -43,7 +50,7 @@ const setLists = L => store.set('lists', L);
 const lmin = p => ({ id: p.id, code: p.code, name: p.name, brand: p.brand, img: p.img, score: S.score(p).score, net: S.score(p).net, servQ: p.servQ || null, serv: p.serv || '' });
 function listsSummary() { const L = lists(); if (!L.length) return 'Plan a shop'; const open = L.reduce((a, l) => a + l.items.filter(i => !i.done).length, 0); return `${L.length} list${L.length > 1 ? 's' : ''} · ${open} to buy`; }
 function newList(name) { const L = lists(); const l = { id: 'l' + Date.now().toString(36), name: name || 'My list', items: [], t: Date.now() }; L.unshift(l); setLists(L); return l; }
-function addToList(lid, p) { const L = lists(); const l = L.find(x => x.id === lid); if (!l) return false; if (l.items.some(i => i.id === p.id)) return false; l.items.push(Object.assign(lmin(p), { done: false, t: Date.now() })); setLists(L); return true; }
+function addToList(lid, p) { try { remember(p); } catch {} const L = lists(); const l = L.find(x => x.id === lid); if (!l) return false; if (l.items.some(i => i.id === p.id)) return false; l.items.push(Object.assign(lmin(p), { done: false, t: Date.now() })); setLists(L); return true; }
 function listPicker(p) {
   const L = lists(); const el = document.createElement('div'); el.className = 'lp-wrap';
   el.innerHTML = `<div class="lp" role="dialog" aria-label="Add to list"><b>Add to a list</b>${L.map(l => `<button class="lp-i" data-l="${l.id}">☰ ${esc(l.name)} <small>${l.items.length}</small></button>`).join('')}<form class="lp-new"><input placeholder="New list name" aria-label="New list name" maxlength="40"><button class="btn pri">＋ Create</button></form><button class="btn lp-x">Cancel</button></div>`;

@@ -21,7 +21,7 @@ function viewHome() {
     ${newsPill()}
     <h1>${greeting()}</h1><p class="lead74">Search or scan a food to see its carbs and health rating.</p>
     <div class="hs74">${searchBox()}<button class="scan74" id="heroScan" aria-label="Scan a barcode"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10 8v8M13 8v8M17 8v8"/></svg><span>Scan</span></button></div>
-    <button class="lnk74" id="typeBc">Type a barcode instead</button>
+    <button class="lnk74" id="typeBc">Type a barcode instead</button> <a class="lnk74" href="#/label">Scan a label photo</a>
     ${logged ? `<div class="log74">${logged}</div>` : ''}
     <nav class="sc74" aria-label="Shortcuts">${SC74.map(([h, t]) => `<a href="${h}">${t}</a>`).join('')}</nav>
     ${rec.length ? `<div class="rec74"><span>Recent</span>${rec.slice(0, 6).map(r => `<a href="#/search/${encodeURIComponent(r)}">${esc(r)}</a>`).join('')}<button id="clrRec" aria-label="Clear recent searches">Clear</button></div>` : ''}
@@ -50,5 +50,8 @@ function viewBrowseHub() {
       <a href="#/overview"><b>Overview</b><span>Your stats</span></a>
       <a href="#/additives"><b>Additives</b><span>What's in it</span></a>
       <a href="#/cosmetics"><b>Cosmetics</b><span>Shampoo, sunscreen…</span></a>
+      <a href="#/label"><b>Scan a label</b><span>Photo of Nutrition Facts</span></a>
+      <a href="#/alerts"><b>Ingredient alerts</b><span>Your watchlist</span></a>
+      <a href="#/report"><b>Log report</b><span>Printable summary for your endo</span></a>
     </div></section>`;
 }
