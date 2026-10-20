@@ -22,6 +22,16 @@ Local dev: `python3 serve.py 8765`.
 - v5.1: every item also gets a Yuka-style Health rating (js/health.js: Nutri-Score 2023 ~60%, additive risk tiers ~30%, organic ~10%; nutrition-only when ingredients are unknown). Precomputed in tools/build.js; organic/fruit-veg share come from `offdata/side.py`.
 - v6: additive & cosmetic-ingredient pages with cited sources (`js/encyc.js`; every link checked), allergen/diet alerts (`js/diet.js`, OFF allergen/traces/analysis tags via `tools/side2.py` plus ingredient text), cosmetics from the Open Beauty Facts bulk export (`tools/extract_obf.py`, then `node tools/build_cos.js`; run it after `tools/build.js`, which clears `data/`), better options after a scan, and a local Overview.
 
+## v7.5 (Yuka-style rows)
+- Hazardous-substances row:
+  - No additives → Positives shows "No additives / No hazardous substances ✓".
+  - With additives → Negatives shows "N hazardous, up to <worst risk>" with a dot for the worst level. Expanding it lists each additive (E-number, name, hazard-free/limited/moderate/high), linking to its additive page and sources.
+  - No ingredient list → "Couldn't verify additives". Never "safe".
+- Fiber and Protein rows: green at 3 g+ fiber and 8 g+ protein. In-between amounts show a grey "Some …" row; low fiber shows grey "Low fiber". Neither changes the score.
+- Sodium uses "Low/Moderate/High/Very high impact".
+- Every row expands with a chevron to a colored scale bar with the product's position marked. A per 100 g / per serving toggle is remembered.
+- Home: shortcut pills wrap on mobile, and Top picks have at most 2 dairy items.
+
 ## v7.4 (calm home)
 - Home now has: greeting, one line, a big search bar with a Scan button (and a small "type a barcode" link), a compact log summary only on days with entries, 5 shortcuts, a slim recent-searches row, and 6 Top picks.
   - Top picks are everyday foods: score 82+, 2–25 g net carbs. No sauces/condiments, alcohol, supplements, staples or sugary drinks. One per food type and one per brand, known brands first.

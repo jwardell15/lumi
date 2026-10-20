@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '7.4';
+const VERSION = '7.5';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -423,7 +423,7 @@ function healthCard(hr, unit) {
   const basis = hr.basis === 'nutrition' ? 'Based on nutrition only — ingredients/additives not available.' : `Nutrition ${hr.nutrition}/100 (60%) · additives ${hr.additiveScore}/100 (30%) · organic ${hr.organic ? 'yes' : 'no'} (10%)${hr.adds.some(a => a.tier === 3) ? ' · capped at 49 by a high-risk additive' : ''}.`;
   return `<div class="card fxcard" id="hcard"><div class="fx-h"><h2>Health rating <span class="pill bg-${HB(hr.score)}">${hr.score}</span> <small class="c-${HB(hr.score)}">${HL(hr.score)}</small></h2><span class="small">per 100${unit}</span></div>
     <div class="small" style="margin:-4px 0 6px">${esc(basis)} Nutri-Score ${hr.grade}${hr.variant !== 'general' ? ' (' + hr.variant + ')' : ''}.${hr.est.length ? ' Estimated: ' + esc(hr.est.join(', ')) + '.' : ''}</div>
-    ${hr.neg.length ? `<div class="fx-h"><h2>Negatives</h2></div><ul class="fxl">${hr.neg.map(li).join('')}</ul>` : ''}${hr.pos.length ? `<div class="fx-h"><h2>Positives</h2></div><ul class="fxl">${hr.pos.map(li).join('')}</ul>` : ''}</div>`;
+    ${(() => { const ng = hr.neg.filter(r => r.k !== 'add'), ps = hr.pos.filter(r => r.k !== 'add'); return (ng.length ? `<div class="fx-h"><h2>Negatives</h2></div><ul class="fxl">${ng.map(li).join('')}</ul>` : '') + (ps.length ? `<div class="fx-h"><h2>Positives</h2></div><ul class="fxl">${ps.map(li).join('')}</ul>` : ''); })()}</div>`;
 }
 async function viewProduct(id) {
   app.innerHTML = `<div class="loading-dog">${MASCOT(56, 'bounce')}<span>Sniffing out the label…</span></div><div class="card"><div class="ph"><div class="thumb big sk"></div><div style="flex:1"><div class="sk skl" style="height:22px;width:85%"></div><div class="sk skl" style="width:50%"></div><div class="sk skl" style="width:40%;height:26px;margin-top:14px"></div></div></div></div><div class="card">${'<div class="sk skl" style="height:40px;margin:10px 0"></div>'.repeat(4)}</div>`;
@@ -445,7 +445,7 @@ async function viewProduct(id) {
   const row = (lab, v, u, key) => `<tr class="${key ? 'key' : ''}"><td>${lab}</td><td>${fmt(v, u)}</td>${ps ? `<td>${fmt(v == null ? null : v * ps, u)}</td>` : ''}</tr>`;
   const maxAbs = Math.max(10, ...s.items.map(i => Math.abs(i.pts)));
   const srcLink = p.meta && p.meta.url ? `<a style="color:var(--acc)" href="${esc(p.meta.url)}" target="_blank" rel="noopener">${esc(p.meta.src)}</a>${p.meta.date ? ', ' + esc(p.meta.date) : ''}` : p.src === 'custom' ? 'your custom food' : p.src === 'usda' ? `<a style="color:var(--acc)" href="https://fdc.nal.usda.gov/food-details/${p.fdcId}/nutrients" target="_blank" rel="noopener">USDA FoodData Central</a>` : `<a style="color:var(--acc)" href="https://world.openfoodfacts.org/product/${esc(p.code)}" target="_blank" rel="noopener">Open Food Facts</a>`;
-  const F = s.missing ? null : factRows(p, s);
+  const F = s.missing ? null : factRows75(p, s, hr);
   const issues = s.quality && s.quality.issues.length ? s.quality.issues : null;
   app.classList.add('prodv');
   app.innerHTML = `
@@ -463,8 +463,7 @@ async function viewProduct(id) {
   </div>
   <div id="better"></div>
   ${hp ? healthCard(hr, unit) : ''}
-  ${F ? `<div class="card fxcard">${F.neg.length ? `<div class="fx-h"><h2>${hp ? 'Carb score · ' : ''}Negatives</h2><span class="small">${p.meta && p.meta.perItem ? 'per item' : 'per 100' + unit}</span></div><ul class="fxl">${F.neg.map(factLi).join('')}</ul>` : ''}
-    ${F.pos.length ? `<div class="fx-h"><h2>${hp ? 'Carb score · ' : ''}Positives</h2><span class="small">${p.meta && p.meta.perItem ? 'per item' : 'per 100' + unit}</span></div><ul class="fxl">${F.pos.map(factLi).join('')}</ul>` : ''}</div>` : ''}
+  ${F ? factCard75(p, F, hp) : ''}
   ${hp ? '' : healthCard(hr, unit)}
   ${n.carbs != null && !s.bad ? portionCard(p) : ''}
   <div id="swapsCard"></div>
@@ -488,7 +487,7 @@ async function viewProduct(id) {
   if ($('#quickLog')) $('#quickLog').onclick = () => $('#addLog').click();
   if (!s.missing) renderSwaps(p, s);
   drawBetter(p, s, hr);
-  bindProduct7(p);
+  bindProduct7(p); bind75(p, s, hr, hp);
 }
 function orTryWater(doc, limit = 4) {
   if (doc.ai !== LumiAisles.BYID['bv-soda']) return [];

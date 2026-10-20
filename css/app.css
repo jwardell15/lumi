@@ -349,3 +349,17 @@ body.has-tray #app{padding-bottom:90px}
 .hs74 .sbox,.hs74 .sfield{min-width:0}.hs74 input{min-width:0;width:100%}.home74,.browse74{min-width:0;overflow-x:clip}
 .home74 .list{grid-template-columns:repeat(2,minmax(0,1fr))!important}
 @media (max-width:640px){.home74 .list{grid-template-columns:1fr!important}}
+/* v7.5 Yuka-style rows */
+.fx75{display:block;padding:0}
+.fx75-h{display:flex;align-items:center;gap:14px;width:100%;padding:12px 0;background:none;border:0;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.chev75{color:var(--mut);font-size:18px;transition:transform .15s;width:12px;text-align:center}.fx75.open .chev75{transform:rotate(90deg)}
+.fx75-b{padding:2px 0 14px 44px}
+.ok75{color:#1aa260;font-weight:800;font-size:17px}
+.bg-na{background:#b9b4c4}
+.sc75{padding:6px 4px 4px}.sc75-bar{position:relative;height:8px;border-radius:999px;overflow:visible;background:var(--chip)}
+.sc75-bar i{position:absolute;top:0;height:8px}.sc75-bar i:first-child{border-radius:999px 0 0 999px}.sc75-bar i:last-of-type{border-radius:0 999px 999px 0}
+.sc75-bar b{position:absolute;top:-5px;width:4px;height:18px;margin-left:-2px;border-radius:2px;background:var(--ink);box-shadow:0 0 0 2px var(--card)}
+.sc75-lab{position:relative;height:16px;margin-top:6px;font-size:11px;color:var(--mut)}.sc75-lab span{position:absolute;transform:translateX(-50%);white-space:nowrap}.sc75-lab span:first-child{transform:none}.sc75-lab span:last-child{transform:translateX(-100%)}
+.al75{list-style:none;margin:0;padding:0}.al75 a{display:flex;align-items:center;gap:8px;padding:8px 0;color:var(--ink);text-decoration:none;font-size:14px;border-bottom:1px dashed var(--line)}.al75 small{color:var(--mut)}.al75 .chev{margin-left:auto;color:var(--mut)}
+.bt75{display:inline-flex;background:var(--chip);border-radius:999px;padding:2px}.bt75 button{border:0;background:none;color:var(--mut);font:inherit;font-size:12px;padding:5px 10px;border-radius:999px;cursor:pointer}.bt75 button.on{background:var(--card);color:var(--ink);font-weight:700;box-shadow:0 1px 3px rgb(0 0 0/.12)}
+@media (max-width:640px){.sc74{flex-wrap:wrap!important;overflow:visible!important}.sc74 a{padding:8px 13px;font-size:13px}.fx75-b{padding-left:0}.fx-h{flex-wrap:wrap;gap:6px}}

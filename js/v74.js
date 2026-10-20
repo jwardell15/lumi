@@ -4,11 +4,11 @@ const COND74 = /\b(sauce|dressing|condiment|ketchup|mustard|mayo|mayonnaise|sals
 const KINDS74 = [['yogurt', /yogurt|yoghurt|skyr|kefir|light and free|light \+ fit|hipro|\bgreek\b|oikos|chobani|fage/i], ['milk', /\bmilk\b/i], ['cheese', /cheese|mozzarella|cheddar/i], ['eggs', /\beggs?\b/i], ['fruit', /berr|apple|orange|grape|melon|cherr|peach|pear|banana|kiwi|mango|fruit/i], ['veg', /broccoli|spinach|salad|greens|kale|carrot|pepper|cauliflower|bean|pea\b|veg/i], ['nuts', /almond|cashew|pistachio|walnut|pecan|nut|seed/i], ['bars', /\bbars?\b/i], ['cereal', /cereal|granola|oat/i], ['bread', /bread|tortilla|wrap|bagel|bun/i], ['meat', /chicken|turkey|beef|jerky|salmon|tuna|sausage|ham\b/i], ['snack', /chips|crisps|crackers|popcorn|puffs/i]];
 function kind74(d) { const t = d.name + ' ' + d.brand + ' ' + d.cat + ' ' + ((d.keys || []).map(k => C.KEYS[k]).join(' ')); for (const [k, re] of KINDS74) if (re.test(t)) return k; return 'ai' + d.ai; }
 function homePicks() {
-  const out = [], brands = new Map(), cats = new Set(); const ks = new Set(['sauces', 'drinks', 'sweets'].map(k => C.KEYS.indexOf(k)));
+  const out = [], brands = new Map(), cats = new Set(); let nd = 0; const ks = new Set(['sauces', 'drinks', 'sweets'].map(k => C.KEYS.indexOf(k)));
   const pool = engine.docs.filter(d => d.src === 'local' && d.score != null && d.score >= 82 && d.net != null && d.net >= 2 && d.net <= 25 && !d.fl && !d.bad && d.img && d.brand && d.rank < 40000
     && !isStaple(d) && !isSugaryDrink(d) && usEnglish(d) && !ALC74.test(d.name + ' ' + d.cat) && !COND74.test(d.name + ' ' + d.cat) && !d.keys.some(k => ks.has(k)) && !/\bwater\b/i.test(d.name) && !/\b(protein powder|powder|supplement|vitamins?|capsules?|gummies|shake mix|peanut butter|nut butter|peanuts?|creamy)\b|\bprotein (shake|drink)|^organic protein\b/i.test(d.name) && d.net >= 2);
   const KB = LumiSearch.KNOWNB; pool.sort((a, b) => (KB.test(b.brand) - KB.test(a.brand)) || a.rank - b.rank);
-  for (const d of pool) { const b = d.brand.toLowerCase().split(/[\s,]/)[0], c = kind74(d); if (cats.has(c) || (brands.get(b) || 0) >= 1) continue; out.push(d); cats.add(c); brands.set(b, (brands.get(b) || 0) + 1); if (out.length >= 6) break; }
+  for (const d of pool) { const b = d.brand.toLowerCase().split(/[\s,]/)[0], c = kind74(d); const dairy = ['yogurt', 'milk', 'cheese'].includes(c); if (cats.has(c) || (brands.get(b) || 0) >= 1 || (dairy && nd >= 2)) continue; if (dairy) nd++; out.push(d); cats.add(c); brands.set(b, (brands.get(b) || 0) + 1); if (out.length >= 6) break; }
   return out;
 }
 function restPicks74() { let r = []; try { r = bestAtRestaurants(); } catch {} return r.filter(d => !ALC74.test(d.name)).slice(0, 4); }
