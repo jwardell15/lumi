@@ -95,6 +95,7 @@ class Engine {
   add(data) {
     if (data.cats && !data.generic) this.cats = data.cats;
     const cats = data.generic ? data.cats : this.cats; const KC = root.LumiCats;
+    if (data.chains) { this.chainN = (this.chainN || []).concat(data.chains.map(([k, l]) => ({ k, n: norm(l).replace(/^the /, '').replace(/ (scratch kitchen|restaurant|restaurants)$/, '') })).filter(c => c.n.length >= 3)); } // v9.1.1: chain names from data, apostrophes normalized
     for (const d of data.docs) {
       const i = this.docs.length;
       const doc = { code: d[0], name: fixName(d[1]), brand: fixBrand(d[2], d[1]), score: d[3] < 0 ? null : d[3], net: d[4] < 0 ? null : d[4], cat: cats[d[5]] || '', img: imgURL(d[0], d[6]), keys: d[7] ? d[7].split('.').map(k => /^\d+$/.test(k) ? +k : (KC ? KC.KEYS.indexOf(k) : -1)).filter(k => k >= 0) : [], sugar: d[8] == null || d[8] < 0 ? null : d[8], zc: d[4] === 0 && d[8] >= 3 && !/\b(keto|sugar[- ]?free|zero|no sugar)\b/i.test(d[1] || ''), h: d[9] == null || d[9] < 0 ? null : d[9], hn: !!(d[10] & 1), al: d[11] || 0, df: d[12] == null ? null : d[12], src: data.generic ? (d[7] && d[7].startsWith('rest') ? 'rest' : 'whole') : 'local', rank: i, sm: d[13] || 0, ai: d[14] == null ? -1 : d[14], wf: d[15] || 0, bad: !!(d[10] & 8), fl: !!(d[10] & 4) || (water().includes(d[14]) && d[4] >= 0 && d[4] <= 0.5) };
@@ -144,6 +145,8 @@ class Engine {
         // v8.1 mainstream signal: how many index entries in this category share the product's lead word (Cheerios, Frosted, Special K…)
         if (!L.lead) { L.lead = new Map(); for (const i of L) { const w = leadWord(this.docs[i].name), w2 = leadPair(this.docs[i].name); if (w) L.lead.set(w, (L.lead.get(w) || 0) + 1); if (w2) L.lead.set('2:' + w2, (L.lead.get('2:' + w2) || 0) + 1); } }
         leadMap = L.lead; } }
+    let qcKi = -1; { const KC = root.LumiCats, nq0 = ' ' + norm(query) + ' '; let best = null; for (const c of this.chainN || []) if (nq0.includes(' ' + c.n + ' ') && (!best || c.n.length > best.n.length)) best = c; // v9.1.1: query names a chain
+      if (best && KC) { qcKi = KC.KEYS.indexOf(best.k); if (qcKi >= 0) this.docs.forEach((d, i) => { if (d.keys.includes(qcKi) && !acc.has(i)) acc.set(i, [0.78 * qt.length, qt.length]); }); } }
     const need = qt.length <= 2 ? qt.length : qt.length - 1;
     const nq = norm(query); const N = this.docs.length || 1; const res = [];
     for (const [i, [s, c]] of acc) {
@@ -168,7 +171,7 @@ class Engine {
       if (d.src !== 'whole' && d.src !== 'rest') { if (!/^[\x20-\x7e]+$/.test(d.name + d.brand) || NONEN.test(d.name.toLowerCase()) || !(d.code.length === 12 || (d.code.length === 13 && /^[01]/.test(d.code)))) r -= 22; if (d.bad) r -= 15; if (!d.img) r -= 3; if (d.name.split(' ').length <= 1 && d.brand && nq.split(' ').length === 1) r -= 6; }
       if (!ALCQ.test(nq) && ALCN.test(d.nn)) r -= 28;
       if (d.src === 'whole' && PACKQ.test(nq)) r -= 30;
-      if (d.src === 'rest') r += CHAINQ.test(nq) ? 6 : catKi >= 0 ? -60 : -30;
+      if (d.src === 'rest') r += qcKi >= 0 ? (d.keys.includes(qcKi) ? 60 : -10) : CHAINQ.test(nq) ? 6 : catKi >= 0 ? -60 : -30;
       if (d.src === 'whole') { const nn = norm(d.name), w = nn.split(' '); if (nn.startsWith(qt[0])) r += 14; if (/\braw\b/.test(nn)) r += 6; r -= Math.min(10, Math.max(0, w.length - qt.length - 1) * 1.5); }
       res.push([r, d]);
     }

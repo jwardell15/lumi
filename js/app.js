@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '9.1';
+const VERSION = '9.1.1';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -351,7 +351,9 @@ function runQuery(q, typing) {
     offSearch(q).then(ps => done('off', ps.map(p => itemFromProduct(p, textRel(q, p.name, p.brand) - 3 + LumiSearch.relAdj(q, p))))).catch(e => done('off', null, e)); }, typing ? 700 : 0);
   renderResults();
 }
+let browseWait = false;
 function viewBrowse(key) {
+  if (!browseWait && (!C.CATS[key] || key === 'rest' || /^rest-/.test(key)) && C.subs('rest').length < 10) { browseWait = true; return loadIndex().catch(() => {}).then(() => { browseWait = false; if (location.hash.replace(/^#\/browse\//, '') === key) viewBrowse(key); }); } // v9.1.1: chains register from index-g; wait so the chain list is complete
   if (!C.CATS[key]) return viewHome();
   const [emo, label, , , parent] = C.CATS[key]; const top = parent || key; const ki = C.KEYS.indexOf(key);
   document.title = `${label} — Lumi`;
