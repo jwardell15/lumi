@@ -24,6 +24,7 @@ const IMGBASE = 'https://images.openfoodfacts.org/images/products/';
 function imgURL(code, v) {
   if (!v) return '';
   if (v[0] === '~') { const parts = code.length > 8 ? code.padStart(13, '0').match(/^(...)(...)(...)(.*)$/).slice(1).join('/') : code; return IMGBASE + parts + '/' + v.slice(1) + '.200.jpg'; }
+  if (v.startsWith('w:')) return 'img/w/' + v.slice(2) + '-200.webp';
   return v.startsWith('http') ? v : IMGBASE + v;
 }
 class Engine {
@@ -33,7 +34,7 @@ class Engine {
     const cats = data.generic ? data.cats : this.cats; const KC = root.LumiCats;
     for (const d of data.docs) {
       const i = this.docs.length;
-      const doc = { code: d[0], name: d[1], brand: d[2] || '', score: d[3] < 0 ? null : d[3], net: d[4] < 0 ? null : d[4], cat: cats[d[5]] || '', img: data.generic ? '' : imgURL(d[0], d[6]), keys: d[7] ? d[7].split('.').map(k => /^\d+$/.test(k) ? +k : (KC ? KC.KEYS.indexOf(k) : -1)).filter(k => k >= 0) : [], sugar: d[8] == null || d[8] < 0 ? null : d[8], h: d[9] == null || d[9] < 0 ? null : d[9], hn: !!(d[10] & 1), al: d[11] || 0, df: d[12] == null ? null : d[12], src: data.generic ? (d[7] && d[7].startsWith('rest') ? 'rest' : 'whole') : 'local', rank: i };
+      const doc = { code: d[0], name: d[1], brand: d[2] || '', score: d[3] < 0 ? null : d[3], net: d[4] < 0 ? null : d[4], cat: cats[d[5]] || '', img: imgURL(d[0], d[6]), keys: d[7] ? d[7].split('.').map(k => /^\d+$/.test(k) ? +k : (KC ? KC.KEYS.indexOf(k) : -1)).filter(k => k >= 0) : [], sugar: d[8] == null || d[8] < 0 ? null : d[8], h: d[9] == null || d[9] < 0 ? null : d[9], hn: !!(d[10] & 1), al: d[11] || 0, df: d[12] == null ? null : d[12], src: data.generic ? (d[7] && d[7].startsWith('rest') ? 'rest' : 'whole') : 'local', rank: i };
       doc.nn = norm(doc.name + ' ' + doc.brand);
       this.docs.push(doc);
       const seen = new Map();

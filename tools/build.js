@@ -7,6 +7,17 @@ const COV = {}; const cov = (k, r) => { const c = COV[k] = COV[k] || { n: 0, rat
 const ORG = /\borganic\b/i; const D = require('../js/diet.js');
 const SIDE2 = fs.existsSync(path.join(path.dirname(process.argv[2]), 'side2.json')) ? JSON.parse(fs.readFileSync(path.join(path.dirname(process.argv[2]), 'side2.json'), 'utf8')) : {};
 const ALC = {}; const alc = (k, m) => { const c = ALC[k] = ALC[k] || { n: 0, ingredientsKnown: 0, anyAllergen: 0 }; c.n++; if (m.df & 1) c.ingredientsKnown++; if (m.am) c.anyAllergen++; };
+// v6.1: cross-source merge (OFF CSV extract + USDA Branded by GTIN with leading zeros stripped, so UPC-A/EAN-13/GTIN-14 all match)
+const M61 = '/workspace/m61/'; const rj = f => fs.existsSync(M61 + f) ? JSON.parse(fs.readFileSync(M61 + f, 'utf8')) : {};
+const OX = rj('offx.json'), UX = rj('usdax.json');
+for (const o of Object.values(OX)) if (/^\d{9,11}$/.test(o.mod || '')) o.mod = new Date(o.mod * 1000).toISOString().slice(0, 10);
+const OFFIMG = /^https:\/\/images\.openfoodfacts\.org\/images\/products\/[0-9\/]+\/[a-z0-9_]+\.\d+\.\d+\.jpg$/;
+const oxOk = o => o && /^\d{4}-\d\d-\d\d$/.test(o.mod || '') && (!o.img || OFFIMG.test(o.img)) && !/^https?:/.test(o.ing || '');
+const cleanIng = t => (t || '').replace(/^\s*ingredients?\s*:\s*/i, '').trim();
+const NKs = ['carbohydrates', 'sugars', 'fiber', 'proteins', 'fat', 'saturated-fat', 'sodium', 'energy-kcal'];
+const cmpl = n => n ? NKs.filter(k => n[k] != null).length : 0;
+const nutArr = m => [m.carbohydrates, m.sugars, m['added-sugars'], m.fiber, m.proteins, m.fat, m['saturated-fat'], m['trans-fat'], m.sodium == null ? null : m.sodium * 1000, m['energy-kcal'], m.polyols].map(v => v == null ? null : Math.round(v * 10) / 10);
+const ST = {}; const st = (k, f) => { const c = ST[k] = ST[k] || { n: 0, photoBefore: 0, photoAfter: 0, ingBefore: 0, ingAfter: 0, verifiableBefore: 0, verifiableAfter: 0, nutritionSwapped: 0, altNutrition: 0, ingFrom: {} }; f(c); };
 const audit = { total: 0, carbsUnknown: 0, inconsistent: 0, fiberDropped: 0, zeroCarbOk: 0, issues: {} };
 const src = process.argv[2]; const out = path.join(__dirname, '..', 'data');
 fs.rmSync(out, { recursive: true, force: true }); fs.mkdirSync(path.join(out, 'd'), { recursive: true });
@@ -27,6 +38,18 @@ const cats = [], catIdx = new Map(), docs = [], shards = {}; const seen = new Se
 const rnd = v => v == null ? null : Math.round(v * 10) / 10;
 for (const l of lines) {
   const r = JSON.parse(l); if (seen.has(r.code)) continue; seen.add(r.code);
+  const isU = r.src === 'usda-branded'; const gk = r.code.replace(/^0+/, ''); const ox0 = OX[gk]; const ox = oxOk(ox0) ? ox0 : null; const ux = UX[gk];
+  const SK = isU ? 'USDA Branded' : 'OFF'; const b4 = { img: !!r.img, ing: !!(r.ing && r.ing.trim()) };
+  let s2b = SIDE2[r.code]; const dmB = D.analyze({ ing: r.ing, name: r.name, allergens: s2b && s2b[0], traces: s2b && s2b[1], analysis: s2b && s2b[2], labels: s2b && s2b[3] });
+  const SRC = { n: isU ? 'u' : 'o', i: r.ing ? (isU ? 'u' : 'o') : '', p: r.img ? 'o' : '', om: ox ? ox.mod : '', fdc: isU ? r.fdc : ux ? ux.fdc : 0, ud: isU ? r.date : ux ? ux.date : '' };
+  if (isU && ux && cleanIng(ux.ing).length > (r.ing || '').length) r.ing = cleanIng(ux.ing);
+  if (isU && ox) { if (ox.img && !r.img) { r.img = ox.img; SRC.p = 'o'; } if (!r.ing && ox.ing) { r.ing = ox.ing; SRC.i = 'o'; } if (!r.add && ox.add) r.add = ox.add; s2b = [ox.al, ox.tr, ox.an, ox.lb]; if (!r.cats && ox.cats) r.cats = ox.cats; }
+  if (!isU && ox && ox.img && !r.img) { r.img = ox.img; SRC.p = 'o'; }
+  if (!isU && !r.ing && ux && cleanIng(ux.ing)) { r.ing = cleanIng(ux.ing); SRC.i = 'u'; }
+  let ALT = null; { const oth = isU ? ox && ox.n : ux && ux.n; const od = isU ? ox && ox.mod : ux && ux.date; const md = isU ? r.date : ox ? ox.mod : '';
+    const plaus = m => { const c = m.carbohydrates || 0, pr = m.proteins || 0, f = m.fat || 0, k = m['energy-kcal']; if (k == null) return false; const e = 4 * c + 4 * pr + 9 * f; return Math.abs(e - k) <= Math.max(15, 0.35 * Math.max(e, k)) && (m.sugars == null || m.sugars <= c + 0.5); };
+    if (oth && oth.carbohydrates != null && oth['energy-kcal'] != null && plaus(oth) && !(oth['energy-kcal'] === 0 && (r.n['energy-kcal'] || 0) > 5)) { const a = cmpl(oth), b = cmpl(r.n);
+      if (r.n.carbohydrates == null || !plaus(r.n) || a > b || (a === b && (od || '') > (md || ''))) { ALT = [SRC.n, nutArr(r.n)]; r.n = Object.assign({ polyols: r.n.polyols }, oth); SRC.n = isU ? 'o' : 'u'; } else ALT = [isU ? 'o' : 'u', nutArr(oth)]; } }
   const m = r.n; const sod = m.sodium;
   const nut = [m.carbohydrates, m.sugars, m['added-sugars'], m.fiber, m.proteins, m.fat, m['saturated-fat'], m['trans-fat'], sod == null ? null : sod * 1000, m['energy-kcal'], m.polyols].map(rnd);
   const img = r.img.startsWith(IMG) ? r.img.slice(IMG.length) : r.img;
@@ -36,7 +59,8 @@ for (const l of lines) {
   const comp = [r.code, r.name, r.brand, r.qty, img, r.servQ, r.serv, r.nova, nut, adds, r.ing, cat, (na ? 1 : 0) | (liquid ? 2 : 0) | (S.CARBY.test(r.cats + ' ' + r.cat) ? 4 : 0) | (S.DRY.test(r.cats + ' ' + r.cat) ? 8 : 0) | 16];
   if (r.src === 'usda-branded') comp.push(null, { src: 'USDA Branded Foods', url: `https://fdc.nal.usda.gov/food-details/${r.fdc}/nutrients`, date: r.date });
   const sd = SIDE[r.code]; const hx = { o: (sd && sd[0]) || ORG.test(r.name) ? 1 : 0, fv: sd && sd[1] != null ? sd[1] : null };
-  const s2 = SIDE2[r.code]; const dm = D.analyze({ ing: r.ing, name: r.name, allergens: s2 && s2[0], traces: s2 && s2[1], analysis: s2 && s2[2], labels: s2 && s2[3], organic: !!hx.o }); hx.am = dm.am; hx.tm = dm.tm; hx.df = dm.df; alc(r.src === 'usda-branded' ? 'USDA Branded' : 'OFF', dm);
+  const s2 = s2b; const dm = D.analyze({ ing: r.ing, name: r.name, allergens: s2 && s2[0], traces: s2 && s2[1], analysis: s2 && s2[2], labels: s2 && s2[3], organic: !!hx.o }); hx.am = dm.am; hx.tm = dm.tm; hx.df = dm.df; alc(SK, dm); hx.s = SRC; if (ALT) hx.alt = ALT;
+  st(SK, c => { c.n++; c.photoBefore += b4.img; c.photoAfter += !!r.img; c.ingBefore += b4.ing; c.ingAfter += !!(r.ing && r.ing.trim()); c.verifiableBefore += dmB.df & 1; c.verifiableAfter += dm.df & 1; if (SRC.n !== (isU ? 'u' : 'o')) c.nutritionSwapped++; if (ALT) c.altNutrition++; if (SRC.i) c.ingFrom[SRC.i] = (c.ingFrom[SRC.i] || 0) + 1; });
   if (r.src !== 'usda-branded') comp.push(null, null); comp.push(hx);
   const p = S.fromCompact(comp); const s = S.score(p); audit.total++;
   const hr = H.rate(p, { organic: !!hx.o, fvl: hx.fv }); cov(r.src === 'usda-branded' ? 'USDA Branded (no photo)' : 'Open Food Facts', hr);
@@ -70,18 +94,28 @@ if (gsrc) {
   G.sort((a, b) => order(a) - order(b));
   const hash = id => { let h = 0; for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h % 40; };
   const ga = { total: 0, inconsistent: 0 };
+  const WC = fs.existsSync(path.join(__dirname, '..', 'img/w/credits.json')) ? JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'img/w/credits.json'), 'utf8')).names : {};
+  const wbase = n => n.toLowerCase().replace(/\(.*?\)/g, '').split(',')[0].trim();
+  const CFA = rj('cfa_items.json'); const cfaN = {}; for (const [t, v] of Object.entries(CFA)) cfaN[t.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()] = v;
+  const CFAT = { milk: 'en:milk', egg: 'en:eggs', soy: 'en:soybeans', wheat: 'en:gluten', sesame: 'en:sesame-seeds', 'tree-nuts': 'en:nuts', peanut: 'en:peanuts', fish: 'en:fish' };
+  const CFAIMG = /^https:\/\/www\.cdn-chick-fil-a\.com\/|^https:\/\/www\.chick-fil-a\.com\//;
   for (const r of G) {
     const n = r.n; const nut = S.DK.map(k => n[k] == null ? null : rnd(n[k]));
     const p0 = r.portions && r.portions[0];
     const liquid = !!r.liquid || /beverage|drinks?\b|juice|milk\b|soda|coffee|tea\b/i.test(r.group + ' ' + r.name) && !/powder|dry|bar\b/i.test(r.name);
     const comp = [r.id, r.name, r.brand, '', '', p0 ? p0[1] : null, p0 ? p0[0] : '', null, nut, '', '', r.group, 1 | (liquid ? 2 : 0) | (S.CARBY.test(r.group + ' ' + r.name) ? 4 : 0) | 16, r.portions || [], { src: r.src, url: r.url, date: r.date, perItem: !!r.perItem }];
-    const isWhole = r.keys[0] === 'whole' || !r.keys.some(k => k.startsWith('rest')); const hx = { w: isWhole ? 1 : 0, g: r.group, o: ORG.test(r.name) ? 1 : 0 }; if (r.keys.some(k => /^whole-(fruit|veg|legumes)/.test(k))) hx.fv = 100; { const simple = isWhole && /^(Fruits|Vegetables|Legumes|Nut and Seed|Spices|Finfish|Beef Products|Pork Products|Poultry|Lamb|Dairy and Egg)/.test(r.group || '') && !/FNDDS/.test((r.brand || '') + r.src) && !/breaded|batter|fried|stuffed|with |sauce|gravy|prepared|recipe/i.test(r.name); const dm = D.analyze({ name: r.name, whole: simple, organic: !!hx.o }); hx.am = dm.am; hx.tm = dm.tm; hx.df = dm.df; alc(isWhole ? 'Whole' : 'Restaurant', dm); } comp.push(hx);
+    const isWhole = r.keys[0] === 'whole' || !r.keys.some(k => k.startsWith('rest')); const hx = { w: isWhole ? 1 : 0, g: r.group, o: ORG.test(r.name) ? 1 : 0 }; if (r.keys.some(k => /^whole-(fruit|veg|legumes)/.test(k))) hx.fv = 100; { const simple = isWhole && /^(Fruits|Vegetables|Legumes|Nut and Seed|Spices|Finfish|Beef Products|Pork Products|Poultry|Lamb|Dairy and Egg)/.test(r.group || '') && !/FNDDS/.test((r.brand || '') + r.src) && !/breaded|batter|fried|stuffed|with |sauce|gravy|prepared|recipe/i.test(r.name); const GK = isWhole ? 'Whole' : 'Restaurant'; const dmB = D.analyze({ name: r.name, whole: simple }); hx.s = { n: 'g' };
+      if (isWhole) { const sl = WC[wbase(r.name)]; if (sl) { comp[4] = 'w:' + sl; hx.s.p = 'w'; } }
+      const cf = r.brand === 'Chick-fil-A' && cfaN[r.name.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()]; let tags = '';
+      if (cf) { if (cf.img && CFAIMG.test(cf.img)) { comp[4] = cf.img; hx.s.p = 'c'; } if (cf.ing) { comp[10] = cf.ing; hx.s.i = 'c'; } if (cf.allergens) { tags = Object.entries(cf.allergens).filter(([k, v]) => v && CFAT[k]).map(([k]) => CFAT[k]).join(','); hx.s.a = 1; } if (cf.link) hx.s.cu = cf.link; }
+      const dm = D.analyze({ name: r.name, ing: comp[10], allergens: tags, whole: simple, organic: !!hx.o }); hx.am = dm.am; hx.tm = dm.tm; hx.df = dm.df; alc(GK, dm);
+      st(GK, c => { c.n++; c.photoAfter += !!comp[4]; c.ingAfter += !!comp[10]; c.verifiableBefore += dmB.df & 1; c.verifiableAfter += dm.df & 1; if (hx.s.i) c.ingFrom[hx.s.i] = (c.ingFrom[hx.s.i] || 0) + 1; if (hx.s.p) c.ingFrom['photo-' + hx.s.p] = (c.ingFrom['photo-' + hx.s.p] || 0) + 1; }); } comp.push(hx);
     const p = S.fromCompact(comp); const s = S.score(p); ga.total++;
     const hr = H.rate(p, { whole: isWhole, group: r.group, organic: !!hx.o, fvl: hx.fv }); cov(isWhole ? 'Whole foods (USDA)' : r.src.includes('official') ? 'Restaurants (official)' : 'Restaurants (USDA)', hr); if (s.score == null) ga.inconsistent++;
     let keys = r.keys.filter(k => k === 'rest' || k === 'whole' || !k.startsWith('rest-') || okKeys.has(k) || k === 'rest-other');
     if (r.keys[1] && r.keys[1].startsWith('rest-') && !okKeys.has(r.keys[1]) && r.keys[1] !== 'rest-other') keys = ['rest', 'rest-other'];
     if (!gci.has(r.group)) { gci.set(r.group, gcats.length); gcats.push(r.group); }
-    gdocs.push([r.id, r.name, r.brand, s.score == null ? -1 : s.score, s.score == null || s.net == null ? -1 : Math.round(s.net), gci.get(r.group), '', keys.join('.'), n.sugars == null ? -1 : Math.round(n.sugars), hr.score == null ? -1 : hr.score, (hr.basis === 'nutrition' ? 1 : 0) | (hr.est.length ? 2 : 0), hx.am | hx.tm << 9, hx.df]);
+    gdocs.push([r.id, r.name, r.brand, s.score == null ? -1 : s.score, s.score == null || s.net == null ? -1 : Math.round(s.net), gci.get(r.group), comp[4] || '', keys.join('.'), n.sugars == null ? -1 : Math.round(n.sugars), hr.score == null ? -1 : hr.score, (hr.basis === 'nutrition' ? 1 : 0) | (hr.est.length ? 2 : 0), hx.am | hx.tm << 9, hx.df]);
     const k = hash(r.id); (gsh[k] = gsh[k] || {})[r.id] = comp;
   }
   fs.mkdirSync(path.join(out, 'g'), { recursive: true });
@@ -90,5 +124,5 @@ if (gsrc) {
   META.whole = gdocs.filter(d => d[7].startsWith('whole')).length; META.restaurant = gdocs.length - META.whole; META.chains = dyn.length; META.chainCounts = dyn.map(x => [x[1], chainCount[x[0]], G.some(r => r.keys[1] === x[0] && r.src.includes('official')) ? 'official' : 'USDA']);
   console.log('generic', JSON.stringify(ga), 'chains', dyn.map(x => x[1] + ':' + chainCount[x[0]]).join(', '));
 }
-META.health = COV; META.allergenData = ALC; console.log('ALLERGEN', JSON.stringify(ALC)); console.log('HEALTH', JSON.stringify(COV));
+META.health = COV; META.sources = ST; console.log('SOURCES', JSON.stringify(ST, null, 1)); META.allergenData = ALC; console.log('ALLERGEN', JSON.stringify(ALC)); console.log('HEALTH', JSON.stringify(COV));
 fs.writeFileSync(path.join(out, 'meta.json'), JSON.stringify(META));

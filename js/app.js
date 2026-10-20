@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '6.0.0';
+const VERSION = '6.1.0';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -116,12 +116,13 @@ function catIcon(keys, cat) {
   const m = [[/cereal|granola|oat/, '🥣'], [/chip|crisp|snack|cracker|popcorn/, '🍿'], [/drink|beverage|soda|juice|water/, '🥤'], [/yog/, '🥛'], [/sauce|dressing|dip|salsa|condiment/, '🥫'], [/bar\b/, '🍫'], [/bread|tortilla|bagel/, '🍞'], [/chees|milk|dairy/, '🧀'], [/cookie|candy|choc|sweet|dessert|ice/, '🍪'], [/nut|peanut|almond/, '🥜']].find(([r]) => r.test(t));
   return m ? m[1] : '🛒';
 }
-function thumb(img, name, keys, cat, big) {
-  const src = img ? S.imgSize(img, big ? 400 : 200) : '';
-  return `<div class="thumb${big ? ' big' : ''}"><span class="ic">${catIcon(keys, cat)}</span>${src ? `<img src="${esc(src)}" alt="" loading="lazy" decoding="async" onload="this.classList.add('ok')" onerror="this.remove()">` : ''}</div>`;
+function thumb(img, name, keys, cat, big, brand) {
+  let src = img ? S.imgSize(img, big ? 400 : 200) : ''; if (BADIMG.test(src)) src = '';
+  const bg = !src && brand && isRestKeys(keys) ? chainPH(brand) : `<span class="ic">${catIcon(keys, cat)}</span>`;
+  return `<div class="thumb${big ? ' big' : ''}">${bg}${src ? `<img src="${esc(src)}" alt="" ${big ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async" onload="LumiImg.ok(this)" onerror="LumiImg.err(this)">` : ''}</div>`;
 }
 const SRC = { local: '', off: '<span class="tag">OFF</span>', usda: '<span class="tag">USDA</span>', whole: '<span class="tag t-whole">Whole food</span>', rest: '<span class="tag t-rest">Restaurant</span>', chain: '<span class="tag t-rest">Restaurant</span>', custom: '<span class="tag">My food</span>' };
-function rowHTML(it) { return `<a class="row" href="#/product/${esc(it.id)}">${thumb(it.img, it.name, it.keys, it.cat)}<div class="t"><div class="n">${alertIcon(it)}${esc(it.name)}</div><div class="b">${SRC[it.src] || ''}${esc(it.brand || '')}${it.score == null ? ' · <span class="c-pr">data incomplete</span>' : it.net != null ? ` · ${r1(it.net)}g net carbs/100` : ''}</div></div>${mini(it)}</a>`; }
+function rowHTML(it) { return `<a class="row" href="#/product/${esc(it.id)}">${thumb(it.img, it.name, it.keys, it.cat, false, it.brand)}<div class="t"><div class="n">${alertIcon(it)}${esc(it.name)}</div><div class="b">${SRC[it.src] || ''}${esc(it.brand || '')}${it.score == null ? ' · <span class="c-pr">data incomplete</span>' : it.net != null ? ` · ${r1(it.net)}g net carbs/100` : ''}</div></div>${mini(it)}</a>`; }
 const skel = n => `<div class="list">${Array.from({ length: n }, () => `<div class="row skel"><div class="thumb sk"></div><div class="t"><div class="sk skl" style="width:80%"></div><div class="sk skl" style="width:45%"></div></div><div class="sk" style="width:44px;height:44px;border-radius:50%"></div></div>`).join('')}</div>`;
 function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 2200); }
 const go = h => { if (location.hash !== h) location.hash = h; else route(); };
@@ -197,7 +198,7 @@ function viewHome() {
     let p = []; try { p = topPicks(); } catch (e) { console.warn('picks', e); }
     const items = p.length >= 4 ? p.filter(d => !prefs().hide || !conflicts(d)).map(itemFromDoc) : FALLBACK_PICKS.map(x => ({ id: x[0], code: x[0], name: x[1], brand: x[2], score: x[3], net: x[4], img: '', src: x[5] || 'local', keys: [], cat: '' }));
     el.innerHTML = `<div class="list">${items.map(rowHTML).join('')}</div>`;
-    const rb = $('#restBest'); if (rb) { let r = []; try { r = bestAtRestaurants(); } catch {} rb.innerHTML = r.length ? `<div class="swaps">${r.map(d => `<a class="swap" href="#/product/${esc(d.code)}">${thumb(d.img, d.name, d.keys, d.cat)}<div class="b chain">${esc(d.brand)}</div><div class="n">${esc(d.name)}</div><div class="s"><span>${d.net}g net</span><span class="pills">${pills(d)}</span></div></a>`).join('')}</div>` : `<div class="empty sm">${MASCOT(48)}<span>Restaurant data is loading or unavailable offline.</span></div>`; }
+    const rb = $('#restBest'); if (rb) { let r = []; try { r = bestAtRestaurants(); } catch {} rb.innerHTML = r.length ? `<div class="swaps">${r.map(d => `<a class="swap" href="#/product/${esc(d.code)}">${thumb(d.img, d.name, d.keys, d.cat, false, d.brand)}<div class="b chain">${esc(d.brand)}</div><div class="n">${esc(d.name)}</div><div class="s"><span>${d.net}g net</span><span class="pills">${pills(d)}</span></div></a>`).join('')}</div>` : `<div class="empty sm">${MASCOT(48)}<span>Restaurant data is loading or unavailable offline.</span></div>`; }
   };
   const fb = setTimeout(drawPicks, 6000); // never leave the section empty
   loadIndex().then(() => { clearTimeout(fb); drawPicks(); return loadIndexFull(); }).then(drawPicks).catch(() => { clearTimeout(fb); drawPicks(); });
@@ -443,9 +444,10 @@ async function viewProduct(id) {
   const issues = s.quality && s.quality.issues.length ? s.quality.issues : null;
   app.innerHTML = `
   <div class="card">
-    <div class="ph">${thumb(p.img, p.name, keys, p.cat, true)}
-      <div class="ph-t"><h1>${esc(p.name)}</h1><div class="b">${esc(p.brand)}${p.qty ? ' · ' + esc(p.qty) : ''}</div>${p.meta ? `<div class="srcline">Source: ${esc(p.meta.src)}${p.meta.date ? ', ' + esc(p.meta.date) : ''}</div>` : ''}
+    <div class="ph">${thumb(p.img, p.name, keys, p.cat, true, p.brand)}
+      <div class="ph-t"><h1>${esc(p.name)}</h1><div class="b">${esc(p.brand)}${p.qty ? ' · ' + esc(p.qty) : ''}</div>${p.hx && p.hx.s ? '' : p.meta ? `<div class="srcline">Source: ${esc(p.meta.src)}${p.meta.date ? ', ' + esc(p.meta.date) : ''}</div>` : ''}
         ${ratingLines(s, hr, hp)}</div></div>
+    ${sourceLine(p)}
     ${alertBanner(p, s.net)}
     ${mascotReact(hp ? hr.score : s.score)}
     ${issues ? `<div class="note"><b>Not scored:</b> ${esc(issues.join(', '))}. The label data in the database looks wrong — check the package.</div>` : s.missing ? `<div class="note">No carbohydrate data — Lumi won't guess. Check the package.</div>` : (s.missingFields.length ? `<div class="note">Missing: ${esc(s.missingFields.join(', '))} (treated as zero).</div>` : '')}
@@ -467,8 +469,10 @@ async function viewProduct(id) {
     ${s.items.map(i => `<li><span class="l">${esc(i.label)}${i.detail ? `<small>${esc(i.detail)}</small>` : ''}</span><span class="bar-s"><i class="${i.pts < 0 ? 'bg-bd' : 'bg-ex'}" style="width:${Math.round(Math.abs(i.pts) / maxAbs * 100)}%"></i></span><span class="v ${i.pts < 0 ? 'neg' : 'pos'}">${i.pts > 0 ? '+' : ''}${i.pts}</span></li>`).join('')}
     <li><span class="l"><b>Final</b> <small>clamped to 0–100</small></span><span class="v">${s.score}</span></li></ul>
     ${s.assumedServing ? `<div class="small" style="margin-top:6px">No serving size on file — per-serving term assumes ${p.liquid ? '240 ml' : '50 g'}.</div>` : ''}</details>`}
+  ${altCard(p)}
   ${p.ing ? `<div class="card"><h2>Ingredients</h2><div class="ing">${esc(p.ing)}</div></div>` : ''}
-  <p class="foot">Source: ${srcLink}. Informational only — not medical advice. Dose from the physical label.</p>`;
+  <p class="foot">${p.hx && p.hx.s ? '' : 'Source: ' + srcLink + '. '} Informational only — not medical advice. Dose from the physical label.</p>`;
+  fillCredits();
   $('#share').onclick = () => share(p, s);
   $('#save').onclick = () => { const on = toggleSave(p); $('#save').textContent = on ? '♥ Saved' : '♡ Save'; toast(on ? 'Saved — available offline' : 'Removed'); };
   if (p.code && p.src !== 'off') offProduct(p.code).then(o => { if (o && o.img && (!p.img || !/\.400\.jpg$/.test(p.img))) { p.img = o.img; const el = document.querySelector('.ph .thumb'); if (el) el.outerHTML = thumb(o.img, p.name, keys, p.cat, true); } }).catch(() => {});
@@ -498,7 +502,7 @@ async function renderSwaps(p, s) {
     const doc = engine.byCode(p.code || p.id) || { code: p.code || p.id, name: p.name, keys: C.match(p.cats || '') };
     const sw = swapsFor(doc, { score: s.score, net: s.net, sugar: p.n.sugars });
     const leaf = (doc.keys || []).slice(-1)[0];
-    el.innerHTML = sw.length ? `<div class="card"><h2>Better swaps</h2><div class="small" style="margin:-6px 0 8px">Same category${leaf != null ? ': ' + esc(C.CATS[C.KEYS[leaf]][1]) : ''} · per 100${p.liquid ? 'ml' : 'g'}</div><div class="swaps">${sw.map(d => `<a class="swap" href="#/product/${esc(d.code)}">${thumb(d.img, d.name, d.keys, d.cat)}<div class="n">${esc(d.name)}</div><div class="s"><span>${esc((d.brand || '').slice(0, 14))}</span><span class="pills">${pills(d)}</span></div><div class="why">${esc(d.reason)}</div></a>`).join('')}</div></div>` : '';
+    el.innerHTML = sw.length ? `<div class="card"><h2>Better swaps</h2><div class="small" style="margin:-6px 0 8px">Same category${leaf != null ? ': ' + esc(C.CATS[C.KEYS[leaf]][1]) : ''} · per 100${p.liquid ? 'ml' : 'g'}</div><div class="swaps">${sw.map(d => `<a class="swap" href="#/product/${esc(d.code)}">${thumb(d.img, d.name, d.keys, d.cat, false, d.brand)}<div class="n">${esc(d.name)}</div><div class="s"><span>${esc((d.brand || '').slice(0, 14))}</span><span class="pills">${pills(d)}</span></div><div class="why">${esc(d.reason)}</div></a>`).join('')}</div></div>` : '';
   };
   draw(); loadIndexFull().then(draw).catch(() => {});
 }
@@ -589,6 +593,7 @@ function route() {
   if (view === 'browse' && arg) return viewBrowse(arg);
   if (view === 'saved' || view === 'favorites') return viewSaved();
   if (view === 'about') return viewAbout();
+  if (view === 'credits') return viewCredits();
   if (view === 'log') return viewLog(arg);
   if (view === 'settings') return viewSettings();
   if (view === 'custom') return viewCustom();

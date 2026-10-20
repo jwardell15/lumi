@@ -143,8 +143,8 @@ const titleCase = s => String(s || '').toLowerCase().replace(/\b([a-z])/g, c => 
 const DK = ['carbs', 'sugars', 'added', 'fiber', 'protein', 'fat', 'sat', 'trans', 'sodiumMg', 'kcal', 'polyols'];
 function fromCompact(a) {
   const [code, name, brand, qty, img, servQ, serv, nova, nut, adds, ing, cat, flags, portions, meta] = a; const fl = flags || 0; const n = {}; DK.forEach((k, i) => n[k] = nut[i] == null ? null : nut[i]);
-  return { id: code, code: /^\d+$/.test(code) ? code : '', src: meta ? (meta.src.includes('official') ? 'chain' : 'usda') : 'local', fdcId: /^fdc-/.test(code) ? code.slice(4) : undefined, name, brand, qty, img: img ? (img.startsWith('http') ? img : 'https://images.openfoodfacts.org/images/products/' + img) : '', servQ, serv, nova, additives: adds ? adds.split(',') : [], ing, cat, cats: cat, naLabel: !!(fl & 1), liquid: !!(fl & 2), carby: fl & 16 ? !!(fl & 4) : undefined, dry: fl & 16 ? !!(fl & 8) : undefined, portions: portions || null, meta: meta || null, hx: a[15] || null, n };
+  return { id: code, code: /^\d+$/.test(code) ? code : '', src: meta ? (meta.src.includes('official') ? 'chain' : 'usda') : 'local', fdcId: /^fdc-/.test(code) ? code.slice(4) : undefined, name, brand, qty, img: img ? (img.startsWith('w:') ? 'img/w/' + img.slice(2) + '-200.webp' : img.startsWith('http') ? img : 'https://images.openfoodfacts.org/images/products/' + img) : '', servQ, serv, nova, additives: adds ? adds.split(',') : [], ing, cat, cats: cat, naLabel: !!(fl & 1), liquid: !!(fl & 2), carby: fl & 16 ? !!(fl & 4) : undefined, dry: fl & 16 ? !!(fl & 8) : undefined, portions: portions || null, meta: meta || null, hx: a[15] || null, n };
 }
-const imgSize = (u, n) => u ? u.replace(/\.(100|200|400|full)\.jpg$/, '.' + n + '.jpg') : '';
+const imgSize = (u, n) => u ? u.replace(/\.(100|200|400|full)\.jpg$/, '.' + n + '.jpg').replace(/-(200|400)\.webp$/, '-' + n + '.webp') : '';
 return { DRY, CARBY, imgSize, score, quality, fromOFF, fromUSDA, fromCompact, band, label, netCarbs, addTags, isNA, isLiquid, DK, ADDITIVES };
 });
