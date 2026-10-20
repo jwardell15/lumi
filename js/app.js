@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '10.0';
+const VERSION = '11.0';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -200,7 +200,7 @@ function viewHomeOld() {
   <p class="foot">Lumi ${VERSION} · <a class="lnk" href="#/whatsnew">What's new</a> · Informational only — not medical advice.</p>`;
   bindSearch();
   $('#heroScan').onclick = startScan;
-  $('#bform').onsubmit = e => { e.preventDefault(); const c = $('#bc').value.replace(/\D/g, ''); if (c.length >= 8) go('#/product/' + c); else toast('Enter an 8–14 digit barcode'); };
+  $('#bform').onsubmit = e => { e.preventDefault(); const c = $('#bc').value.replace(/\D/g, ''); if (c.length >= 8) { sessionStorage.setItem('lumi.scanned', c); go('#/product/' + c); } else toast('Enter an 8–14 digit barcode'); };
   if ($('#clrRec')) $('#clrRec').onclick = () => { store.set('recent', []); viewHome(); };
   loadIndex().then(loadIndexFull).then(renderForYou).catch(() => {});
   loadMeta().then(m => { const el = $('#lead'); if (el && m) el.textContent = leadText(m); });
@@ -640,6 +640,10 @@ function route() {
   if (view === 'label') return viewLabel(arg);
   if (view === 'alerts') return viewAlerts();
   if (view === 'meals') return viewMeals9();
+  if (view === 'history') return viewHistory11();
+  if (view === 'applehealth') return viewHealth11();
+  if (view === 'glucose') return viewGlucose11(arg);
+  if (view === 'share') return viewShare11(h.slice(i + 1 || h.length));
   if (view === 'report') return viewReport(arg);
   viewHome();
 }

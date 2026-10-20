@@ -96,6 +96,15 @@ Local dev: `python3 serve.py 8765`.
 - **Fixes**: restaurant rows hidden from the All view unless they're relevant; Open Food Facts searched one mirror at a time with a 10-minute quiet back-off; 0 g net carbs with ≥3 g sugar is flagged "check label" and kept out of picks and swaps; more non-English words filtered; data-driven big-brand signal alongside the hand list; top picks skip hidden-sugar items.
 
 
+## v11.0
+- **Glucose after meals** (`js/v11.js`): import a Dexcom Clarity CSV export; each logged meal can chart the user's own readings from 15 min before to 3 h after (peak, 2 h, 3 h). Low/High values are skipped, never estimated. Optional direct Dexcom API via a user-deployed backend (`tools/dexcom-worker.js`): Dexcom's OAuth needs `client_secret` server-side and `api.dexcom.com` returns no CORS headers (checked: preflight from github.io gets 403), and US data is delayed 1 h (3 h outside US). Sandbox data is labeled "sandbox (simulated data)".
+- **Apple Health** via iOS Shortcuts: `shortcuts://run-shortcut?name=Lumi%20to%20Health&input=text&text={json}` with carbs, protein, fat, kcal, name, date. Build guide at `#/applehealth`.
+- **Family sharing** without a backend: lists and saved meals packed as deflate-raw + base64url in `#/share/<code>`; opening imports a copy (no sync).
+- **Scan history** (`#/history`): scans and typed barcodes with time, note and price, stored locally.
+- New layouts: Log timeline + desktop two-column, Settings hub, Lists/Compare/Meal/Meals icon empties and layouts, aisle line icons.
+- Chains from official guides: Pizza Ranch (2023-08-17 guide, 812 items), Godfather's Pizza (2026, 412), BIGGBY Coffee (Feb 2026, 753), Scooter's Coffee (729). Skipped: Raising Cane's (403), In-N-Out (PDF behind a JS page), Whataburger (only a 2021 PDF; existing 2018 MenuStat data kept), Smoothie King (502), Caribou (2019 guide only).
+- Store brands: Aldi + Fusia, Goldhen, Burman's, Dakota's Pride, Lunch Mate, PurAqua, Benner; Walmart + Prima Della, Spring Valley, Equate.
+
 ## v10.0 (redesign)
 - New design system in `css/v10.css` (tokens: iOS type scale on the system SF stack, 4-pt spacing, radius, elevation, light/dark palettes with brand orange as accent, motion that honors prefers-reduced-motion) and `js/v10.js` (line icons, minimal emoji, iOS tab bar, desktop sidebar, Yuka-style product layout with large score circle and sticky Log/Save/List/Share bar, scan-first home).
 - Presentation only: data, scoring, dose-estimate (off by default, "estimate only, confirm on your pump"), allergen wording ("couldn't verify") and citations unchanged. axe WCAG 2 AA clean on main screens in light and dark.

@@ -3,13 +3,13 @@
 'use strict';
 // [id, chip label, store name, own-brand regex (on normalized brand), OFF "stores" field regex]
 const STORES = [
-  ['walmart', 'Great Value', 'Walmart', /^(great value|marketside|sam'?s choice|bettergoods|freshness guaranteed|parent'?s choice)\b/, /\bwal-?mart\b/],
+  ['walmart', 'Great Value', 'Walmart', /^(great value|marketside|sam'?s choice|bettergoods|freshness guaranteed|parent'?s choice|prima della|spring valley|equate)\b/, /\bwal-?mart\b/],
   ['costco', 'Kirkland', 'Costco', /^kirkland( signature)?\b/, /\bcostco\b/],
   ['target', 'Good & Gather', 'Target', /^(good (&|and) gather|market pantry|favorite day|archer farms|simply balanced|up (&|and) up|dealworthy)\b/, /\btarget\b/],
   ['kroger', 'Kroger', 'Kroger', /^(kroger|simple truth|private selection|heritage farm|psst|smart way|home chef|bakery fresh goodness|big k|check this out)\b/, /\b(kroger|ralphs|fred meyer|king soopers|fry'?s|smith'?s|harris teeter|mariano'?s|dillons|qfc)\b/],
   ['wholefoods', '365', 'Whole Foods', /^(365|whole foods)\b/, /\bwhole foods\b/],
   ['traderjoes', "Trader Joe's", "Trader Joe's", /^trader (joe'?s|giotto'?s|ming'?s|jose'?s)\b/, /\btrader joe'?s\b/],
-  ['aldi', 'Aldi', 'Aldi', /^(simply nature|millville|clancy'?s|specially selected|friendly farms|happy farms|baker'?s corner|fit (&|and) active|season'?s choice|l'?oven fresh|never any|savoritz|benton'?s|southern grove|stonemill|elevation by millville|choceur|barissimo|casa mamita|mama cozzi'?s|appleton farms|priano|earth grown|moser roth|park street deli|reggano|countryside creamery|emporium selection|bremer|sundae shoppe|brookdale|kirkwood|simms|tuscan garden|little salad bar|nature'?s nectar|northern catch|fremont fish market|chef'?s cupboard|pueblo lindo|live g free|carlini|deutsche k(u|ü)che|aldi)\b/, /\baldi\b/],
+  ['aldi', 'Aldi', 'Aldi', /^(simply nature|millville|clancy'?s|specially selected|friendly farms|happy farms|baker'?s corner|fit (&|and) active|season'?s choice|l'?oven fresh|never any|savoritz|benton'?s|southern grove|stonemill|elevation by millville|choceur|barissimo|casa mamita|mama cozzi'?s|appleton farms|priano|earth grown|moser roth|park street deli|reggano|countryside creamery|emporium selection|bremer|sundae shoppe|brookdale|kirkwood|simms|tuscan garden|little salad bar|nature'?s nectar|northern catch|fremont fish market|chef'?s cupboard|pueblo lindo|live g free|carlini|deutsche k(u|ü)che|aldi|fusia|goldhen|burman'?s|dakota'?s pride|lunch mate|puraqua|benner)\b/, /\baldi\b/],
   ['heb', 'H-E-B', 'H-E-B', /^(h ?e ?b|hill country fare|central market|higher harvest)\b/, /\bh-?e-?b\b/],
   ['publix', 'Publix', 'Publix', /^(publix|greenwise)\b/, /\bpublix\b/],
   ['hyvee', 'Hy-Vee', 'Hy-Vee', /^(hy ?-?vee|midwest country fare)\b/, /\bhy-?vee\b/],
