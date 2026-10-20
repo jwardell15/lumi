@@ -354,7 +354,8 @@ function viewBrowse(key) {
 }
 
 /* ---------------- product ---------------- */
-async function resolveProduct(id) {
+async function resolveProduct(id) { const p = await resolveProduct0(id); if (p && p.brand && window.LumiStores) { const a = LumiStores.alias(p.brand); if (a) p.brand = a; } return p; }
+async function resolveProduct0(id) {
   if (/^(fdc-|r-|ms-|cnf-)/.test(id)) { const g = await genericProduct(id); if (g) return g; }
   if (memo.has(id)) return memo.get(id);
   const sv = saved().find(s => s.p.id === id); if (sv) return sv.p;
