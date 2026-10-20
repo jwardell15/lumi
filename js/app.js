@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '8.0';
+const VERSION = '8.1';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -77,8 +77,9 @@ async function usdaSearch(q) {
 }
 async function offSearch(q) {
   const enc = encodeURIComponent(q);
-  const v = await cached('off:' + q.toLowerCase(), 6 * 36e5, () => Promise.any(MIRRORS.map((cc, i) => new Promise(r => setTimeout(r, i * 700)).then(() =>
-    getJSON(`https://${cc}.openfoodfacts.org/cgi/search.pl?search_terms=${enc}&search_simple=1&action=process&json=1&page_size=30&fields=${OFF_FIELDS}`, 9000)).then(j => { if (!Array.isArray(j.products)) throw new Error('bad'); return j.products; }))));
+  const v = await cached('off:' + q.toLowerCase(), 6 * 36e5, () => { let done = false; // v8.1: stop starting more mirrors once one answered
+    return Promise.any(MIRRORS.map((cc, i) => new Promise(r => setTimeout(r, i * 700)).then(() => { if (done) throw new Error('skip');
+      return getJSON(`https://${cc}.openfoodfacts.org/cgi/search.pl?search_terms=${enc}&search_simple=1&action=process&json=1&page_size=30&fields=${OFF_FIELDS}`, 9000).then(j => { if (!Array.isArray(j.products)) throw new Error('bad'); done = true; return j.products; }); }))); });
   return v.filter(p => p.code).map(S.fromOFF);
 }
 async function offProduct(code) {
@@ -92,7 +93,7 @@ async function usdaByGtin(code) { const r = await usdaSearch(gtinKey(code)); ret
 
 /* ---------------- result items ---------------- */
 function itemFromProduct(p, rel) { const s = S.score(p); memo.set(p.id, p); const hr = HR(p); const wh = typeof watchHits === 'function' ? watchHits(p) : null; return { wa: wh && wh.length ? wh.map(h => h.label).join(', ') : '', m: p.src === 'cos' ? null : dietM(p), h: hr.score, hn: hr.basis === 'nutrition', id: p.id, code: p.code, name: p.name, brand: LumiSearch.fixBrand(p.brand, p.name), score: s.score, net: s.score == null ? null : s.net, img: p.img, src: p.src, cat: p.cat, rel }; }
-function itemFromDoc(d) { return { ai: d.ai, bad: d.bad, sizes: d.sizes, fl: d.fl, al: d.al, df: d.df, h: d.h, hn: d.hn, id: d.code, code: d.code, name: d.name, brand: d.brand, score: d.score, net: d.score == null ? null : d.net, img: d.img, src: d.src || 'local', cat: d.cat, keys: d.keys, rel: d.rel }; }
+function itemFromDoc(d) { return { wa: d.wf && typeof watchFlags === 'function' ? watchFlags(d.wf) : '', ai: d.ai, bad: d.bad, sizes: d.sizes, fl: d.fl, al: d.al, df: d.df, h: d.h, hn: d.hn, id: d.code, code: d.code, name: d.name, brand: d.brand, score: d.score, net: d.score == null ? null : d.net, img: d.img, src: d.src || 'local', cat: d.cat, keys: d.keys, rel: d.rel }; }
 function textRel(q, name, brand) {
   const qt = LumiSearch.toks(q), nt = new Set(LumiSearch.toks(name + ' ' + brand)); if (!qt.length) return 0;
   let hit = 0; for (const t of qt) if (nt.has(t) || [...nt].some(x => x.startsWith(t) || (t.length > 4 && LumiSearch.dl(t, x, 1) <= 1))) hit++;

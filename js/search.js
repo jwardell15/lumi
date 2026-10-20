@@ -44,6 +44,9 @@ function fixBrand(b, name) {
 /* well-known US consumer brands get a relevance boost */
 const KNOWNB = /^(chobani|fage|oikos|siggi'?s|two good|ratio|yoplait|dannon|danone|activia|light \+ fit|kirkland|kirkland signature|great value|good & gather|market pantry|365|365 by whole foods market|kroger|private selection|simple truth|simple truth organic|trader joe'?s|stonyfield|stonyfield organic|noosa|tillamook|horizon|horizon organic|organic valley|fairlife|lactaid|silk|oatly|califia farms|kraft|sargento|cabot|philadelphia|daisy|breakstone'?s|kerrygold|general mills|cheerios|kellogg'?s|post|quaker|kashi|nature'?s path|magic spoon|catalina crunch|coca[- ]cola|pepsi|sprite|dr pepper|mountain dew|zevia|olipop|poppi|la croix|lacroix|sparkling ice|canada dry|a&w|lay'?s|frito ?lay|doritos|tostitos|kettle brand|cape cod|siete|ruffles|pringles|sun ?chips|pepperidge farm|dave'?s killer bread|nature'?s own|sara lee|wonder|arnold|oroweat|thomas'?|friendly farms|clancy'?s|h-e-b|heb|publix|wegmans|hy-vee|meijer|signature select|o organics|lucerne|bellwether farms|nancy'?s|maple hill|icelandic provisions|lifeway|ellenos|wallaby|brown cow|clover|alexandre|painterland|quest|premier protein|core power)$/i;
 /* known non-US labels that show up in OFF */
+const LEADSTOP = new Set('cereal cereals protein original organic the a and with of whole grain grains multigrain multi chocolate cinnamon vanilla strawberry peanut butter almond blueberry apple maple fruity fruit berry berries dark toast toasted honey crunchy crispy crisp low sugar free gluten family size big mini kids breakfast simple plain natural classic oat oats wheat rice corn brown light keto high fiber mixed nut nuts granola instant sweetened kelloggs kellogg crunch quick flavored fashioned nature natures pumpkin cranberry coconut banana pecan steel golden rolled flax lightly apples clusters overnight marshmallow general mills ancient sprouted superfood strawberries strawberry almonds flavor chocolatey super cherry cookie caramel chip french hazelnut food morning post quaker kashi great value signature select kroger simple truth market pantry spice flakes'.split(' '));
+const leadWord = n => { for (const w of norm(n).split(' ')) if (w.length >= 4 && !LEADSTOP.has(w) && !/\d/.test(w)) return w; return ''; };
+const leadPair = n => { const t = norm(n).split(' '); for (let i = 0; i < t.length; i++) if (t[i].length >= 4 && !LEADSTOP.has(t[i]) && !/\d/.test(t[i])) { const nx = t[i + 1]; return nx && !/\d/.test(nx) && !/^(cereal|cereals|breakfast|original|with|and|the)$/.test(nx) ? t[i] + ' ' + nx : ''; } return ''; };
 const CATQ = { cereal: 'cereal', cereals: 'cereal', 'breakfast cereal': 'cereal', granola: 'cereal-granola', oatmeal: 'cereal-hot', chips: 'snacks-chips', crisps: 'snacks-chips', crackers: 'snacks-crackers', popcorn: 'snacks-popcorn', soda: 'drinks-soda', sodas: 'drinks-soda', pop: 'drinks-soda', juice: 'drinks-juice', yogurt: 'yogurt', yoghurt: 'yogurt', 'greek yogurt': 'yogurt-greek', bread: 'bread', tortillas: 'bread-tortilla', bagels: 'bread-bagel', cheese: 'dairy-cheese', milk: 'dairy-milk', cookies: 'sweets-cookies', chocolate: 'sweets-choc', candy: 'sweets-candy', 'ice cream': 'sweets-ice', 'protein bar': 'bars-protein', 'protein bars': 'bars-protein', 'granola bar': 'bars-granola', bars: 'bars', 'peanut butter': 'nuts-butter', nuts: 'nuts-nuts', 'pasta sauce': 'sauces-pasta', dressing: 'sauces-dressing', 'salad dressing': 'sauces-dressing', 'hot sauce': 'sauces-hot' };
 const NONUSB = /\b(sojade|yeo valley|olympic|alpro|onken|m[uü]ller|pr[eé]sident|lactalis|carrefour|auchan|leclerc|monoprix|tesco|sainsbury'?s|asda|waitrose|morrisons|marks (&|and) spencer|lidl|milbona|libert[eé]|iogo|astro|natrel|qu[eé]bon|sealtest|neilson|president'?s choice|no name|compliments|arla|la laiti[eè]re|st hubert|bonduelle|gerbl[eé]|bjorg|les 2 vaches|malo|candia|lactel|bridel|paysan breton|soignon|andros|ehrmann|zott|emmi|mlekovita|valio|dux|pozuelo|rovira)\b/i;
 /* query word → patterns meaning "a different product that merely contains the word" */
@@ -94,7 +97,7 @@ class Engine {
     const cats = data.generic ? data.cats : this.cats; const KC = root.LumiCats;
     for (const d of data.docs) {
       const i = this.docs.length;
-      const doc = { code: d[0], name: fixName(d[1]), brand: fixBrand(d[2], d[1]), score: d[3] < 0 ? null : d[3], net: d[4] < 0 ? null : d[4], cat: cats[d[5]] || '', img: imgURL(d[0], d[6]), keys: d[7] ? d[7].split('.').map(k => /^\d+$/.test(k) ? +k : (KC ? KC.KEYS.indexOf(k) : -1)).filter(k => k >= 0) : [], sugar: d[8] == null || d[8] < 0 ? null : d[8], h: d[9] == null || d[9] < 0 ? null : d[9], hn: !!(d[10] & 1), al: d[11] || 0, df: d[12] == null ? null : d[12], src: data.generic ? (d[7] && d[7].startsWith('rest') ? 'rest' : 'whole') : 'local', rank: i, sm: d[13] || 0, ai: d[14] == null ? -1 : d[14], bad: !!(d[10] & 8), fl: !!(d[10] & 4) || (water().includes(d[14]) && d[4] >= 0 && d[4] <= 0.5) };
+      const doc = { code: d[0], name: fixName(d[1]), brand: fixBrand(d[2], d[1]), score: d[3] < 0 ? null : d[3], net: d[4] < 0 ? null : d[4], cat: cats[d[5]] || '', img: imgURL(d[0], d[6]), keys: d[7] ? d[7].split('.').map(k => /^\d+$/.test(k) ? +k : (KC ? KC.KEYS.indexOf(k) : -1)).filter(k => k >= 0) : [], sugar: d[8] == null || d[8] < 0 ? null : d[8], h: d[9] == null || d[9] < 0 ? null : d[9], hn: !!(d[10] & 1), al: d[11] || 0, df: d[12] == null ? null : d[12], src: data.generic ? (d[7] && d[7].startsWith('rest') ? 'rest' : 'whole') : 'local', rank: i, sm: d[13] || 0, ai: d[14] == null ? -1 : d[14], wf: d[15] || 0, bad: !!(d[10] & 8), fl: !!(d[10] & 4) || (water().includes(d[14]) && d[4] >= 0 && d[4] <= 0.5) };
       doc.nn = norm(doc.name + ' ' + doc.brand);
       this.docs.push(doc);
       const seen = new Map();
@@ -134,10 +137,13 @@ class Engine {
     const acc = new Map();
     per.forEach(m => { for (const [i, s] of m) { const a = acc.get(i) || [0, 0]; a[0] += s; a[1]++; acc.set(i, a); } });
     // v8.0 category matching: "cereal" also finds Cheerios / Frosted Flakes (category tags), not only names containing the word
-    let catKi = -1;
+    let catKi = -1, leadMap = null;
     { const KC = root.LumiCats, ck = KC && CATQ[norm(query)]; const ki = ck ? KC.KEYS.indexOf(ck) : -1; catKi = ki;
       if (ki >= 0) { if (!this.byKey) this.byKey = new Map(); let L = this.byKey.get(ki); if (!L || L.n !== this.docs.length) { L = []; this.docs.forEach((d, i) => { if (d.keys.includes(ki)) L.push(i); }); L.n = this.docs.length; this.byKey.set(ki, L); }
-        for (const i of L) if (!acc.has(i)) acc.set(i, [0.78 * qt.length, qt.length]); } }
+        for (const i of L) if (!acc.has(i)) acc.set(i, [0.78 * qt.length, qt.length]);
+        // v8.1 mainstream signal: how many index entries in this category share the product's lead word (Cheerios, Frosted, Special K…)
+        if (!L.lead) { L.lead = new Map(); for (const i of L) { const w = leadWord(this.docs[i].name), w2 = leadPair(this.docs[i].name); if (w) L.lead.set(w, (L.lead.get(w) || 0) + 1); if (w2) L.lead.set('2:' + w2, (L.lead.get('2:' + w2) || 0) + 1); } }
+        leadMap = L.lead; } }
     const need = qt.length <= 2 ? qt.length : qt.length - 1;
     const nq = norm(query); const N = this.docs.length || 1; const res = [];
     for (const [i, [s, c]] of acc) {
@@ -153,7 +159,7 @@ class Engine {
       if (d.score != null) r += (pop ? 0.13 : 0.03) * (d.score - 50);
       // v7.2: known mainstream US brands first; brandless/non-US labels and off-topic products down
       if (KNOWNB.test(d.brand)) r += 22;
-      if (catKi >= 0 && d.keys.includes(catKi)) r += d.nn.includes(nq) ? 18 : 40; // v8.0: in the asked-for category
+      if (catKi >= 0 && d.keys.includes(catKi)) { r += d.nn.includes(nq) ? 18 : 40; const lw = leadMap && leadWord(d.name), lc = lw ? leadMap.get(lw) || 0 : 0; if (lc >= 10) r += Math.min(34, 6 * Math.log2(lc / 5)); const l2 = lc >= 10 && leadPair(d.name), c2 = l2 ? leadMap.get('2:' + l2) || 0 : lc >= 10 ? lc : 0; if (c2 >= 8) r += Math.min(16, 6 * Math.log2(c2 / 4)); } // v8.0: in the asked-for category
       if (d.src === 'local' && !d.brand) r -= 22;
       if (NONUSB.test(d.brand) || NONEN2.test(d.nn)) r -= 30;
       for (const w of nq.split(" ")) { const o = OFFTOPIC[w] || OFFTOPIC[w + "s"]; if (o && o.test(d.nn) && !o.test(nq)) { r -= 55; break; } }
@@ -161,11 +167,13 @@ class Engine {
       if (d.src !== 'whole' && d.src !== 'rest') { if (!/^[\x20-\x7e]+$/.test(d.name + d.brand) || NONEN.test(d.name.toLowerCase()) || !(d.code.length === 12 || (d.code.length === 13 && /^[01]/.test(d.code)))) r -= 22; if (d.bad) r -= 15; if (!d.img) r -= 3; if (d.name.split(' ').length <= 1 && d.brand && nq.split(' ').length === 1) r -= 6; }
       if (!ALCQ.test(nq) && ALCN.test(d.nn)) r -= 28;
       if (d.src === 'whole' && PACKQ.test(nq)) r -= 30;
-      if (d.src === 'rest') r += CHAINQ.test(nq) ? 6 : -30;
+      if (d.src === 'rest') r += CHAINQ.test(nq) ? 6 : catKi >= 0 ? -60 : -30;
       if (d.src === 'whole') { const nn = norm(d.name), w = nn.split(' '); if (nn.startsWith(qt[0])) r += 14; if (/\braw\b/.test(nn)) r += 6; r -= Math.min(10, Math.max(0, w.length - qt.length - 1) * 1.5); }
       res.push([r, d]);
     }
     res.sort((a, b) => b[0] - a[0]);
+    // v8.1 lead-word diversity for category queries: each extra product sharing a lead word (Frosted…, Cheerios…) drops a little
+    if (leadMap) { const seen = new Map(); for (const x of res) { const w = leadWord(x[1].name); if (!w) continue; const n = seen.get(w) || 0; if (n) x[0] -= Math.min(30, 9 * n); seen.set(w, n + 1); } res.sort((a, b) => b[0] - a[0]); }
     // v8.0 brand diversity: at most 3 per brand in the top 30 (extras move down, nothing is dropped)
     { const top = [], rest = [], cnt = new Map(); for (const x of res) { const b = norm(x[1].brand || '').split(' ')[0] || ('#' + x[1].code); const n = cnt.get(b) || 0; if (top.length < 30 && (n < 3 || x[1].src === 'whole')) { top.push(x); cnt.set(b, n + 1); } else rest.push(x); } res.length = 0; res.push(...top, ...rest); }
     this.mergeBrands(res.slice(0, limit * 2).map(x => x[1]));

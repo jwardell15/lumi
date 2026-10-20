@@ -14,6 +14,7 @@ const OX = rj('offx.json'), UX = rj('usdax.json');
 for (const o of Object.values(OX)) { if (/^\d{9,11}$/.test(o.mod || '')) o.mod = new Date(o.mod * 1000).toISOString().slice(0, 10); else if (o.mod) o.mod = String(o.mod).slice(0, 10); }
 const OFFIMG = /^https:\/\/images\.openfoodfacts\.org\/images\/products\/[0-9\/]+\/[a-z0-9_]+\.\d+\.\d+\.jpg$/;
 const oxOk = o => o && /^\d{4}-\d\d-\d\d$/.test(o.mod || '') && (!o.img || OFFIMG.test(o.img)) && !/^https?:/.test(o.ing || '');
+const WATCH8 = require('../js/watch8.js').map(x => new RegExp(x[2].source, 'i')); const wflags = ing => { let m = 0; if (ing) WATCH8.forEach((re, i) => { if (re.test(ing)) m |= 1 << i; }); return m; };
 const cleanIng = t => (t || '').replace(/^\s*ingredients?\s*:\s*/i, '').trim();
 const NKs = ['carbohydrates', 'sugars', 'fiber', 'proteins', 'fat', 'saturated-fat', 'sodium', 'energy-kcal'];
 const cmpl = n => n ? NKs.filter(k => n[k] != null).length : 0;
@@ -84,7 +85,7 @@ for (const l of lines) {
   if (ai >= 0) A63.aisle[AI.SUB[ai][1]] = (A63.aisle[AI.SUB[ai][1]] || 0) + 1; else A63.aisle.none = (A63.aisle.none || 0) + 1;
   ST63.STORES.forEach((x, i) => { if (sm & (1 << i)) A63.stores[x[0] + ':brand'] = (A63.stores[x[0] + ':brand'] || 0) + 1; if (sm & (1 << (16 + i))) A63.stores[x[0] + ':soldAt'] = (A63.stores[x[0] + ':soldAt'] || 0) + 1; });
   if (SRC.p === 'o2') A63.photoOther++;
-  docs.push([r.code, r.name, r.brand, s.score == null ? -1 : s.score, s.score == null || s.net == null ? -1 : Math.round(s.net), catIdx.get(cat), img ? short : '', keys, m.sugars == null ? -1 : Math.round(m.sugars), hr.score == null ? -1 : hr.score, (hr.basis === 'nutrition' ? 1 : 0) | (hr.est.length ? 2 : 0) | (S.isFiller(p) ? 4 : 0) | (s.bad ? 8 : 0), hx.am | hx.tm << 9, hx.df, sm, ai]);
+  docs.push([r.code, r.name, r.brand, s.score == null ? -1 : s.score, s.score == null || s.net == null ? -1 : Math.round(s.net), catIdx.get(cat), img ? short : '', keys, m.sugars == null ? -1 : Math.round(m.sugars), hr.score == null ? -1 : hr.score, (hr.basis === 'nutrition' ? 1 : 0) | (hr.est.length ? 2 : 0) | (S.isFiller(p) ? 4 : 0) | (s.bad ? 8 : 0), hx.am | hx.tm << 9, hx.df, sm, ai, wflags(r.ing)]);
   const k = r.code.slice(-3); (shards[k] = shards[k] || {})[r.code] = comp;
 }
 const TIERS = [[0, 15000], [15000, 70000], [70000, 130000]]; for (let a = 130000; a < docs.length; a += 70000) TIERS.push([a, Math.min(docs.length, a + 70000)]);
@@ -127,7 +128,7 @@ if (gsrc) {
     let keys = r.keys.filter(k => k === 'rest' || k === 'whole' || !k.startsWith('rest-') || okKeys.has(k) || k === 'rest-other');
     if (r.keys[1] && r.keys[1].startsWith('rest-') && !okKeys.has(r.keys[1]) && r.keys[1] !== 'rest-other') keys = ['rest', 'rest-other'];
     if (!gci.has(r.group)) { gci.set(r.group, gcats.length); gcats.push(r.group); }
-    gdocs.push([r.id, r.name, r.brand, s.score == null ? -1 : s.score, s.score == null || s.net == null ? -1 : Math.round(s.net), gci.get(r.group), comp[4] || '', keys.join('.'), n.sugars == null ? -1 : Math.round(n.sugars), hr.score == null ? -1 : hr.score, (hr.basis === 'nutrition' ? 1 : 0) | (hr.est.length ? 2 : 0) | (S.isFiller(p) ? 4 : 0) | (s.bad ? 8 : 0), hx.am | hx.tm << 9, hx.df, 0, (() => { const w = r.keys.find(k => AI.WHOLE[k]); return w && isWhole ? AI.BYID[AI.WHOLE[w]] : -1; })()]);
+    gdocs.push([r.id, r.name, r.brand, s.score == null ? -1 : s.score, s.score == null || s.net == null ? -1 : Math.round(s.net), gci.get(r.group), comp[4] || '', keys.join('.'), n.sugars == null ? -1 : Math.round(n.sugars), hr.score == null ? -1 : hr.score, (hr.basis === 'nutrition' ? 1 : 0) | (hr.est.length ? 2 : 0) | (S.isFiller(p) ? 4 : 0) | (s.bad ? 8 : 0), hx.am | hx.tm << 9, hx.df, 0, (() => { const w = r.keys.find(k => AI.WHOLE[k]); return w && isWhole ? AI.BYID[AI.WHOLE[w]] : -1; })(), wflags(comp[10])]);
     const k = hash(r.id); (gsh[k] = gsh[k] || {})[r.id] = comp;
   }
   fs.mkdirSync(path.join(out, 'g'), { recursive: true });
@@ -136,5 +137,5 @@ if (gsrc) {
   META.whole = gdocs.filter(d => d[7].startsWith('whole')).length; META.restaurant = gdocs.length - META.whole; META.chains = dyn.length; META.chainCounts = dyn.map(x => [x[1], chainCount[x[0]], G.some(r => r.keys[1] === x[0] && r.src.includes('official')) ? 'official' : 'USDA']);
   console.log('generic', JSON.stringify(ga), 'chains', dyn.map(x => x[1] + ':' + chainCount[x[0]]).join(', '));
 }
-META.health = COV; META.audit = audit; META.version = '8.0'; META.v63 = A63; META.fillers = { grocery: docs.filter(d => d[10] & 4).length }; console.log('V63', JSON.stringify(A63)); META.sources = ST; console.log('SOURCES', JSON.stringify(ST, null, 1)); META.allergenData = ALC; console.log('ALLERGEN', JSON.stringify(ALC)); console.log('HEALTH', JSON.stringify(COV));
+META.health = COV; META.audit = audit; META.version = '8.1'; META.v63 = A63; META.fillers = { grocery: docs.filter(d => d[10] & 4).length }; console.log('V63', JSON.stringify(A63)); META.sources = ST; console.log('SOURCES', JSON.stringify(ST, null, 1)); META.allergenData = ALC; console.log('ALLERGEN', JSON.stringify(ALC)); console.log('HEALTH', JSON.stringify(COV));
 fs.writeFileSync(path.join(out, 'meta.json'), JSON.stringify(META));

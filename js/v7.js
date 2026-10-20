@@ -9,6 +9,9 @@ function typeBarcode(msg) {
 }
 document.addEventListener('click', e => { if (e.target && e.target.id === 'scanType') { if (typeof stopScan === 'function') stopScan(); typeBarcode(''); } });
 const V7_NEWS = [
+  ['🥣', 'Better cereal search (8.1)', 'Searching "cereal" now surfaces mainstream boxes like Cheerios, Frosted Flakes and Special K near the top, still ranked with blood sugar in mind.'],
+  ['⚠', 'Ingredient alerts in search (8.1)', 'Your preset alerts (hidden sugars, maltodextrin, seed oils, sweeteners) now show ⚠ right in the results. Custom words still show on the product page.'],
+  ['🍌', 'Fixes (8.1)', 'Glycemic index values only match the right preparation (no cooked GI for dry lentils), raw fruit is measured in grams, and the week table shows Net carbs on phones.'],
   ['🩸', 'Blood sugar impact (8.0)', 'Each product has a Low/Medium/High, fast/slow estimate. It uses published glycemic index values (International Tables 2008) when one matches; otherwise it is a clearly labeled heuristic from net carbs, sugar, fiber, fat and protein. No dosing math.'],
   ['📷', 'Scan a Nutrition Facts label (8.0)', 'Barcode not found? Photograph the label. Lumi reads it on your device, lets you check every number, then saves and scores it as a user-entered food.'],
   ['📒', 'Smarter log (8.0)', 'Day and week views by meal, CSV export, and a printable summary for your endo.'],
@@ -29,9 +32,9 @@ const V7_NEWS = [
   ['☰', 'Shopping lists', 'Make lists (Costco run, school snacks…), check items off, see the carb total and share the list.'],
   ['💊', 'Supplements, sorted', 'Protein & collagen, greens powders, creatine & hydration, vitamins. Fresh "super greens" salads moved to Produce.'],
   ['🔎', 'Smarter search filters', 'Ready-to-eat, has photo and hide bad data, plus better near-duplicate grouping (one row per product).']];
-function whatsNewCard() { if (store.get('seen80', false)) return ''; return `<div class="card news7"><div class="n7h"><b>✨ New in Lumi ${VERSION}</b><button class="icon" id="n7x" aria-label="Dismiss">✕</button></div><ul>${V7_NEWS.slice(0, 3).map(n => `<li><span>${n[0]}</span><div><b>${esc(n[1])}</b> <span class="d">${esc(n[2])}</span></div></li>`).join('')}</ul><a class="lnk" href="#/whatsnew">Everything new ›</a></div>`; }
-document.addEventListener('click', e => { if (e.target && e.target.id === 'n7x') { store.set('seen80', true); const c = document.querySelector('.news7'); if (c) c.remove(); } });
-function viewWhatsNew() { document.title = 'New in 7.0 — Lumi'; store.set('seen80', true);
+function whatsNewCard() { if (store.get('seen81', false)) return ''; return `<div class="card news7"><div class="n7h"><b>✨ New in Lumi ${VERSION}</b><button class="icon" id="n7x" aria-label="Dismiss">✕</button></div><ul>${V7_NEWS.slice(0, 3).map(n => `<li><span>${n[0]}</span><div><b>${esc(n[1])}</b> <span class="d">${esc(n[2])}</span></div></li>`).join('')}</ul><a class="lnk" href="#/whatsnew">Everything new ›</a></div>`; }
+document.addEventListener('click', e => { if (e.target && e.target.id === 'n7x') { store.set('seen81', true); const c = document.querySelector('.news7'); if (c) c.remove(); } });
+function viewWhatsNew() { document.title = 'New in Lumi'; store.set('seen81', true);
   app.innerHTML = `<h1>New in Lumi ${VERSION}</h1><div class="card news7 full"><ul>${V7_NEWS.map(n => `<li><span>${n[0]}</span><div><b>${esc(n[1])}</b> ${esc(n[2])}</div></li>`).join('')}</ul></div><p class="foot">Informational only, not medical advice. Dose from the physical label.</p>`; }
 /* ready-to-eat: index docs use the aisle + staple rules; outside items (USDA/OFF live) use the name rules only */
 function readyToEat(i) { if (i.src === 'whole' || i.src === 'rest' || i.src === 'chain') return true; const d = { name: i.name || '', ai: i.ai == null ? -1 : i.ai }; return !isStaple(d) && !RAW.has(d.ai); }

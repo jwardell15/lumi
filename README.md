@@ -75,3 +75,12 @@ Local dev: `python3 serve.py 8765`.
 - Aisles: chocolate, nut/seed butters (protein > 8 g/100 g), cookies, candy eggs and prepared meals moved out of Dairy; fresh "super greens" salads (under 10 g carbs and 80 kcal) moved to Produce; Supplements split into Protein & collagen, Greens & superfood powders, Creatine/pre-workout/hydration, Vitamins/gummies/capsules and Other (`post7` in `js/aisles.js`; classification needs a rebuild).
 - Shopping lists (`#/lists`), "Add to list" and "Copy link" on product pages, data-check card, ready-to-eat / has-photo / hide-bad-data search filters, two-column product layout on desktop, what's-new card, "/" to focus search (`js/v7.js`).
 - Rebuild: `node --max-old-space-size=7000 tools/build.js /workspace/m63/us.jsonl /workspace/generic62.jsonl /workspace/m63/extra.jsonl` (about 2.5 min).
+
+
+## v8.1
+- Cereal search: a category "mainstream" signal (how many index entries in the category share a product's lead word) lifts Cheerios, Frosted Flakes, Special K, Raisin Bran etc. into the top results; diabetes-aware weighting and the 3-per-brand cap are unchanged.
+- GI matching checks preparation: `ref/gi2008.json` entries carry `cooked`/`raw`/`any`; cooked values are not applied to raw/dry/uncooked/flour foods, raw-fruit values not to cooked/canned/dried. No match → labeled heuristic.
+- Solids mislabeled as liquid in source data (e.g. raw banana) are served in grams.
+- Build-time ingredient flags (doc field 15, presets in `js/watch8.js`) so preset alerts show ⚠ in search results.
+- Week table: Net column visible on phones, sideways scroll with sticky day column, averages for Net and Cal.
+- OFF search stops starting extra mirrors once one answers (fewer console errors).

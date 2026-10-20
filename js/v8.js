@@ -2,8 +2,9 @@
 const V8 = {};
 /* ---------- 1. Blood sugar impact ---------- */
 let GI8 = null;
-function loadGI() { if (GI8) return Promise.resolve(GI8); return fetch('ref/gi2008.json').then(r => r.json()).then(j => (GI8 = Object.assign(j, { re: j.foods.map(f => [f[0], f[1], new RegExp(f[2], 'i')]) }))).catch(() => null); }
-function giMatch(p) { if (!GI8 || !p || !p.name) return null; const nm = String(p.name).toLowerCase(); for (const [food, gi, re] of GI8.re) if (re.test(nm)) return { food, gi }; return null; }
+function loadGI() { if (GI8) return Promise.resolve(GI8); return fetch('ref/gi2008.json').then(r => r.json()).then(j => (GI8 = Object.assign(j, { re: j.foods.map(f => [f[0], f[1], new RegExp(f[2], 'i'), f[3] || 'any']) }))).catch(() => null); }
+function giMatch(p) { if (!GI8 || !p || !p.name) return null; const nm = String(p.name).toLowerCase(); const notCooked = /\b(raw|dry|dried|uncooked|unprepared|flour|meal|mix|powder|not prepared)\b/.test(nm) && !/\b(cooked|boiled|prepared|steamed|baked|canned)\b/.test(nm), notRaw = /\b(cooked|boiled|canned|baked|fried|dried|dehydrated|chips|juice|stewed)\b/.test(nm);
+  for (const [food, gi, re, prep] of GI8.re) if (re.test(nm)) { if ((prep === 'cooked' && notCooked) || (prep === 'raw' && notRaw)) return null; return { food, gi }; } return null; }
 function bgImpact(p) {
   const s = S.score(p), n = p.n || {}; if (s.net == null) return null;
   const perItem = p.meta && p.meta.perItem, g = perItem ? 100 : (p.servQ || 100), basis = perItem ? 'per item' : p.servQ ? `per serving (${Math.round(g)}${p.liquid ? 'ml' : 'g'})` : 'per 100 g';
@@ -40,12 +41,8 @@ function bgCard(p) {
     <p class="small">Informational estimate only. Everyone responds differently; check your CGM. Not dosing advice.</p></div>`;
 }
 /* ---------- 6. Ingredient watchlist ---------- */
-const WATCH8 = [
-  ['sugars', 'Hidden sugars', /\b(dextrose|maltose|sucrose|glucose(?![- ]?oxidase)|fructose|corn syrup|high[- ]fructose|rice syrup|brown rice syrup|malt syrup|barley malt|cane (sugar|juice)|evaporated cane|invert sugar|agave|molasses|treacle|honey|maple syrup|coconut sugar|date syrup|fruit juice concentrate|golden syrup|caramel(?! colou?r)|lactose|galactose|trehalose|isomaltulose)\b/gi],
-  ['malto', 'Maltodextrin', /\bmaltodextrins?\b/gi],
-  ['seed', 'Seed oils', /\b(canola|rapeseed|soybean|soya bean|sunflower|safflower|cottonseed|corn|grapeseed|rice bran|vegetable) oils?\b/gi],
-  ['sweet', 'Artificial sweeteners', /\b(aspartame|sucralose|acesulfame(?:[- ]?k| potassium)?|saccharin|neotame|advantame|cyclamate|e951|e955|e950|e954|e961|e969|e952)\b/gi],
-];
+/* WATCH8 presets live in js/watch8.js (shared with tools/build.js for index flags) */
+function watchFlags(m) { const on = watch8().on; return WATCH8.filter((x, i) => m & (1 << i) && on.includes(x[0])).map(x => x[1]).join(', '); }
 const watch8 = () => store.get('watch', { on: [], words: [] });
 function watchRules() { const w = watch8(); const r = WATCH8.filter(x => w.on.includes(x[0])).map(x => [x[1], x[2]]); (w.words || []).filter(Boolean).forEach(word => r.push([`"${word}"`, new RegExp('\\b' + word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi')])); return r; }
 function watchHits(p) {
@@ -97,9 +94,9 @@ const prodURL = p => p.src === 'custom' ? '' : location.origin + location.pathna
 function shareProductCard(p) { const s = S.score(p); return shareCanvas(productCanvas(p), 'Lumi: ' + p.name, `${p.name}${p.brand ? ' (' + p.brand + ')' : ''}: Carb score ${s.score ?? '?'}/100, ${r1(s.net ?? 0)} g net carbs/100${p.liquid ? 'ml' : 'g'}${p.src === 'custom' ? ' (user-entered label)' : ''}`, prodURL(p), 'lumi-' + String(p.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40) + '.png'); }
 /* ---------- 3. Smarter log: week view + printable report ---------- */
 function daysBack(n, end = new Date()) { const out = []; for (let i = n - 1; i >= 0; i--) { const d = new Date(end); d.setDate(d.getDate() - i); out.push(d); } return out; }
-function weekTable(days) { const L = LOG.all(); let tot = 0, nd = 0;
-  const rows = days.map(d => { const es = L.filter(e => dayKey(e.ts) === dayKey(d)); const by = MEALS.map(m => totals(es.filter(e => e.meal === m)).carbs); const t = totals(es); if (es.length) { tot += t.carbs; nd++; } return `<tr><th><a href="#/log/${dayKey(d)}">${d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' })}</a></th>${by.map(v => `<td>${v ? Math.round(v) : '–'}</td>`).join('')}<td><b>${es.length ? Math.round(t.carbs) : '–'}</b></td><td>${es.length ? Math.round(t.net) : '–'}</td><td>${es.length ? Math.round(t.kcal) : '–'}</td></tr>`; }).join('');
-  return `<table class="wk8"><thead><tr><th>Day</th>${MEALS.map(m => `<th>${({ breakfast: 'Bkfst', lunch: 'Lunch', dinner: 'Dinner', snack: 'Snack' })[m]}</th>`).join('')}<th>Carbs</th><th>Net</th><th>Cal</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><th>Avg (${nd} d)</th><td colspan="4"></td><td><b>${nd ? Math.round(tot / nd) : '–'}</b></td><td colspan="2"></td></tr></tfoot></table>`; }
+function weekTable(days) { const L = LOG.all(); let tot = 0, nd = 0, totN = 0, totK = 0;
+  const rows = days.map(d => { const es = L.filter(e => dayKey(e.ts) === dayKey(d)); const by = MEALS.map(m => totals(es.filter(e => e.meal === m)).carbs); const t = totals(es); if (es.length) { tot += t.carbs; totN += t.net; totK += t.kcal; nd++; } return `<tr><th><a href="#/log/${dayKey(d)}">${d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' })}</a></th>${by.map(v => `<td>${v ? Math.round(v) : '–'}</td>`).join('')}<td><b>${es.length ? Math.round(t.carbs) : '–'}</b></td><td>${es.length ? Math.round(t.net) : '–'}</td><td>${es.length ? Math.round(t.kcal) : '–'}</td></tr>`; }).join('');
+  return `<table class="wk8"><thead><tr><th>Day</th>${MEALS.map(m => `<th>${({ breakfast: 'Bkfst', lunch: 'Lunch', dinner: 'Dinner', snack: 'Snack' })[m]}</th>`).join('')}<th>Carbs</th><th>Net</th><th>Cal</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><th>Avg (${nd} d)</th><td colspan="4"></td><td><b>${nd ? Math.round(tot / nd) : '–'}</b></td><td>${nd ? Math.round(totN / nd) : '–'}</td><td>${nd ? Math.round(totK / nd) : '–'}</td></tr></tfoot></table>`; }
 function viewWeek() { document.title = 'Week — Lumi'; const st = settings();
   app.innerHTML = `<div class="dayhead"><a class="icon" href="#/log" aria-label="Back to today">‹</a><h1>Last 7 days</h1><span class="icon"></span></div>
   <div class="seg8"><a href="#/log">Day</a><a class="on" href="#/log/week">Week</a><a href="#/report">Report</a></div>

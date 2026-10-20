@@ -10,6 +10,10 @@ const LIQUID = /(beverage|drink|soda|juice|nectar|smoothie|milk(?!.*chocolate)|t
 const r1 = v => v == null ? null : Math.round(v * 10) / 10;
 const num = v => (v === '' || v == null || isNaN(+v)) ? null : +v;
 
+// v8.1: some USDA/legacy rows mark solids (raw banana, apples) as liquid; serve those in grams.
+const DRINKW = /\b(juice|drinks?|beverages?|milk|soda|cola|water|nectar|smoothies?|tea|coffee|latte|broth|stock|soup|syrup|shakes?|oil|sauce|dressing|kefir|lemonade|punch|wine|beer|liquor|creamer|kombucha|cocktail|ade|vinegar|extract|liquid)\b/i;
+const SOLIDW = /\b(raw|fresh|banana|bananas|apples?|pears?|berries|grapes|melon|vegetables?|beans|rice|bread|cheese|meat|chicken|beef|pork|fish|nuts?|seeds?|flour|cereal|bar|chips|crackers|cookies?|cake|dried|frozen|peeled|whole|sliced|cooked|boiled|baked)\b/i;
+function notSolid(name, liq) { return !!liq && !(SOLIDW.test(name || '') && !DRINKW.test(name || '')); }
 /* Normalized product: {id, code, name, brand, qty, img, servQ, serv, nova, additives:[e...], ing, cat, cats, naLabel, liquid, src, n:{carbs,sugars,added,fiber,protein,fat,sat,trans,sodiumMg,kcal,polyols}} */
 /* Data sanity: never treat missing/implausible carbs as zero. Returns {ok, issues, dropFiber}. */
 const DRY = /breakfast-cereals|breakfast cereals|granola|muesli|crisps|chips|crackers|biscuits|cookies|pretzel|puff/i;
@@ -175,14 +179,14 @@ function fromUSDA(f) {
   const name = titleCase(f.description || 'USDA food');
   return { id: 'fdc-' + f.fdcId, code: gtin, fdcId: f.fdcId, src: 'usda', name, brand: (f.brandName || f.brandOwner) ? titleCase(f.brandName || f.brandOwner) : (f.dataType && f.dataType !== 'Branded' ? 'USDA ' + String(f.dataType).replace(/^sr legacy$/i, 'SR Legacy').replace(/^survey \(fndds\)$/i, 'FNDDS') : ''), qty: f.packageWeight || '',
     img: '', servQ, serv: f.householdServingFullText ? `${f.householdServingFullText} (${f.servingSize}${unit === 'grm' ? 'g' : unit === 'mlt' ? 'ml' : unit})` : servQ ? servQ + unit : '', nova: null, additives: [], ing: (f.ingredients || '').toLowerCase(), cat: catS, cats: catS,
-    naLabel: true, liquid: /beverage|drink|soda|juice|milk|water/i.test(catS) || unit === 'ml' || unit === 'mlt', n };
+    naLabel: true, liquid: notSolid(name, /beverage|drink|soda|juice|milk|water/i.test(catS) || unit === 'ml' || unit === 'mlt'), n };
 }
 const titleCase = s => String(s || '').toLowerCase().replace(/(^|[^a-z'’])([a-z])/g, (m, p, c) => p + c.toUpperCase()).replace(/\b(Of|And|With|In|The|A)\b/g, w => w.toLowerCase()).replace(/^./, c => c.toUpperCase());
 /* compact local-index record (see tools/build.js) */
 const DK = ['carbs', 'sugars', 'added', 'fiber', 'protein', 'fat', 'sat', 'trans', 'sodiumMg', 'kcal', 'polyols'];
 function fromCompact(a) {
   const [code, name, brand, qty, img, servQ, serv, nova, nut, adds, ing, cat, flags, portions, meta] = a; const fl = flags || 0; const n = {}; DK.forEach((k, i) => n[k] = nut[i] == null ? null : nut[i]);
-  return { id: code, code: /^\d+$/.test(code) ? code : '', src: meta ? (meta.src.includes('official') ? 'chain' : 'usda') : 'local', fdcId: /^fdc-/.test(code) ? code.slice(4) : undefined, name, brand, qty, img: img ? (img.startsWith('w:') ? 'img/w/' + img.slice(2) + '-200.webp' : img.startsWith('http') ? img : 'https://images.openfoodfacts.org/images/products/' + img) : '', servQ, serv, nova, additives: adds ? adds.split(',') : [], ing, cat, cats: cat, naLabel: !!(fl & 1), liquid: !!(fl & 2), carby: fl & 16 ? !!(fl & 4) : undefined, dry: fl & 16 ? !!(fl & 8) : undefined, portions: portions || null, meta: meta || null, hx: a[15] || null, n };
+  return { id: code, code: /^\d+$/.test(code) ? code : '', src: meta ? (meta.src.includes('official') ? 'chain' : 'usda') : 'local', fdcId: /^fdc-/.test(code) ? code.slice(4) : undefined, name, brand, qty, img: img ? (img.startsWith('w:') ? 'img/w/' + img.slice(2) + '-200.webp' : img.startsWith('http') ? img : 'https://images.openfoodfacts.org/images/products/' + img) : '', servQ, serv, nova, additives: adds ? adds.split(',') : [], ing, cat, cats: cat, naLabel: !!(fl & 1), liquid: notSolid(name, !!(fl & 2)), carby: fl & 16 ? !!(fl & 4) : undefined, dry: fl & 16 ? !!(fl & 8) : undefined, portions: portions || null, meta: meta || null, hx: a[15] || null, n };
 }
 const imgSize = (u, n) => u ? u.replace(/\.(100|200|400|full)\.jpg$/, '.' + n + '.jpg').replace(/-(200|400)\.webp$/, '-' + n + '.webp') : '';
 return { implausible, isFiller, DRY, CARBY, imgSize, score, quality, fromOFF, fromUSDA, fromCompact, band, label, netCarbs, addTags, isNA, isLiquid, DK, ADDITIVES };

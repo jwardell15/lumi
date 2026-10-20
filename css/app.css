@@ -377,4 +377,4 @@ body.has-tray #app{padding-bottom:90px}
 .rp8-kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}.rp8-kpi div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}.rp8-kpi small{display:block;color:var(--mut)}.rp8-kpi b{font-size:22px}
 .report8{max-width:900px;margin:0 auto}
 @media print{.tabbar,.topbar,header,nav,.noprint,.cmp-tray,#toast{display:none!important}body,#app{background:#fff!important;color:#000!important;padding:0!important;margin:0!important}.report8 *{color:#000!important}.rp8-kpi div{border:1px solid #999}}
-@media (max-width:640px){.wk8{font-size:12.5px}.wk8 th,.wk8 td{padding:6px 4px}.wk8 tr>*:nth-child(7),.wk8 tr>*:nth-child(8){display:none}.wk8 tfoot th{white-space:normal}}
+@media (max-width:640px){.wk8{font-size:12.5px}.wk8 th,.wk8 td{padding:6px 4px}.wk8{min-width:520px}.wk8 th:first-child,.wk8 td:first-child{position:sticky;left:0;background:var(--card,#fff);z-index:1}.wk8w{-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}}
