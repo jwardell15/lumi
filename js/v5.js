@@ -48,24 +48,29 @@ async function viewCompare() {
   app.innerHTML = `<h1>Compare</h1><div class="card">${'<div class="sk skl" style="height:36px;margin:8px 0"></div>'.repeat(6)}</div>`;
   const ps = (await Promise.all(ids.map(id => resolveProduct(id).catch(() => null)))).filter(Boolean);
   if (!/^#\/compare/.test(location.hash)) return;
-  const rows = ps.map(p => { const s = S.score(p); const h = HR(p); const g = p.servQ || (p.meta && p.meta.perItem ? 100 : null); const per = g ? scale(per100(p), g) : null; return { p, s, h, g, per, n: per100(p) }; });
+  const mode = store.get('cmpMode', 'common'); const isItem = p => !!(p.meta && p.meta.perItem);
+  const p0 = ps.find(p => !isItem(p)); const common = p0 && p0.servQ ? Math.round(p0.servQ) : 100; const cu = p0 && p0.liquid ? 'ml' : 'g';
+  const rows = ps.map(p => { const s = S.score(p); const h = HR(p); const lab = p.servQ || (isItem(p) ? 100 : null); const g = mode === 'label' ? lab : isItem(p) ? 100 : common; const per = g ? scale(per100(p), g) : null; return { p, s, h, g, per, n: per100(p) }; });
   const best = (f, low) => { const v = rows.map(f).filter(x => x != null); if (v.length < 2) return null; return low ? Math.min(...v) : Math.max(...v); };
   const line = (lab, f, fmt, low) => { const b = best(f, low); return `<tr><td>${lab}</td>${rows.map(r => { const v = f(r); return `<td class="${v != null && v === b ? 'win' : ''}">${v == null ? '—' : fmt(v)}</td>`; }).join('')}</tr>`; };
   const g = v => r1(v) + ' g', mg = v => Math.round(v) + ' mg', k = v => Math.round(v);
-  app.innerHTML = `<h1>Compare</h1><p class="lead">Best value in each row is highlighted. Servings are as labeled.</p>
+  const note = mode === 'label' ? 'Each column uses its own labeled serving, so the amounts differ.' : `Every column uses the same portion: <b>${common} ${cu}</b>${ps.some(isItem) ? ' (restaurant items stay at 1 item, because their data is per item)' : ''}.`;
+  app.innerHTML = `<h1>Compare</h1><p class="lead">Best value in each row is highlighted.</p>
+  <div class="seg wide" id="cmpMode"><button data-m="common" class="${mode === 'common' ? 'on' : ''}">Same portion (${common} ${cu})</button><button data-m="label" class="${mode === 'label' ? 'on' : ''}">As labeled</button></div><p class="small" id="cmpNote">${note}</p>
   <div class="card cmp"><table class="cmpt"><tr><th></th>${rows.map(r => `<th><a href="#/product/${esc(r.p.id)}">${thumb(r.p.img, r.p.name, [], r.p.cat)}<span class="cn">${esc(r.p.name)}</span><small>${esc(r.p.brand || '')}</small></a><button class="x" data-rm="${esc(r.p.id)}" aria-label="Remove">✕</button></th>`).join('')}</tr>
   ${[['Carb score', line('Carb score', r => r.s.score, v => `<span class="pill bg-${S.band(v)}">${v}</span>`)], ['Health', line('Health rating', r => r.h.score, v => `<span class="pill bg-${HB(v)}">${v}</span> <small>${HL(v)}</small>`)]].sort((a, b) => (PRIM() === 'health') === (a[0] === 'Health') ? -1 : 1).map(x => x[1]).join('')}
   <tr><td>Additives</td>${rows.map(r => { const a = r.h.adds.filter(x => x.tier >= 1); return `<td>${r.h.basis !== 'full' ? '<small>unknown</small>' : a.length ? a.map(x => `<span class="adot bg-${['ex', 'gd', 'pr', 'bd'][x.tier]}"></span>`).join('') + ' ' + a.length : '0'}</td>`; }).join('')}</tr>
-  <tr class="sub"><td colspan="${rows.length + 1}">Per serving</td></tr>
-  <tr><td>Serving</td>${rows.map(r => `<td>${r.g ? esc(r.p.meta && r.p.meta.perItem ? '1 item' : (r.p.serv || r.g + ' g')) : '—'}</td>`).join('')}</tr>
-  ${line('Net carbs', r => r.per && r.per.net, g, 1)}${line('Total carbs', r => r.per && r.per.carbs, g, 1)}${line('Sugar', r => r.per && r.per.sugars, g, 1)}${line('Fiber', r => r.per && r.per.fiber, g)}${line('Protein', r => r.per && r.per.protein, g)}${line('Calories', r => r.per && r.per.kcal, k, 1)}
+  <tr class="sub"><td colspan="${rows.length + 1}">${mode === 'label' ? 'Per labeled serving' : `Per ${common} ${cu} portion`}</td></tr>
+  <tr><td>Portion</td>${rows.map(r => `<td>${r.g ? esc(isItem(r.p) ? '1 item' : mode === 'label' ? (r.p.serv || r.g + ' g') : r.g + ' ' + (r.p.liquid ? 'ml' : 'g')) : '—'}</td>`).join('')}</tr>
+  ${line('Net carbs', r => r.per && r.per.net, g, 1)}${line('Total carbs', r => r.per && r.per.carbs, g, 1)}${line('Total sugar', r => r.per && r.per.sugars, g, 1)}${line('Added sugar', r => r.per && r.per.added, g, 1)}${line('Fiber', r => r.per && r.per.fiber, g)}${line('Protein', r => r.per && r.per.protein, g)}${line('Calories', r => r.per && r.per.kcal, k, 1)}
   <tr class="sub"><td colspan="${rows.length + 1}">Per 100 g / item</td></tr>
-  ${line('Net carbs', r => r.n.net, g, 1)}${line('Sugar', r => r.n.sugars, g, 1)}${line('Fiber', r => r.n.fiber, g)}${line('Protein', r => r.n.protein, g)}${line('Fat', r => r.n.fat, g, 1)}${line('Sat. fat', r => r.n.sat, g, 1)}${line('Sodium', r => r.n.sodiumMg, mg, 1)}${line('Calories', r => r.n.kcal, k, 1)}
+  ${line('Net carbs', r => r.n.net, g, 1)}${line('Total sugar', r => r.n.sugars, g, 1)}${line('Added sugar', r => r.n.added, g, 1)}${line('Fiber', r => r.n.fiber, g)}${line('Protein', r => r.n.protein, g)}${line('Fat', r => r.n.fat, g, 1)}${line('Sat. fat', r => r.n.sat, g, 1)}${line('Sodium', r => r.n.sodiumMg, mg, 1)}${line('Calories', r => r.n.kcal, k, 1)}
   </table></div>
   <div class="actions"><a class="btn" href="#/">＋ Add another</a><button class="btn" id="cmpClr">Clear all</button></div>
   <p class="foot">Informational only — not medical advice.</p>`;
   document.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { store.set('compare', cmpIds().filter(x => x !== b.dataset.rm)); viewCompare(); });
   $('#cmpClr').onclick = () => { store.set('compare', []); viewCompare(); };
+  document.querySelectorAll('#cmpMode button').forEach(b => b.onclick = () => { store.set('cmpMode', b.dataset.m); viewCompare(); });
 }
 
 /* ---------- meal builder (plate) ---------- */

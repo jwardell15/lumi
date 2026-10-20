@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '6.2.0';
+const VERSION = '6.3.0';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -180,6 +180,8 @@ function viewHome() {
     <a class="qa-tile" href="#/overview"><span class="qi">📊</span><b>Overview</b><span>Your stats</span></a>
     <a class="qa-tile" href="#/additives"><span class="qi">🧪</span><b>Additives</b><span>What's in it</span></a>
   </div>
+  ${storeChips()}
+  ${aisleTiles()}
   <form class="bc" id="bform"><input id="bc" inputmode="numeric" pattern="[0-9]*" placeholder="…or type a barcode" aria-label="Barcode"><button>Look up</button></form>
   ${viewed.length ? `<div class="sec-h"><h2>Recently viewed</h2><a href="#/saved">History</a></div><div class="list">${viewed.map(rowHTML).join('')}</div>` : ''}
   ${rec.length ? `<div class="sec-h"><h2>Recent searches</h2><button id="clrRec">Clear</button></div><div class="chips" style="margin-top:0">${rec.map(r => `<a class="chip" href="#/search/${encodeURIComponent(r)}">🕘 ${esc(r)}</a>`).join('')}</div>` : ''}
@@ -463,7 +465,7 @@ async function viewProduct(id) {
   ${n.carbs != null ? portionCard(p) : ''}
   <div id="swapsCard"></div>
   ${n.carbs != null ? `<div class="card"><h2>Nutrition</h2><table><tr><th></th><th>per 100${unit}</th>${ps ? `<th>per serving<br>${esc(p.serv || p.servQ + unit)}</th>` : ''}</tr>
-    ${row('Total carbohydrate', n.carbs, 'g', 1)}${row('Net carbs', s.net, 'g', 1)}${row('Sugars', n.sugars)}${n.added != null ? row('Added sugars', n.added) : ''}${row('Fiber', n.fiber)}${n.polyols ? row('Polyols', n.polyols) : ''}${row('Protein', n.protein)}${row('Fat', n.fat)}${row('Saturated fat', n.sat)}${n.trans != null ? row('Trans fat', n.trans) : ''}${row('Sodium', n.sodiumMg, 'mg')}${row('Energy (kcal)', n.kcal, 'kcal')}</table>
+    ${row('Total carbohydrate', n.carbs, 'g', 1)}${row('Net carbs', s.net, 'g', 1)}${row(n.added === 0 && n.sugars > 0 ? 'Total sugars (all natural)' : 'Total sugars', n.sugars)}${n.added != null ? row('Added sugars', n.added) : `<tr><td>Added sugars</td><td colspan="2" class="small">not declared${p.ing && /\b(sugar|syrup|honey|dextrose|cane)\b/i.test(p.ing) ? ' (ingredients list a sugar)' : ''}</td></tr>`}${row('Fiber', n.fiber)}${n.polyols ? row('Polyols', n.polyols) : ''}${row('Protein', n.protein)}${row('Fat', n.fat)}${row('Saturated fat', n.sat)}${n.trans != null ? row('Trans fat', n.trans) : ''}${row('Sodium', n.sodiumMg, 'mg')}${row('Energy (kcal)', n.kcal, 'kcal')}</table>
     <div class="small" style="margin-top:8px">${esc(s.netNote)}.${p.nova ? ' NOVA ' + p.nova + '.' : ''}</div></div>` : ''}
   ${s.missing ? '' : `<details class="card"><summary><h2 style="display:inline">How the ${s.score} is calculated</h2></summary><ul class="bd" style="margin-top:8px"><li><span class="l"><b>Starting score</b></span><span class="v">100</span></li>
     ${s.items.map(i => `<li><span class="l">${esc(i.label)}${i.detail ? `<small>${esc(i.detail)}</small>` : ''}</span><span class="bar-s"><i class="${i.pts < 0 ? 'bg-bd' : 'bg-ex'}" style="width:${Math.round(Math.abs(i.pts) / maxAbs * 100)}%"></i></span><span class="v ${i.pts < 0 ? 'neg' : 'pos'}">${i.pts > 0 ? '+' : ''}${i.pts}</span></li>`).join('')}
@@ -491,7 +493,7 @@ function swapsFor(doc, cur, limit = 6) {
     if (gain < 5 || red < -2 || (cur.net >= 10 && d.net < cur.net * 0.35)) continue;
     out.push({ d, gain, red, sug: cur.sugar != null && d.sugar != null ? cur.sugar - d.sugar : 0, rank: gain + 0.6 * red - d.rank / engine.docs.length * 5 });
   }
-  out.sort((a, b) => b.rank - a.rank);
+  out.sort((a, b) => Math.abs(a.d.score - b.d.score) <= 5 ? (a.d.net - b.d.net) || b.rank - a.rank : b.rank - a.rank); // within ~5 points, lower net carbs wins
   const seen = new Set(); return out.filter(x => { const k = LumiSearch.norm(x.d.name + x.d.brand); if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, limit)
     .map(x => Object.assign({}, x.d, { reason: [x.red >= 1 ? `−${Math.round(x.red)}g net carbs` : '', x.sug >= 3 ? 'less sugar' : '', `+${x.gain} pts`].filter(Boolean).join(', ') }));
 }
@@ -594,6 +596,8 @@ function route() {
   if (view === 'saved' || view === 'favorites') return viewSaved();
   if (view === 'about') return viewAbout();
   if (view === 'credits') return viewCredits();
+  if (view === 'store' && arg) return viewStore(arg);
+  if (view === 'aisle' && arg) return viewAisle(arg);
   if (view === 'log') return viewLog(arg);
   if (view === 'settings') return viewSettings();
   if (view === 'custom') return viewCustom();

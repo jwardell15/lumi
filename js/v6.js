@@ -103,7 +103,7 @@ function betterFor(p, s, hr, limit = 10) {
   if (pool.length < 4 && doc.cat) pool = pool.concat(engine.docs.filter(d => d.cat === doc.cat));
   const need = Math.max(50, cur + 10); const seen = new Set();
   const c = pool.filter(d => d.code !== doc.code && val(d) != null && val(d) >= need && d.score != null && !conflicts(d) && (d.src !== 'local' || usEnglish(d)))
-    .sort((a, b) => (val(b) + (b.img ? 6 : 0) - b.rank / 4000) - (val(a) + (a.img ? 6 : 0) - a.rank / 4000))
+    .sort((a, b) => Math.abs(val(a) - val(b)) <= 5 && a.net != null && b.net != null && a.net !== b.net ? a.net - b.net : (val(b) + (b.img ? 6 : 0) - b.rank / 4000) - (val(a) + (a.img ? 6 : 0) - a.rank / 4000))
     .filter(d => { const k = LumiSearch.norm(d.name + d.brand); if (seen.has(k)) return false; seen.add(k); return true; });
   return { cur, hp, leaf, items: c.slice(0, limit) };
 }

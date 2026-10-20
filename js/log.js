@@ -12,7 +12,7 @@ const dayKey = d => { const x = new Date(d); return x.getFullYear() + '-' + Stri
 const fmtN = (k, v) => v == null ? '—' : k === 'kcal' ? Math.round(v) : r1(v) + (k === 'kcal' ? '' : 'g');
 
 /* per-100 snapshot for a product (net carbs computed once) */
-function per100(p) { const s = S.score(p); const n = p.n || {}; return { carbs: n.carbs, net: s.net, sugars: n.sugars, fiber: n.fiber, protein: n.protein, fat: n.fat, kcal: n.kcal, sat: n.sat, sodiumMg: n.sodiumMg }; }
+function per100(p) { const s = S.score(p); const n = p.n || {}; return { carbs: n.carbs, net: s.net, sugars: n.sugars, added: n.added, fiber: n.fiber, protein: n.protein, fat: n.fat, kcal: n.kcal, sat: n.sat, sodiumMg: n.sodiumMg }; }
 const scale = (n100, g) => Object.fromEntries(Object.entries(n100).map(([k, v]) => [k, v == null ? null : v * g / 100]));
 function portionOptions(p) {
   const o = [], seen = new Set(), add = (label, g) => { if (!g || seen.has(label)) return; seen.add(label); o.push([label, g]); };

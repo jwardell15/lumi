@@ -64,10 +64,12 @@ function score(p) {
   const sq = p.servQ || (liquid ? 240 : 50);
   const netServ = nc * sq / 100;
   add('netServ', p.servQ ? 'Net carbs per serving' : `Net carbs per assumed ${sq}${liquid ? 'ml' : 'g'} serving`, -Math.min(liquid ? 30 : 25, netServ * (liquid ? 0.9 : 0.6)), r1(netServ) + ' g');
-  if (n.sugars != null) add('sugar', 'Total sugars', -Math.min(15, n.sugars * 0.4), r1(n.sugars) + ' g/100');
+  const dairy = /yog|milk|kefir|skyr|cheese|dairy|cream|lait/i.test((p.cats || '') + ' ' + (p.cat || '') + ' ' + (p.name || ''));
+  const natural = n.added === 0 && n.sugars > 0;
+  if (n.sugars != null) add('sugar', natural ? (dairy ? 'Total sugars (natural sugar, lactose)' : 'Total sugars (natural, none added)') : 'Total sugars', -Math.min(15, n.sugars * 0.4), r1(n.sugars) + ' g/100');
   const syr = [...new Set((ing.match(SYRUPS) || []))];
   const sugarIng = SUGAR_WORDS.test(ing) || syr.length > 0;
-  if (n.added != null) add('added', 'Added sugars', -Math.min(12, n.added * 0.5), r1(n.added) + ' g/100');
+  if (n.added != null) { if (n.added === 0) items.push({ key: 'added', label: 'Added sugars', pts: 0, detail: '0 g/100 (declared)' }); else add('added', 'Added sugars', -Math.min(12, n.added * 0.5), r1(n.added) + ' g/100'); }
   else if (sugarIng && n.sugars) add('added', 'Added sugar (in ingredients; qty undeclared)', -Math.min(8, n.sugars * 0.4), 'estimated');
   if (liquid && (n.sugars || 0) > 2.5) add('liquid', 'Liquid sugar — rapid absorption', -Math.min(30, n.sugars * 3), r1(n.sugars) + ' g/100ml');
   if (liquid && n.sugars != null && n.sugars * sq / 100 >= 15) add('liquidDose', '≥15 g sugar per drink serving', -10, r1(n.sugars * sq / 100) + ' g');
@@ -85,13 +87,14 @@ function score(p) {
     add('fiber', 'Fiber', Math.min(10, n.fiber), r1(n.fiber) + ' g/100');
     if (nc > 5 && n.fiber / (nc + n.fiber) >= 0.2) add('fiberRatio', 'High fiber relative to carbs', 3, '≥20%');
   }
-  if (n.protein != null) add('protein', 'Protein', Math.min(6, n.protein * 0.3), r1(n.protein) + ' g/100');
+  // v6.3: protein only buffers carbs, so its bonus is capped at half the carb penalty and can't outweigh a lower-carb/lower-sugar profile
+  if (n.protein != null) { const carbPen = Math.abs(items.filter(i => i.key === 'net100' || i.key === 'netServ').reduce((a, i) => a + i.pts, 0)); const cap = Math.min(6, carbPen / 2); const raw = Math.min(6, n.protein * 0.3); add('protein', raw > cap ? 'Protein (capped at half the carb penalty)' : 'Protein', Math.min(raw, cap), r1(n.protein) + ' g/100'); }
   // --- secondary
   if (n.sat != null) add('sat', 'Saturated fat', -Math.min(8, n.sat * 0.8), r1(n.sat) + ' g/100');
   if ((n.trans || 0) > 0.05) add('trans', 'Trans fat', -Math.min(8, n.trans * 8), r1(n.trans) + ' g/100');
   else if (HYDRO.test(ing) && !/fully hydrogenated/.test(ing)) add('trans', 'Partially hydrogenated oil', -6, 'trans-fat source');
   if (n.sodiumMg != null) add('sodium', 'Sodium', -Math.min(8, n.sodiumMg / 100), Math.round(n.sodiumMg) + ' mg/100');
-  if (p.nova === 4) add('nova', 'Ultra-processed (NOVA 4)', -8, ''); else if (p.nova === 3) add('nova', 'Processed (NOVA 3)', -3, '');
+  if (p.nova === 4) add('nova', 'Ultra-processed (NOVA 4)', -4, 'processing is weighed fully in the Health rating'); else if (p.nova === 3) add('nova', 'Processed (NOVA 3)', -2, '');
   const adds = (p.additives || []).filter((t, i, s) => ADDITIVES[t] && s.indexOf(t) === i);
   if (adds.length) add('additives', 'Additives of concern', -Math.min(8, adds.length * 2), adds.map(t => t.toUpperCase() + ' ' + ADDITIVES[t]).join(', '));
   const raw = 100 + items.reduce((s, i) => s + i.pts, 0);
