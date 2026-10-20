@@ -42,13 +42,14 @@ function servingFit9(p) { const t = mealT9(), m = mealFor(new Date()); if (!t[m]
 /* ---------- 2. Better choice (Yuka-style, near the top of every product page) ---------- */
 function betterCard9(p, s) {
   if (!p || p.src === 'cos' || s.score == null) return;
-  loadIndex().then(() => { if (!document.body.contains($('#hcard') || app)) return;
+  const run = () => { if (!document.body.contains($('#hcard') || app) || location.hash.indexOf(encodeURIComponent(p.code || p.id)) < 0 && location.hash.indexOf(p.code || p.id) < 0) return;
     const doc = engine.byCode(p.code || p.id) || { code: p.code || p.id, name: p.name, keys: C.match(p.cats || '') };
     const sw = swapsFor(doc, { score: s.score, net: s.net, sugar: p.n.sugars }, 1)[0], old = $('#better9'); if (old) old.remove();
     const anchor = app.querySelector('.card'); if (!anchor) return;
     if (sw) anchor.insertAdjacentHTML('afterend', `<section class="card better9" id="better9" aria-labelledby="b9h"><h2 id="b9h">Better choice</h2><a class="b9row" href="#/product/${esc(sw.code)}">${thumb(sw.img, sw.name, sw.keys, sw.cat, false, sw.brand)}<div class="t"><b>${esc(sw.name)}</b><small>${esc(sw.brand || '')}</small><span class="why">${esc(sw.reason)}</span></div><span class="pills">${pills(sw)}</span></a><div class="small">Same category, lower carb impact per 100${p.liquid ? 'ml' : 'g'}. <a class="lnk" href="#swapsCard" id="b9all">More swaps ↓</a></div></section>`);
     const a = $('#b9all'); if (a) a.onclick = e => { e.preventDefault(); const t = $('#swapsCard'); if (t) t.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); };
-  }).catch(() => {});
+  };
+  loadIndex().then(run).then(() => loadIndexFull()).then(run).catch(() => {});
 }
 function zeroCarbWarn9(p, s) { if (!p.n || p.n.sugars == null || p.n.sugars < 3 || s.net == null || s.net > 0 || /\b(keto|sugar[- ]?free|zero|no sugar)\b/i.test(p.name || '')) return '';
   return `<div class="card warn9" role="note"><b>⚠ Check the label</b><p class="small">The data says 0 g net carbs but ${r1(p.n.sugars)} g sugar per 100 g, which can't both be right. Count carbs from the package before you bolus.</p></div>`; }
