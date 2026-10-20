@@ -22,6 +22,11 @@ Local dev: `python3 serve.py 8765`.
 - v5.1: every item also gets a Yuka-style Health rating (js/health.js: Nutri-Score 2023 ~60%, additive risk tiers ~30%, organic ~10%; nutrition-only when ingredients are unknown). Precomputed in tools/build.js; organic/fruit-veg share come from `offdata/side.py`.
 - v6: additive & cosmetic-ingredient pages with cited sources (`js/encyc.js`; every link checked), allergen/diet alerts (`js/diet.js`, OFF allergen/traces/analysis tags via `tools/side2.py` plus ingredient text), cosmetics from the Open Beauty Facts bulk export (`tools/extract_obf.py`, then `node tools/build_cos.js`; run it after `tools/build.js`, which clears `data/`), better options after a scan, and a local Overview.
 
+## v7.2 (search relevance)
+- Relevance now leans on popularity and known US consumer brands, and less on score. Brandless items, known non-US brands, French/Spanish labels and non-US barcodes rank lower. The same rules apply to live Open Food Facts and USDA results.
+- Off-topic penalties by query word: soda → crackers/sherbet; chips → Chips Ahoy/fish/cereal; bread → flour/crumbs/pickle chips; milk/cheese/yogurt → similar. Restaurant rows rank below packaged items on generic queries.
+- Brand cleanup: misspellings (Bellwether), apostrophe casing (Nancy's, Siggi's), all-lowercase brands, generic words used as brands (e.g. "skyr"), Danone mapped to Oikos/Activia/Dannon, and USDA source labels ("USDA SR Legacy").
+
 ## v7.1 (audit release)
 - Search: US packaged products first. Foreign and non-English labels, generic USDA rows on packaged-type queries, and unrequested alcohol are ranked lower. Restaurant rows rank higher only when you search a chain.
 - Store picks: juice and sports/sugary drinks are left out of picks. More pantry staples (cones, sauces, chopped nuts, beans) moved to Staples & ingredients. Aisle pages use a blended ranking instead of tied 100s.

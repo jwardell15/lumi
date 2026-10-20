@@ -9,6 +9,8 @@ function typeBarcode(msg) {
 }
 document.addEventListener('click', e => { if (e.target && e.target.id === 'scanType') { if (typeof stopScan === 'function') stopScan(); typeBarcode(''); } });
 const V7_NEWS = [
+  ['🎯', 'Smarter search ranking (7.2)', 'Big US brands (Chobani, Fage, Oikos, Siggi\'s, Yoplait, Kirkland, Great Value…) rank first. Imported, foreign-label and no-brand items rank lower. Off-topic matches (soda crackers, Chips Ahoy, bread flour, pickle chips) are pushed down.'],
+  ['🏷️', 'Cleaner brand names (7.2)', 'Misspelled and mis-cased brands are merged (Bellwether Farms, Nancy\'s, Siggi\'s), Danone shows as Oikos/Activia/Dannon, and USDA sources read "USDA Foundation" and "USDA SR Legacy".'],
   ['🔎', 'Better search (7.1)', 'US products first, fewer foreign-label and generic rows, no cocktails when you search "soda", chains rank higher for chain names.'],
   ['🧹', 'Cleaner aisles & data checks (7.1)', 'Spinach is no longer in Baby, sushi not in Bakery; 0 g carbs on juice, fruit or chocolate milk is flagged; "0 g" on small servings is scored with label rounding in mind; juice and sports drinks are no longer store picks.'],
   ['🧴', 'Cosmetics are back (7.1)', 'The cosmetics scanner data had gone missing in an earlier update. It\'s restored.'],
@@ -17,9 +19,9 @@ const V7_NEWS = [
   ['☰', 'Shopping lists', 'Make lists (Costco run, school snacks…), check items off, see the carb total and share the list.'],
   ['💊', 'Supplements, sorted', 'Protein & collagen, greens powders, creatine & hydration, vitamins. Fresh "super greens" salads moved to Produce.'],
   ['🔎', 'Smarter search filters', 'Ready-to-eat, has photo and hide bad data, plus better near-duplicate grouping (one row per product).']];
-function whatsNewCard() { if (store.get('seen71', false)) return ''; return `<div class="card news7"><div class="n7h"><b>✨ New in Lumi ${VERSION}</b><button class="icon" id="n7x" aria-label="Dismiss">✕</button></div><ul>${V7_NEWS.slice(0, 3).map(n => `<li><span>${n[0]}</span><div><b>${esc(n[1])}</b> <span class="d">${esc(n[2])}</span></div></li>`).join('')}</ul><a class="lnk" href="#/whatsnew">Everything new ›</a></div>`; }
-document.addEventListener('click', e => { if (e.target && e.target.id === 'n7x') { store.set('seen71', true); const c = document.querySelector('.news7'); if (c) c.remove(); } });
-function viewWhatsNew() { document.title = 'New in 7.0 — Lumi'; store.set('seen71', true);
+function whatsNewCard() { if (store.get('seen72', false)) return ''; return `<div class="card news7"><div class="n7h"><b>✨ New in Lumi ${VERSION}</b><button class="icon" id="n7x" aria-label="Dismiss">✕</button></div><ul>${V7_NEWS.slice(0, 3).map(n => `<li><span>${n[0]}</span><div><b>${esc(n[1])}</b> <span class="d">${esc(n[2])}</span></div></li>`).join('')}</ul><a class="lnk" href="#/whatsnew">Everything new ›</a></div>`; }
+document.addEventListener('click', e => { if (e.target && e.target.id === 'n7x') { store.set('seen72', true); const c = document.querySelector('.news7'); if (c) c.remove(); } });
+function viewWhatsNew() { document.title = 'New in 7.0 — Lumi'; store.set('seen72', true);
   app.innerHTML = `<h1>New in Lumi ${VERSION}</h1><div class="card news7 full"><ul>${V7_NEWS.map(n => `<li><span>${n[0]}</span><div><b>${esc(n[1])}</b> ${esc(n[2])}</div></li>`).join('')}</ul></div><p class="foot">Informational only, not medical advice. Dose from the physical label.</p>`; }
 /* ready-to-eat: index docs use the aisle + staple rules; outside items (USDA/OFF live) use the name rules only */
 function readyToEat(i) { if (i.src === 'whole' || i.src === 'rest' || i.src === 'chain') return true; const d = { name: i.name || '', ai: i.ai == null ? -1 : i.ai }; return !isStaple(d) && !RAW.has(d.ai); }

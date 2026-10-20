@@ -173,11 +173,11 @@ function fromUSDA(f) {
   const cat = f.brandedFoodCategory || f.foodCategory || (f.foodCategory && f.foodCategory.description) || '';
   const catS = typeof cat === 'string' ? cat : (cat.description || '');
   const name = titleCase(f.description || 'USDA food');
-  return { id: 'fdc-' + f.fdcId, code: gtin, fdcId: f.fdcId, src: 'usda', name, brand: titleCase(f.brandName || f.brandOwner || (f.dataType !== 'Branded' ? 'USDA ' + (f.dataType || '') : '')), qty: f.packageWeight || '',
+  return { id: 'fdc-' + f.fdcId, code: gtin, fdcId: f.fdcId, src: 'usda', name, brand: (f.brandName || f.brandOwner) ? titleCase(f.brandName || f.brandOwner) : (f.dataType && f.dataType !== 'Branded' ? 'USDA ' + String(f.dataType).replace(/^sr legacy$/i, 'SR Legacy').replace(/^survey \(fndds\)$/i, 'FNDDS') : ''), qty: f.packageWeight || '',
     img: '', servQ, serv: f.householdServingFullText ? `${f.householdServingFullText} (${f.servingSize}${unit === 'grm' ? 'g' : unit === 'mlt' ? 'ml' : unit})` : servQ ? servQ + unit : '', nova: null, additives: [], ing: (f.ingredients || '').toLowerCase(), cat: catS, cats: catS,
     naLabel: true, liquid: /beverage|drink|soda|juice|milk|water/i.test(catS) || unit === 'ml' || unit === 'mlt', n };
 }
-const titleCase = s => String(s || '').toLowerCase().replace(/\b([a-z])/g, c => c.toUpperCase()).replace(/\b(Of|And|With|In|The|A)\b/g, w => w.toLowerCase()).replace(/^./, c => c.toUpperCase());
+const titleCase = s => String(s || '').toLowerCase().replace(/(^|[^a-z'’])([a-z])/g, (m, p, c) => p + c.toUpperCase()).replace(/\b(Of|And|With|In|The|A)\b/g, w => w.toLowerCase()).replace(/^./, c => c.toUpperCase());
 /* compact local-index record (see tools/build.js) */
 const DK = ['carbs', 'sugars', 'added', 'fiber', 'protein', 'fat', 'sat', 'trans', 'sodiumMg', 'kcal', 'polyols'];
 function fromCompact(a) {

@@ -28,7 +28,26 @@ let WATER_; const water = () => WATER_ ?? (WATER_ = typeof self !== 'undefined' 
 const OFFAL = /\b(liver|livers|gizzards?|hearts?|kidneys?|tongue|tripe|giblets?|feet|paws|necks?|brains?|spleen|lungs?|chitterlings|offal|mechanically separated|separable fat|skin only|backs?|frames?|testes|sweetbreads?|blood|marrow|ears?|snouts?)\b/;
 const MEATQ = /\b(chicken|beef|pork|turkey|lamb|steak)\b/;
 const COMMON = /\b(breasts?|thighs?|tenders?|tenderloins?|nuggets?|rotisserie|wings?|drumsticks?|ground|strips?|grilled|patties|sirloin|ribeye|chops?|loin)\b/;
-const NONEN = /\b(le|la|les|du|des|et|au|aux|avec|sans|nature|fromage|lait|sucre|chocolat|yaourt|leche|con|sin|del|azucar|queso|und|mit|vanille|fraise|eau|pain|beurre|creme|natur|saveur|parfum|sabor|blanc|petit|recette|aceite|agua|bebida|dulce|avena|cereales|céréales|intero|greco|bianco|biscottes|onctueux|mousse a)\b/i;
+/* v7.2 brand cleanup: source labels, apostrophe casing, parent→consumer brand, known misspellings, generic words used as brands */
+const BRAND_FIX = [[/^usda\s+usda\s+/i, 'USDA '], [/\bSr Legacy\b/i, 'SR Legacy'], [/\bFndds\b/i, 'FNDDS'], [/(\w)['’]S\b/g, "$1's"], [/^bel+[ao]w?ther farms?$/i, 'Bellwether Farms'], [/^siggi'?s?$|^siggi s$/i, "Siggi's"], [/^nancy'?s$|^nancy s$/i, "Nancy's"], [/^fage( total)?$/i, 'Fage'], [/^two good$/i, 'Two Good'], [/^chobani(,? llc| inc\.?)?$/i, 'Chobani']];
+const GENERIC_BRAND = /^(skyr|yogurt|yoghurt|greek yogurt|milk|cheese|cereal|bread|soda|chips|organic|natural|plain|vanilla|generic|unknown|n\/a|none|food|foods)$/i;
+function fixBrand(b, name) {
+  b = String(b || '').trim(); for (const [re, to] of BRAND_FIX) b = b.replace(re, to);
+  if (GENERIC_BRAND.test(b)) b = '';
+  const n = String(name || '').toLowerCase();
+  if (/^(danone|dannon|the dannon company|danone us)/i.test(b)) { if (/\boikos\b/.test(n)) b = 'Oikos'; else if (/\bactivia\b/.test(n)) b = 'Activia'; else if (/\blight ?(&|and|\+) ?fit\b/.test(n)) b = 'Light + Fit'; else if (/\bsilk\b/.test(n)) b = 'Silk'; else if (/\bdanimals\b/.test(n)) b = 'Danimals'; else b = 'Dannon'; }
+  if (/^general mills/i.test(b) && /\byoplait\b/.test(n)) b = 'Yoplait';
+  if (b && b === b.toLowerCase() && !/^(fairlife|siete)$/.test(b)) b = b.replace(/(^|[\s&\-/])([a-z])/g, (m, p, c) => p + c.toUpperCase());
+  return b;
+}
+/* well-known US consumer brands get a relevance boost */
+const KNOWNB = /^(chobani|fage|oikos|siggi'?s|two good|ratio|yoplait|dannon|danone|activia|light \+ fit|kirkland|kirkland signature|great value|good & gather|market pantry|365|365 by whole foods market|kroger|private selection|simple truth|simple truth organic|trader joe'?s|stonyfield|stonyfield organic|noosa|tillamook|horizon|horizon organic|organic valley|fairlife|lactaid|silk|oatly|califia farms|kraft|sargento|cabot|philadelphia|daisy|breakstone'?s|kerrygold|general mills|cheerios|kellogg'?s|post|quaker|kashi|nature'?s path|magic spoon|catalina crunch|coca[- ]cola|pepsi|sprite|dr pepper|mountain dew|zevia|olipop|poppi|la croix|lacroix|sparkling ice|canada dry|a&w|lay'?s|frito ?lay|doritos|tostitos|kettle brand|cape cod|siete|ruffles|pringles|sun ?chips|pepperidge farm|dave'?s killer bread|nature'?s own|sara lee|wonder|arnold|oroweat|thomas'?|friendly farms|clancy'?s|h-e-b|heb|publix|wegmans|hy-vee|meijer|signature select|o organics|lucerne|bellwether farms|nancy'?s|maple hill|icelandic provisions|lifeway|ellenos|wallaby|brown cow|clover|alexandre|painterland|quest|premier protein|core power)$/i;
+/* known non-US labels that show up in OFF */
+const NONUSB = /\b(sojade|yeo valley|olympic|alpro|onken|m[uü]ller|pr[eé]sident|lactalis|carrefour|auchan|leclerc|monoprix|tesco|sainsbury'?s|asda|waitrose|morrisons|marks (&|and) spencer|lidl|milbona|libert[eé]|iogo|astro|natrel|qu[eé]bon|sealtest|neilson|president'?s choice|no name|compliments|arla|la laiti[eè]re|st hubert|bonduelle|gerbl[eé]|bjorg|les 2 vaches|malo|candia|lactel|bridel|paysan breton|soignon|andros|ehrmann|zott|emmi|mlekovita|valio|dux|pozuelo|rovira)\b/i;
+/* query word → patterns meaning "a different product that merely contains the word" */
+const OFFTOPIC = { soda: /\b(crackers?|sherbet|saltines?|baking soda|bicarbonate|cakes?|cookies?|soda bread|candy)\b/, chips: /\b(cereal|chips ahoy|chocolate chips?|baking chips|morsels|fish|cookies?|bread (&|and) butter|toffee|mint chip|butterscotch|white chips|chips? (&|and) (salsa|queso|guac\w*|pico))\b/, bread: /\b(flour|crumbs?|chips|pickles?|mix|machine|pudding|stuffing|bowl|dip|panko|yeast|starter)\b/, cereal: /\b(bars?|cookies?|treats)\b/, milk: /\b(yogurt|kefir|cheese|creamer|milk chocolate|chocolate (bar|candy|chips?)|chocolates|caramels?|candy|cookies?|bars?|toffee|truffles?|lotion|soap|body)\b/, cheese: /\b(croutons?|ravioli|tortellini|bakes|burgers?|crisps|enchiladas?|straws|cheesecake|cheese (puffs|balls|curls|crackers|nips)|cheez|cheetos|goldfish|crackers?|pizza|cheeseburger|mac(aroni)?|dip|bread|danish|filled|bagels?|biscuits?)\b/, yogurt: /\b(covered|coated|pretzels|raisins|granola|parfaits?|bites|cereal|dressing|dip|tzatziki|bark|melts|starter)\b/ };
+const NONEN = /\b(islandais|sel|en|vinaigre|jardini[eè]re|citron|mousse|grec|grecque|biologique|nature|natur|à la|brassé|brasse|entier|écrémé|ecreme|fromage blanc|brebis|chèvre|chevre|vache|soja|gourmand|sucré|onctueux|griego|desnatado|entera|naturjoghurt|joghurt|jogurt|yaourt|yoghourt|le|la|les|du|des|et|au|aux|avec|sans|nature|fromage|lait|sucre|chocolat|yaourt|leche|con|sin|del|azucar|queso|und|mit|vanille|fraise|eau|pain|beurre|creme|natur|saveur|parfum|sabor|blanc|petit|recette|aceite|agua|bebida|dulce|avena|cereales|céréales|intero|greco|bianco|biscottes|onctueux|mousse a)\b/i;
+const NONEN2 = /\b(uk|united kingdom|france|deutschland|espana|canada|quebec)\b/;
 const ALCQ = /\b(vodka|tequila|rum|gin|whiskey|whisky|bourbon|beer|wine|cocktail|hard|spiked|alcohol|margarita|seltzer|mixer)\b/;
 const ALCN = /\b(vodka|tequila|rum|gin|whiskey|whisky|bourbon|beer|wine|cocktail|hard seltzer|spiked|liqueur|margarita)\b/;
 const PACKQ = /\b(soda|yogurt|yoghurt|cereal|bread|chips|crackers?|cookies?|bars?|protein|granola|ice cream|pizza|pasta sauce|salsa|hummus|juice|candy|chocolate|tortillas?|bagels?|muffins?|waffles?|pancakes?|frozen|snacks?|jerky|popcorn|pretzels?|creamer|milk|cheese|sausage|bacon|hot dogs?|soup|dressing|ketchup|mustard|mayo|peanut butter|jam|coffee|tea|energy drink|sparkling water|kombucha|kefir|oatmeal)\b/;
@@ -73,7 +92,7 @@ class Engine {
     const cats = data.generic ? data.cats : this.cats; const KC = root.LumiCats;
     for (const d of data.docs) {
       const i = this.docs.length;
-      const doc = { code: d[0], name: fixName(d[1]), brand: d[2] || '', score: d[3] < 0 ? null : d[3], net: d[4] < 0 ? null : d[4], cat: cats[d[5]] || '', img: imgURL(d[0], d[6]), keys: d[7] ? d[7].split('.').map(k => /^\d+$/.test(k) ? +k : (KC ? KC.KEYS.indexOf(k) : -1)).filter(k => k >= 0) : [], sugar: d[8] == null || d[8] < 0 ? null : d[8], h: d[9] == null || d[9] < 0 ? null : d[9], hn: !!(d[10] & 1), al: d[11] || 0, df: d[12] == null ? null : d[12], src: data.generic ? (d[7] && d[7].startsWith('rest') ? 'rest' : 'whole') : 'local', rank: i, sm: d[13] || 0, ai: d[14] == null ? -1 : d[14], bad: !!(d[10] & 8), fl: !!(d[10] & 4) || (water().includes(d[14]) && d[4] >= 0 && d[4] <= 0.5) };
+      const doc = { code: d[0], name: fixName(d[1]), brand: fixBrand(d[2], d[1]), score: d[3] < 0 ? null : d[3], net: d[4] < 0 ? null : d[4], cat: cats[d[5]] || '', img: imgURL(d[0], d[6]), keys: d[7] ? d[7].split('.').map(k => /^\d+$/.test(k) ? +k : (KC ? KC.KEYS.indexOf(k) : -1)).filter(k => k >= 0) : [], sugar: d[8] == null || d[8] < 0 ? null : d[8], h: d[9] == null || d[9] < 0 ? null : d[9], hn: !!(d[10] & 1), al: d[11] || 0, df: d[12] == null ? null : d[12], src: data.generic ? (d[7] && d[7].startsWith('rest') ? 'rest' : 'whole') : 'local', rank: i, sm: d[13] || 0, ai: d[14] == null ? -1 : d[14], bad: !!(d[10] & 8), fl: !!(d[10] & 4) || (water().includes(d[14]) && d[4] >= 0 && d[4] <= 0.5) };
       doc.nn = norm(doc.name + ' ' + doc.brand);
       this.docs.push(doc);
       const seen = new Map();
@@ -117,16 +136,21 @@ class Engine {
       if (c < need) continue; const d = this.docs[i]; if (filter && !filter(d)) continue;
       let r = (s / qt.length) * 100 * (c / qt.length);
       if (d.nn.includes(nq)) r += 25; if (norm(d.name).startsWith(nq)) r += 10;
-      r += 18 * (1 - d.rank / N);
+      r += 26 * (1 - d.rank / N);
       // v6.3.3: common cuts first, offal last (unless asked for), and blend in the rating
       if (!OFFAL.test(nq) && OFFAL.test(d.nn)) r -= 30;
       if (MEATQ.test(nq) && COMMON.test(d.nn)) r += 12;
-      if (d.score != null) r += 0.08 * d.score;
+      if (d.score != null) r += 0.04 * d.score;
+      // v7.2: known mainstream US brands first; brandless/non-US labels and off-topic products down
+      if (KNOWNB.test(d.brand)) r += 22;
+      if (d.src === 'local' && !d.brand) r -= 22;
+      if (NONUSB.test(d.brand) || NONEN2.test(d.nn)) r -= 30;
+      for (const w of nq.split(" ")) { const o = OFFTOPIC[w] || OFFTOPIC[w + "s"]; if (o && o.test(d.nn) && !o.test(nq)) { r -= 55; break; } }
       // v7.1: shoppers want US packaged products first: demote non-English/non-US labels, unasked-for alcohol, generic FNDDS rows for packaged-type queries, and bad data
-      if (d.src !== 'whole' && d.src !== 'rest') { if (!/^[\x20-\x7e]+$/.test(d.name + d.brand) || NONEN.test(d.name) || !(d.code.length === 12 || (d.code.length === 13 && /^[01]/.test(d.code)))) r -= 22; if (d.bad) r -= 15; if (!d.img) r -= 3; if (d.name.split(' ').length <= 1 && d.brand && nq.split(' ').length === 1) r -= 6; }
+      if (d.src !== 'whole' && d.src !== 'rest') { if (!/^[\x20-\x7e]+$/.test(d.name + d.brand) || NONEN.test(d.name.toLowerCase()) || !(d.code.length === 12 || (d.code.length === 13 && /^[01]/.test(d.code)))) r -= 22; if (d.bad) r -= 15; if (!d.img) r -= 3; if (d.name.split(' ').length <= 1 && d.brand && nq.split(' ').length === 1) r -= 6; }
       if (!ALCQ.test(nq) && ALCN.test(d.nn)) r -= 28;
       if (d.src === 'whole' && PACKQ.test(nq)) r -= 30;
-      if (d.src === 'rest') r += CHAINQ.test(nq) ? 6 : -12;
+      if (d.src === 'rest') r += CHAINQ.test(nq) ? 6 : -30;
       if (d.src === 'whole') { const nn = norm(d.name), w = nn.split(' '); if (nn.startsWith(qt[0])) r += 14; if (/\braw\b/.test(nn)) r += 6; r -= Math.min(10, Math.max(0, w.length - qt.length - 1) * 1.5); }
       res.push([r, d]);
     }
@@ -144,5 +168,18 @@ class Engine {
   }
   byCode(code) { if (!this._codes) { this._codes = new Map(); } if (this._codes.size !== this.docs.length) { this._codes.clear(); this.docs.forEach(d => this._codes.set(d.code, d)); } return this._codes.get(code); }
 }
-root.LumiSearch = { Engine, norm, toks, dl, imgURL, groupKey, dedupe, fixName };
+/* v7.2: the same relevance adjustments for live Open Food Facts / USDA results */
+function relAdj(query, it) {
+  const nq = norm(query), qt = toks(query), name = String(it.name || ''), brand = fixBrand(it.brand, name), nn = norm(name + ' ' + brand), code = String(it.code || '');
+  let r = 0;
+  if (KNOWNB.test(brand)) r += 22;
+  if (!brand) r -= 22;
+  if (NONUSB.test(brand) || NONEN2.test(nn)) r -= 30;
+  if (!/^[\x20-\x7e]+$/.test(name + brand) || NONEN.test(name.toLowerCase())) r -= 22;
+  if (code && /^\d+$/.test(code) && !(code.length === 12 || (code.length === 13 && /^[01]/.test(code)) || code.length === 8)) r -= 22;
+  if (!ALCQ.test(nq) && ALCN.test(nn)) r -= 28;
+  for (const w of nq.split(" ")) { const o = OFFTOPIC[w] || OFFTOPIC[w + "s"]; if (o && o.test(nn) && !o.test(nq)) { r -= 55; break; } }
+  return r;
+}
+root.LumiSearch = { fixBrand, relAdj, Engine, norm, toks, dl, imgURL, groupKey, dedupe, fixName };
 })(typeof self !== "undefined" ? self : globalThis);
