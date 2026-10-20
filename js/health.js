@@ -112,5 +112,6 @@ function rate(p, opt = {}) {
   return out;
 }
 const LABEL = { excellent: 'Excellent', good: 'Good', poor: 'Poor', bad: 'Bad', unknown: '?' };
-return { rate, additives, ADD, TIER, LABEL };
+let SYN = 0; function addSyn(syn) { if (SYN) return; SYN = 1; const esc = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); for (const [k, L] of Object.entries(syn || {})) if (ADD[k] && L.length) TXT.push([new RegExp('\\b(' + L.map(esc).join('|') + ')\\b'), k]); }
+return { rate, additives, ADD, TIER, LABEL, addSyn };
 });

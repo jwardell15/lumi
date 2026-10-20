@@ -4,6 +4,7 @@ const fs = require('fs'), path = require('path');
 const S = require('../js/score.js'); const C = require('../js/cats.js'); const H = require('../js/health.js');
 const SIDE = fs.existsSync(path.join(path.dirname(process.argv[2]), 'side.json')) ? JSON.parse(fs.readFileSync(path.join(path.dirname(process.argv[2]), 'side.json'), 'utf8')) : {};
 const COV = {}; const cov = (k, r) => { const c = COV[k] = COV[k] || { n: 0, rated: 0, full: 0, nutritionOnly: 0, estimated: 0, unrated: 0, reasons: {} }; c.n++; if (r.score == null) { c.unrated++; c.reasons[r.reason] = (c.reasons[r.reason] || 0) + 1; } else { c.rated++; c[r.basis === 'full' ? 'full' : 'nutritionOnly']++; if (r.est.length) c.estimated++; } };
+const REF = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'ref/additives.json'), 'utf8')); H.addSyn(REF.syn);
 const ORG = /\borganic\b/i; const D = require('../js/diet.js');
 const SIDE2 = fs.existsSync(path.join(path.dirname(process.argv[2]), 'side2.json')) ? JSON.parse(fs.readFileSync(path.join(path.dirname(process.argv[2]), 'side2.json'), 'utf8')) : {};
 const ALC = {}; const alc = (k, m) => { const c = ALC[k] = ALC[k] || { n: 0, ingredientsKnown: 0, anyAllergen: 0 }; c.n++; if (m.df & 1) c.ingredientsKnown++; if (m.am) c.anyAllergen++; };
@@ -111,7 +112,7 @@ if (gsrc) {
       const dm = D.analyze({ name: r.name, ing: comp[10], allergens: tags, whole: simple, organic: !!hx.o }); hx.am = dm.am; hx.tm = dm.tm; hx.df = dm.df; alc(GK, dm);
       st(GK, c => { c.n++; c.photoAfter += !!comp[4]; c.ingAfter += !!comp[10]; c.verifiableBefore += dmB.df & 1; c.verifiableAfter += dm.df & 1; if (hx.s.i) c.ingFrom[hx.s.i] = (c.ingFrom[hx.s.i] || 0) + 1; if (hx.s.p) c.ingFrom['photo-' + hx.s.p] = (c.ingFrom['photo-' + hx.s.p] || 0) + 1; }); } comp.push(hx);
     const p = S.fromCompact(comp); const s = S.score(p); ga.total++;
-    const hr = H.rate(p, { whole: isWhole, group: r.group, organic: !!hx.o, fvl: hx.fv }); cov(isWhole ? 'Whole foods (USDA)' : r.src.includes('official') ? 'Restaurants (official)' : 'Restaurants (USDA)', hr); if (s.score == null) ga.inconsistent++;
+    const hr = H.rate(p, { whole: isWhole, group: r.group, organic: !!hx.o, fvl: hx.fv }); cov(isWhole ? (r.src.includes('Canadian') ? 'Whole foods (CNF)' : 'Whole foods (USDA)') : r.src.includes('official') ? 'Restaurants (official)' : r.src.includes('MenuStat') ? 'Restaurants (MenuStat 2018)' : 'Restaurants (USDA)', hr); if (s.score == null) ga.inconsistent++;
     let keys = r.keys.filter(k => k === 'rest' || k === 'whole' || !k.startsWith('rest-') || okKeys.has(k) || k === 'rest-other');
     if (r.keys[1] && r.keys[1].startsWith('rest-') && !okKeys.has(r.keys[1]) && r.keys[1] !== 'rest-other') keys = ['rest', 'rest-other'];
     if (!gci.has(r.group)) { gci.set(r.group, gcats.length); gcats.push(r.group); }

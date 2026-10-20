@@ -30,9 +30,9 @@ function encPage(e, kind) {
   return `<div class="card enc"><div class="small"><a class="lnk" href="#/additives/${kind}">‹ ${kind === 'cos' ? 'Cosmetic ingredients' : 'Food additives'}</a></div>
     <h1>${esc(e.name)}</h1>${e.code ? `<div class="b">${esc(e.code)}</div>` : ''}<div class="risk-badge bg-${TIERC[e.tier]}">${EN.TIER[e.tier]}</div>
     <h2>What it is</h2><p>${esc(e.fn)}</p><h2>Why it's ${e.tier ? 'flagged' : 'rated no risk'}</h2><p>${esc(e.why)}</p><p class="small"><b>Evidence:</b> ${evText(e.ev)}</p>
-    <h2>Sources</h2>${srcList(e.src)}</div><p class="foot">Risk levels are Lumi's own summary of the cited sources. Informational only, not medical advice.</p>`;
+    ${kind === 'food' ? `<div id="usreg" data-e="${esc(e.id)}"></div>` : ''}<h2>Sources</h2>${srcList(e.src)}</div><p class="foot">Risk levels are Lumi's own summary of the cited sources. Informational only, not medical advice.</p>`;
 }
-function viewAdditive(id) { const e = EN.food(id, HLTH); document.title = (e ? e.name : 'Additive') + ' — Lumi'; app.innerHTML = e ? encPage(e, 'food') : `<div class="card empty">${MASCOT(80)}<b>Unknown additive</b><a class="lnk" href="#/additives">Browse all additives ›</a></div>`; }
+function viewAdditive(id) { const e = EN.food(id, HLTH); document.title = (e ? e.name : 'Additive') + ' — Lumi'; app.innerHTML = e ? encPage(e, 'food') : `<div class="card empty">${MASCOT(80)}<b>Unknown additive</b><a class="lnk" href="#/additives">Browse all additives ›</a></div>`; if (e) fillReg(); }
 function viewIngredient(id) { const e = EN.cos(id); document.title = (e ? e.name : 'Ingredient') + ' — Lumi'; app.innerHTML = e ? encPage(e, 'cos') : `<div class="card empty">${MASCOT(80)}<b>Unknown ingredient</b><a class="lnk" href="#/additives/cos">Browse ingredients ›</a></div>`; }
 function viewAdditives(tab) {
   tab = tab === 'cos' ? 'cos' : 'food'; document.title = 'Additives & ingredients — Lumi';

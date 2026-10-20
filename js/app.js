@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '6.1.0';
+const VERSION = '6.2.0';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -353,12 +353,12 @@ function viewBrowse(key) {
 
 /* ---------------- product ---------------- */
 async function resolveProduct(id) {
-  if (/^(fdc-|r-)/.test(id)) { const g = await genericProduct(id); if (g) return g; }
+  if (/^(fdc-|r-|ms-|cnf-)/.test(id)) { const g = await genericProduct(id); if (g) return g; }
   if (memo.has(id)) return memo.get(id);
   const sv = saved().find(s => s.p.id === id); if (sv) return sv.p;
   if (/^c-/.test(id)) { const c = customFoods().find(x => x.id === id); if (c) return c; }
   const mem = store.get('foods', {})[id];
-  if (/^(fdc-|r-)/.test(id)) { const g = await genericProduct(id); if (g) return g; if (mem) return mem; if (/^fdc-\d+$/.test(id)) return usdaFood(id.slice(4)); return null; }
+  if (/^(fdc-|r-|ms-|cnf-)/.test(id)) { const g = await genericProduct(id); if (g) return g; if (mem) return mem; if (/^fdc-\d+$/.test(id)) return usdaFood(id.slice(4)); return null; }
   if (mem && !/^\d+$/.test(id)) return mem;
   const loc = await localProduct(id);
   if (loc) return loc;
@@ -555,7 +555,7 @@ SECONDARY
 
 Bands: 75+ Excellent · 50–74 Good · 25–49 Poor · &lt;25 Bad</pre>
   <h2 style="margin-top:14px">Net carbs</h2><p class="small">US labels (and all USDA data) include fiber in total carbohydrate, so net = carbs − fiber. EU-style labels already exclude fiber. Declared polyols are subtracted (only half for maltitol).</p>
-  <h2>Data sources</h2><p class="small">1) Lumi's bundled index: 449k US products (165k from Open Food Facts plus 284k from USDA Branded Foods, lazy-loaded in tiers) from the Open Food Facts bulk export, pre-scored and searchable offline-fast with typo tolerance. 2) USDA FoodData Central (Branded + generic foods) via the public demo key. 3) Live Open Food Facts search across country mirrors. Results are merged and de-duplicated by barcode. 4) Whole foods: USDA Foundation, SR Legacy and FNDDS. 5) Restaurants: official nutrition published by Chick-fil-A, Subway, Arby's, Dunkin', Five Guys, Culver's, Shake Shack, Sonic, Jack in the Box, Qdoba, Whataburger, Jimmy John's, Little Caesars, Carl's Jr. and Tropical Smoothie Cafe (fetched once, cached, robots.txt respected; preferred over USDA), plus USDA SR Legacy restaurant items for other chains. 6) USDA Branded Foods: about 284k extra US barcoded products, with no photos. Chains that block automated access were skipped. A free FatSecret or Nutritionix key could add many more chains and branded restaurant items, but Lumi does not use one. Product links: <code>#/product/&lt;barcode&gt;</code> or <code>#/product/fdc-&lt;USDA id&gt;</code>.</p>
+  <h2>Data sources</h2><p class="small"><a class="lnk" href="#/credits">All sources, licenses and image credits ›</a></p><p class="small">1) Lumi's bundled index: 449k US products (165k from Open Food Facts plus 284k from USDA Branded Foods, lazy-loaded in tiers) from the Open Food Facts bulk export, pre-scored and searchable offline-fast with typo tolerance. 2) USDA FoodData Central (Branded + generic foods) via the public demo key. 3) Live Open Food Facts search across country mirrors. Results are merged and de-duplicated by barcode. 4) Whole foods: USDA Foundation, SR Legacy and FNDDS. 5) Restaurants: official nutrition published by Chick-fil-A, Subway, Arby's, Dunkin', Five Guys, Culver's, Shake Shack, Sonic, Jack in the Box, Qdoba, Whataburger, Jimmy John's, Little Caesars, Carl's Jr. and Tropical Smoothie Cafe (fetched once, cached, robots.txt respected; preferred over USDA), plus USDA SR Legacy restaurant items for other chains. 6) USDA Branded Foods: about 284k extra US barcoded products, with no photos. Chains that block automated access were skipped. A free FatSecret or Nutritionix key could add many more chains and branded restaurant items, but Lumi does not use one. Product links: <code>#/product/&lt;barcode&gt;</code> or <code>#/product/fdc-&lt;USDA id&gt;</code>.</p>
   <h2>Limits</h2><p class="small">Crowd-sourced and label data can be wrong or stale. There is no measured GI/GL; ingredients are used as proxies. Fat/protein-heavy meals (delayed rises) are only reflected via saturated fat. USDA's demo key is rate-limited per device.</p>
   <div class="note"><b>Informational only — not medical advice.</b> Always dose from the physical label and your own CGM data.</div></div>
   <div class="card small">Data © Open Food Facts contributors (ODbL) and USDA FoodData Central (public domain).</div>`;
