@@ -31,6 +31,7 @@ const COMMON = /\b(breasts?|thighs?|tenders?|tenderloins?|nuggets?|rotisserie|wi
 /* v7.2 brand cleanup: source labels, apostrophe casing, parent→consumer brand, known misspellings, generic words used as brands */
 const BRAND_FIX = [[/^usda\s+usda\s+/i, 'USDA '], [/\bSr Legacy\b/i, 'SR Legacy'], [/\bFndds\b/i, 'FNDDS'], [/(\w)['’]S\b/g, "$1's"], [/^bel+[ao]w?ther farms?$/i, 'Bellwether Farms'], [/^siggi'?s?$|^siggi s$/i, "Siggi's"], [/^nancy'?s$|^nancy s$/i, "Nancy's"], [/^fage( total)?$/i, 'Fage'], [/^two good$/i, 'Two Good'], [/^chobani(,? llc| inc\.?)?$/i, 'Chobani']];
 const GENERIC_BRAND = /^(skyr|yogurt|yoghurt|greek yogurt|milk|cheese|cereal|bread|soda|chips|organic|natural|plain|vanilla|generic|unknown|n\/a|none|food|foods)$/i;
+const bnorm = b => norm(fixBrand(b)).replace(/\s+/g, '');
 function fixBrand(b, name) {
   b = String(b || '').trim(); for (const [re, to] of BRAND_FIX) b = b.replace(re, to);
   if (GENERIC_BRAND.test(b)) b = '';
@@ -45,7 +46,7 @@ const KNOWNB = /^(chobani|fage|oikos|siggi'?s|two good|ratio|yoplait|dannon|dano
 /* known non-US labels that show up in OFF */
 const NONUSB = /\b(sojade|yeo valley|olympic|alpro|onken|m[uü]ller|pr[eé]sident|lactalis|carrefour|auchan|leclerc|monoprix|tesco|sainsbury'?s|asda|waitrose|morrisons|marks (&|and) spencer|lidl|milbona|libert[eé]|iogo|astro|natrel|qu[eé]bon|sealtest|neilson|president'?s choice|no name|compliments|arla|la laiti[eè]re|st hubert|bonduelle|gerbl[eé]|bjorg|les 2 vaches|malo|candia|lactel|bridel|paysan breton|soignon|andros|ehrmann|zott|emmi|mlekovita|valio|dux|pozuelo|rovira)\b/i;
 /* query word → patterns meaning "a different product that merely contains the word" */
-const OFFTOPIC = { soda: /\b(crackers?|sherbet|saltines?|baking soda|bicarbonate|cakes?|cookies?|soda bread|candy)\b/, chips: /\b(cereal|chips ahoy|chocolate chips?|baking chips|morsels|fish|cookies?|bread (&|and) butter|toffee|mint chip|butterscotch|white chips|chips? (&|and) (salsa|queso|guac\w*|pico))\b/, bread: /\b(flour|crumbs?|chips|pickles?|mix|machine|pudding|stuffing|bowl|dip|panko|yeast|starter)\b/, cereal: /\b(bars?|cookies?|treats)\b/, milk: /\b(yogurt|kefir|cheese|creamer|milk chocolate|chocolate (bar|candy|chips?)|chocolates|caramels?|candy|cookies?|bars?|toffee|truffles?|lotion|soap|body)\b/, cheese: /\b(croutons?|ravioli|tortellini|bakes|burgers?|crisps|enchiladas?|straws|cheesecake|cheese (puffs|balls|curls|crackers|nips)|cheez|cheetos|goldfish|crackers?|pizza|cheeseburger|mac(aroni)?|dip|bread|danish|filled|bagels?|biscuits?)\b/, yogurt: /\b(covered|coated|pretzels|raisins|granola|parfaits?|bites|cereal|dressing|dip|tzatziki|bark|melts|starter)\b/ };
+const OFFTOPIC = { soda: /\b(crackers?|sherbet|saltines?|baking soda|bicarbonate|cakes?|cookies?|soda bread|candy)\b/, chips: /\b(carrots?|pickles?|dill|hamburger|banana|coconut|kale|apple|cereal|chips ahoy|chocolate chips?|baking chips|morsels|fish|cookies?|bread (&|and) butter|toffee|mint chip|butterscotch|white chips|chips? (&|and) (salsa|queso|guac\w*|pico))\b/, bread: /\b(crisp ?bread|crispbread|crackers?|flour|crumbs?|chips|pickles?|mix|machine|pudding|stuffing|bowl|dip|panko|yeast|starter)\b/, cereal: /\b(bars?|cookies?|treats)\b/, milk: /\b(mozzarella|ricotta|cheddar|string|cheese|siggi'?s|chobani|oikos|fage|icelandic|ice cream|coconut|almond|oat|oats|soy|cashew|rice milk|pea|hemp|skyr|shakes?|coffee|latte|protein|yogurt|kefir|cheese|creamer|milk chocolate|chocolate (bar|candy|chips?)|chocolates|caramels?|candy|cookies?|bars?|toffee|truffles?|lotion|soap|body)\b/, cheese: /\b(pasta sauce|sauce|spread|croutons?|ravioli|tortellini|bakes|burgers?|crisps|enchiladas?|straws|cheesecake|cheese (puffs|balls|curls|crackers|nips)|cheez|cheetos|goldfish|crackers?|pizza|cheeseburger|mac(aroni)?|dip|bread|danish|filled|bagels?|biscuits?)\b/, yogurt: /\b(covered|coated|pretzels|raisins|granola|parfaits?|bites|cereal|dressing|dip|tzatziki|bark|melts|starter)\b/ };
 const NONEN = /\b(islandais|sel|en|vinaigre|jardini[eè]re|citron|mousse|grec|grecque|biologique|nature|natur|à la|brassé|brasse|entier|écrémé|ecreme|fromage blanc|brebis|chèvre|chevre|vache|soja|gourmand|sucré|onctueux|griego|desnatado|entera|naturjoghurt|joghurt|jogurt|yaourt|yoghourt|le|la|les|du|des|et|au|aux|avec|sans|nature|fromage|lait|sucre|chocolat|yaourt|leche|con|sin|del|azucar|queso|und|mit|vanille|fraise|eau|pain|beurre|creme|natur|saveur|parfum|sabor|blanc|petit|recette|aceite|agua|bebida|dulce|avena|cereales|céréales|intero|greco|bianco|biscottes|onctueux|mousse a)\b/i;
 const NONEN2 = /\b(uk|united kingdom|france|deutschland|espana|canada|quebec)\b/;
 const ALCQ = /\b(vodka|tequila|rum|gin|whiskey|whisky|bourbon|beer|wine|cocktail|hard|spiked|alcohol|margarita|seltzer|mixer)\b/;
@@ -86,7 +87,7 @@ function imgURL(code, v) {
   return v.startsWith('http') ? v : IMGBASE + v;
 }
 class Engine {
-  constructor() { this.docs = []; this.post = new Map(); this.buckets = new Map(); this.cats = []; this.tiers = 0; }
+  constructor() { this.bc = new Map(); this.docs = []; this.post = new Map(); this.buckets = new Map(); this.cats = []; this.tiers = 0; }
   add(data) {
     if (data.cats && !data.generic) this.cats = data.cats;
     const cats = data.generic ? data.cats : this.cats; const KC = root.LumiCats;
@@ -104,6 +105,7 @@ class Engine {
         p.push(i * 4 + f);
       }
     }
+    for (const d of data.docs) { const k = bnorm(d[2]); if (k) this.bc.set(k, (this.bc.get(k) || 0) + 1); }
     this.tiers++;
   }
   terms(q, prefix) {
@@ -135,12 +137,14 @@ class Engine {
     for (const [i, [s, c]] of acc) {
       if (c < need) continue; const d = this.docs[i]; if (filter && !filter(d)) continue;
       let r = (s / qt.length) * 100 * (c / qt.length);
-      if (d.nn.includes(nq)) r += 25; if (norm(d.name).startsWith(nq)) r += 10;
+      if (d.nn.includes(nq)) r += 25; { const nmn = norm(d.name), at = (' ' + nmn + ' ').indexOf(' ' + nq); if (at >= 0) r += 10 - Math.min(4, nmn.slice(0, at).split(' ').filter(Boolean).length); } // v7.3: query anywhere in the name, small position penalty
       r += 26 * (1 - d.rank / N);
       // v6.3.3: common cuts first, offal last (unless asked for), and blend in the rating
       if (!OFFAL.test(nq) && OFFAL.test(d.nn)) r -= 30;
       if (MEATQ.test(nq) && COMMON.test(d.nn)) r += 12;
-      if (d.score != null) r += 0.04 * d.score;
+      // v7.3 diabetes-aware: among popular / known-brand results the Carb score matters more; obscure items get only a small score nudge
+      const pop = KNOWNB.test(d.brand) || d.rank / N < 0.25;
+      if (d.score != null) r += (pop ? 0.13 : 0.03) * (d.score - 50);
       // v7.2: known mainstream US brands first; brandless/non-US labels and off-topic products down
       if (KNOWNB.test(d.brand)) r += 22;
       if (d.src === 'local' && !d.brand) r -= 22;
@@ -155,7 +159,26 @@ class Engine {
       res.push([r, d]);
     }
     res.sort((a, b) => b[0] - a[0]);
+    this.mergeBrands(res.slice(0, limit * 2).map(x => x[1]));
     return res.slice(0, limit).map(([r, d]) => Object.assign({ rel: r }, d));
+  }
+  /* v7.3 fuzzy brand merge within a result set: a rare brand that is 1 edit (2 for long names) from a much more common brand
+     in the same aisle is treated as a misspelling. Guards: >=6 letters, same first letter, no digit differences, both
+     not well-known brands, and the common brand must be >=4x more frequent. */
+  mergeBrands(list) {
+    const by = new Map();
+    for (const d of list) { const k = bnorm(d.brand); if (!k || k.length < 6) continue; if (!by.has(k)) by.set(k, { k, n: this.bc.get(k) || 1, ai: new Set(), ds: [] }); const e = by.get(k); e.ai.add(d.ai); e.ds.push(d); }
+    const E = [...by.values()].sort((a, b) => b.n - a.n);
+    for (let i = E.length - 1; i > 0; i--) { const r = E[i];
+      for (let j = 0; j < i; j++) { const c = E[j]; if (c.n < 4 * r.n || c.k[0] !== r.k[0]) continue;
+        if (r.k.replace(/\D/g, '') !== c.k.replace(/\D/g, '')) continue;
+        if (KNOWNB.test(r.ds[0].brand) && KNOWNB.test(c.ds[0].brand)) continue;
+        if (![...r.ai].some(a => c.ai.has(a))) continue;
+        const max = Math.min(r.k.length, c.k.length) >= 10 ? 2 : 1; if (Math.abs(r.k.length - c.k.length) > max || dl(r.k, c.k, max) > max) continue;
+        // guard: a misspelling produces a non-word; if every differing word of the rare brand is a real index word (e.g. "Great Valley"), it is a different brand
+        const rw = norm(r.ds[0].brand).split(' '), cw = new Set(norm(c.ds[0].brand).split(' ')), diff = rw.filter(w => !cw.has(w));
+        if (diff.length && diff.every(w => (this.post.get(w) || []).length >= 25)) continue;
+        const nb = c.ds[0].brand; for (const d of r.ds) { d.brandRaw = d.brand; d.brand = nb; d.nn = norm(d.name + ' ' + nb); } break; } }
   }
   browse(keyIdx, limit = 5000) { const r = []; for (const d of this.docs) { if (d.keys.includes(keyIdx)) { r.push(Object.assign({ rel: 100 - d.rank / this.docs.length * 50 }, d)); if (r.length >= limit) break; } } return r; }
   similar(doc, limit = 6) {

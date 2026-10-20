@@ -22,6 +22,12 @@ Local dev: `python3 serve.py 8765`.
 - v5.1: every item also gets a Yuka-style Health rating (js/health.js: Nutri-Score 2023 ~60%, additive risk tiers ~30%, organic ~10%; nutrition-only when ingredients are unknown). Precomputed in tools/build.js; organic/fruit-veg share come from `offdata/side.py`.
 - v6: additive & cosmetic-ingredient pages with cited sources (`js/encyc.js`; every link checked), allergen/diet alerts (`js/diet.js`, OFF allergen/traces/analysis tags via `tools/side2.py` plus ingredient text), cosmetics from the Open Beauty Facts bulk export (`tools/extract_obf.py`, then `node tools/build_cos.js`; run it after `tools/build.js`, which clears `data/`), better options after a scan, and a local Overview.
 
+## v7.3 (diabetes-aware relevance)
+- The query can match anywhere in the name, with a small penalty for later words ("Greek Yogurt" ranks for "yogurt").
+- For popular or known-brand results, Carb score counts 0.13×(score−50); for obscure items only 0.03×, so obscure items can't win on score alone.
+- Fuzzy brand merge in results: a rare brand within 1 edit (2 for names of 10+ letters) of a brand at least 4× more common in the same aisle is merged. It needs the same first letter and the same digits, and two different known brands are never merged.
+- Whole-food cards show a short source (USDA/CNF) instead of a truncated label. More off-topic patterns: plant milks, cheese, yogurt brands and shakes for "milk"; pasta sauce for "cheese"; carrot/pickle chips for "chips"; crispbread for "bread".
+
 ## v7.2 (search relevance)
 - Relevance now leans on popularity and known US consumer brands, and less on score. Brandless items, known non-US brands, French/Spanish labels and non-US barcodes rank lower. The same rules apply to live Open Food Facts and USDA results.
 - Off-topic penalties by query word: soda → crackers/sherbet; chips → Chips Ahoy/fish/cereal; bread → flour/crumbs/pickle chips; milk/cheese/yogurt → similar. Restaurant rows rank below packaged items on generic queries.

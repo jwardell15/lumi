@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '7.2';
+const VERSION = '7.3';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -122,7 +122,7 @@ function thumb(img, name, keys, cat, big, brand) {
   return `<div class="thumb${big ? ' big' : ''}">${bg}${src ? `<img src="${esc(src)}" alt="" ${big ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async" onload="LumiImg.ok(this)" onerror="LumiImg.err(this)">` : ''}</div>`;
 }
 const SRC = { local: '', off: '<span class="tag">OFF</span>', usda: '<span class="tag">USDA</span>', whole: '<span class="tag t-whole">Whole food</span>', rest: '<span class="tag t-rest">Restaurant</span>', chain: '<span class="tag t-rest">Restaurant</span>', custom: '<span class="tag">My food</span>' };
-function rowHTML(it) { return `<a class="row" href="#/product/${esc(it.id)}">${thumb(it.img, it.name, it.keys, it.cat, false, it.brand)}<div class="t"><div class="n">${alertIcon(it)}${esc(it.name)}</div><div class="b">${/^usda\b/i.test(it.brand || '') && it.src === 'usda' ? '' : SRC[it.src] || ''}${esc(LumiSearch.fixBrand ? LumiSearch.fixBrand(it.brand, it.name) : it.brand || '')}${it.sizes > 1 ? ` · ${it.sizes} sizes` : ''}${it.bad ? ' · <span class="c-bd badchip" title="Calories don\'t add up from carbs, protein and fat (4/4/9), so this label data is probably wrong">⚠ data looks wrong</span>' : it.score == null ? ' · <span class="c-pr">data incomplete</span>' : it.net != null ? ` · ${r1(it.net)}g net carbs/100` : ''}</div></div>${mini(it)}</a>`; }
+function rowHTML(it) { return `<a class="row" href="#/product/${esc(it.id)}">${thumb(it.img, it.name, it.keys, it.cat, false, it.brand)}<div class="t"><div class="n">${alertIcon(it)}${esc(it.name)}</div><div class="b">${/^usda\b/i.test(it.brand || '') && it.src === 'usda' ? '' : SRC[it.src] || ''}${it.src === 'whole' ? esc(/^usda/i.test(it.brand || '') ? 'USDA' : /^cnf|canad/i.test(it.brand || '') ? 'CNF' : String(it.brand || '').split(' ')[0]) : esc(LumiSearch.fixBrand ? LumiSearch.fixBrand(it.brand, it.name) : it.brand || '')}${it.sizes > 1 ? ` · ${it.sizes} sizes` : ''}${it.bad ? ' · <span class="c-bd badchip" title="Calories don\'t add up from carbs, protein and fat (4/4/9), so this label data is probably wrong">⚠ data looks wrong</span>' : it.score == null ? ' · <span class="c-pr">data incomplete</span>' : it.net != null ? ` · ${r1(it.net)}g net carbs/100` : ''}</div></div>${mini(it)}</a>`; }
 const skel = n => `<div class="list">${Array.from({ length: n }, () => `<div class="row skel"><div class="thumb sk"></div><div class="t"><div class="sk skl" style="width:80%"></div><div class="sk skl" style="width:45%"></div></div><div class="sk" style="width:44px;height:44px;border-radius:50%"></div></div>`).join('')}</div>`;
 function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 2200); }
 const go = h => { if (location.hash !== h) location.hash = h; else route(); };
