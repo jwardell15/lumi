@@ -84,3 +84,13 @@ Local dev: `python3 serve.py 8765`.
 - Build-time ingredient flags (doc field 15, presets in `js/watch8.js`) so preset alerts show ⚠ in search results.
 - Week table: Net column visible on phones, sideways scroll with sticky day column, averages for Net and Cal.
 - OFF search stops starting extra mirrors once one answers (fewer console errors).
+
+
+## v9.0
+- **Carb target per meal** (`settings.mealT`, total or net basis): bars on the log (green within / amber near / red over, always with numbers), tinted week table, "fits your meal" card on product pages, plate total vs target in the meal builder. Purely informational; the dose estimate stays off by default, estimate only.
+- **Better choice** card near the top of every product page (best same-category swap, lower impact); swaps also skip bad or suspicious data.
+- **Saved meals**: save from the meal builder, one-tap logging from Home with undo, `#/meals` page to log, rename and delete.
+- **Onboarding**: added per-meal targets and a quick tour step.
+- **Performance**: Home loads only tier 0 + generics (about 1.4 MB gz instead of about 3.4 MB); larger tiers load on search.
+- **Accessibility**: skip link, focus-visible outlines, focus moves to the page heading on navigation, aria-live results, reduced-motion support, labeled controls.
+- **Fixes**: restaurant rows hidden from the All view unless they're relevant; Open Food Facts searched one mirror at a time with a 10-minute quiet back-off; 0 g net carbs with ≥3 g sugar is flagged "check label" and kept out of picks and swaps; more non-English words filtered; data-driven big-brand signal alongside the hand list; top picks skip hidden-sugar items.

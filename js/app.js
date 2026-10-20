@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '8.1';
+const VERSION = '9.0';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -75,11 +75,17 @@ async function usdaSearch(q) {
       foodNutrients: (f.foodNutrients || []).filter(n => ['205', '269', '539', '291', '203', '204', '606', '605', '307', '208', '299'].includes(String(n.nutrientNumber))).map(n => ({ nutrientNumber: n.nutrientNumber, value: n.value })) }))));
   return v.map(S.fromUSDA);
 }
+let offDownUntil = +(sessionStorage.getItem('lumi.offDown') || 0); // v9: after a failed OFF search, skip live OFF for 10 min (fewer blocked requests, less console noise)
 async function offSearch(q) {
   const enc = encodeURIComponent(q);
-  const v = await cached('off:' + q.toLowerCase(), 6 * 36e5, () => { let done = false; // v8.1: stop starting more mirrors once one answered
-    return Promise.any(MIRRORS.map((cc, i) => new Promise(r => setTimeout(r, i * 700)).then(() => { if (done) throw new Error('skip');
-      return getJSON(`https://${cc}.openfoodfacts.org/cgi/search.pl?search_terms=${enc}&search_simple=1&action=process&json=1&page_size=30&fields=${OFF_FIELDS}`, 9000).then(j => { if (!Array.isArray(j.products)) throw new Error('bad'); done = true; return j.products; }); }))); });
+  const v = await cached('off:' + q.toLowerCase(), 6 * 36e5, async () => {
+    if (Date.now() < offDownUntil) throw new Error('Open Food Facts paused');
+    const pref = store.get('offMirror', 'world'), order = [pref].concat(['world', 'us'].filter(m => m !== pref));
+    for (const cc of order) {
+      try { const j = await getJSON(`https://${cc}.openfoodfacts.org/cgi/search.pl?search_terms=${enc}&search_simple=1&action=process&json=1&page_size=30&fields=${OFF_FIELDS}`, 9000); if (Array.isArray(j.products)) { store.set('offMirror', cc); return j.products; } } catch (e) { /* try next mirror */ }
+    }
+    offDownUntil = Date.now() + 6e5; try { sessionStorage.setItem('lumi.offDown', offDownUntil); } catch {} throw new Error('Open Food Facts unavailable');
+  });
   return v.filter(p => p.code).map(S.fromOFF);
 }
 async function offProduct(code) {
@@ -93,7 +99,7 @@ async function usdaByGtin(code) { const r = await usdaSearch(gtinKey(code)); ret
 
 /* ---------------- result items ---------------- */
 function itemFromProduct(p, rel) { const s = S.score(p); memo.set(p.id, p); const hr = HR(p); const wh = typeof watchHits === 'function' ? watchHits(p) : null; return { wa: wh && wh.length ? wh.map(h => h.label).join(', ') : '', m: p.src === 'cos' ? null : dietM(p), h: hr.score, hn: hr.basis === 'nutrition', id: p.id, code: p.code, name: p.name, brand: LumiSearch.fixBrand(p.brand, p.name), score: s.score, net: s.score == null ? null : s.net, img: p.img, src: p.src, cat: p.cat, rel }; }
-function itemFromDoc(d) { return { wa: d.wf && typeof watchFlags === 'function' ? watchFlags(d.wf) : '', ai: d.ai, bad: d.bad, sizes: d.sizes, fl: d.fl, al: d.al, df: d.df, h: d.h, hn: d.hn, id: d.code, code: d.code, name: d.name, brand: d.brand, score: d.score, net: d.score == null ? null : d.net, img: d.img, src: d.src || 'local', cat: d.cat, keys: d.keys, rel: d.rel }; }
+function itemFromDoc(d) { return { zc: d.zc, wa: d.wf && typeof watchFlags === 'function' ? watchFlags(d.wf) : '', ai: d.ai, bad: d.bad, sizes: d.sizes, fl: d.fl, al: d.al, df: d.df, h: d.h, hn: d.hn, id: d.code, code: d.code, name: d.name, brand: d.brand, score: d.score, net: d.score == null ? null : d.net, img: d.img, src: d.src || 'local', cat: d.cat, keys: d.keys, rel: d.rel }; }
 function textRel(q, name, brand) {
   const qt = LumiSearch.toks(q), nt = new Set(LumiSearch.toks(name + ' ' + brand)); if (!qt.length) return 0;
   let hit = 0; for (const t of qt) if (nt.has(t) || [...nt].some(x => x.startsWith(t) || (t.length > 4 && LumiSearch.dl(t, x, 1) <= 1))) hit++;
@@ -123,7 +129,7 @@ function thumb(img, name, keys, cat, big, brand) {
   return `<div class="thumb${big ? ' big' : ''}">${bg}${src ? `<img src="${esc(src)}" alt="" ${big ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async" onload="LumiImg.ok(this)" onerror="LumiImg.err(this)">` : ''}</div>`;
 }
 const SRC = { local: '', off: '<span class="tag">OFF</span>', usda: '<span class="tag">USDA</span>', whole: '<span class="tag t-whole">Whole food</span>', rest: '<span class="tag t-rest">Restaurant</span>', chain: '<span class="tag t-rest">Restaurant</span>', custom: '<span class="tag">My food</span>' };
-function rowHTML(it) { return `<a class="row" href="#/product/${esc(it.id)}">${thumb(it.img, it.name, it.keys, it.cat, false, it.brand)}<div class="t"><div class="n">${alertIcon(it)}${esc(it.name)}</div><div class="b">${/^usda\b/i.test(it.brand || '') && it.src === 'usda' ? '' : SRC[it.src] || ''}${it.src === 'whole' ? esc(/^usda/i.test(it.brand || '') ? 'USDA' : /^cnf|canad/i.test(it.brand || '') ? 'CNF' : String(it.brand || '').split(' ')[0]) : esc(LumiSearch.fixBrand ? LumiSearch.fixBrand(it.brand, it.name) : it.brand || '')}${it.sizes > 1 ? ` · ${it.sizes} sizes` : ''}${it.wa ? ` · <span class="wa8" title="Watchlist: ${esc(it.wa)}">⚠ ${esc(it.wa)}</span>` : ''}${it.bad ? ' · <span class="c-bd badchip" title="Calories don\'t add up from carbs, protein and fat (4/4/9), so this label data is probably wrong">⚠ data looks wrong</span>' : it.score == null ? ' · <span class="c-pr">data incomplete</span>' : it.net != null ? ` · ${r1(it.net)}g net carbs/100` : ''}</div></div>${mini(it)}</a>`; }
+function rowHTML(it) { return `<a class="row" href="#/product/${esc(it.id)}">${thumb(it.img, it.name, it.keys, it.cat, false, it.brand)}<div class="t"><div class="n">${alertIcon(it)}${esc(it.name)}</div><div class="b">${/^usda\b/i.test(it.brand || '') && it.src === 'usda' ? '' : SRC[it.src] || ''}${it.src === 'whole' ? esc(/^usda/i.test(it.brand || '') ? 'USDA' : /^cnf|canad/i.test(it.brand || '') ? 'CNF' : String(it.brand || '').split(' ')[0]) : esc(LumiSearch.fixBrand ? LumiSearch.fixBrand(it.brand, it.name) : it.brand || '')}${it.sizes > 1 ? ` · ${it.sizes} sizes` : ''}${it.wa ? ` · <span class="wa8" title="Watchlist: ${esc(it.wa)}">⚠ ${esc(it.wa)}</span>` : ''}${it.zc && !it.bad ? ' · <span class="c-pr badchip" title="The label lists sugar but 0 g net carbs, which cannot both be right">⚠ 0 g net carbs listed with sugar, check label</span>' : it.bad ? ' · <span class="c-bd badchip" title="Calories don\'t add up from carbs, protein and fat (4/4/9), so this label data is probably wrong">⚠ data looks wrong</span>' : it.score == null ? ' · <span class="c-pr">data incomplete</span>' : it.net != null ? ` · ${r1(it.net)}g net carbs/100` : ''}</div></div>${mini(it)}</a>`; }
 const skel = n => `<div class="list">${Array.from({ length: n }, () => `<div class="row skel"><div class="thumb sk"></div><div class="t"><div class="sk skl" style="width:80%"></div><div class="sk skl" style="width:45%"></div></div><div class="sk" style="width:44px;height:44px;border-radius:50%"></div></div>`).join('')}</div>`;
 function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 2200); }
 const go = h => { if (location.hash !== h) location.hash = h; else route(); };
@@ -210,7 +216,7 @@ function viewHomeOld() {
   setTimeout(() => loadIndexFull().catch(() => {}), 1500);
 }
 
-const NONEN = /\b(le|la|les|du|des|de|et|au|aux|avec|sans|nature|fromage|lait|sucre|chocolat|yaourt|leche|con|sin|del|azucar|queso|und|mit|vanille|fraise|eau|pain|beurre|creme|natur|saveur|parfum|sabor|blanc|petit|recette|aceite|agua|bebida|dulce|avena)\b/i;
+const NONEN = /\b(le|la|les|du|des|de|et|au|aux|avec|sans|nature|fromage|lait|sucre|chocolat|yaourt|leche|con|sin|del|azucar|queso|und|mit|vanille|fraise|eau|pain|beurre|creme|natur|saveur|parfum|sabor|blanc|petit|recette|aceite|agua|bebida|dulce|avena|himbeer|erdbeer|erdbeere|fruchtsirup|sirup|rafra[iî]chisseur|haleine|schokolade|k[aä]se|milch|saft|wasser|kekse|brot|nudeln|zucker|ohne|confiture|fragola|cioccolato|biscotti al|galletas|zumo|jugo|refresco|chocolate con|bonbon au|gâteau|gateau)\b/i;
 const usEnglish = d => /^[\x20-\x7e]+$/.test(d.name + d.brand) && !NONEN.test(d.name) && ((d.code.length === 12) || (d.code.length === 13 && /^[01]/.test(d.code)));
 // Picks: varied, US/English packaged foods (one per category/brand) + whole foods + official restaurant items.
 function topPicks() {
@@ -307,6 +313,7 @@ function renderResults() {
   if (rs.live && (rs.group || 'all') === 'all' && sort === 'rel' && !f.good && !f.low && !f.healthy) {
     const by = { prod: [], rest: [], whole: [] }; items.forEach(i => by[grpOf(i)].push(i));
     const top = items[0] ? grpOf(items[0]) : 'prod';
+    const mx = k => Math.max(-1e9, ...by[k].map(i => i.rel || 0)); if (top !== 'rest' && by.rest.length && mx('rest') < mx('prod') - 15) by.rest = []; // v9: restaurant rows only when they are actually relevant
     const order = [top].concat(['prod', 'rest', 'whole'].filter(k => k !== top)), L = { prod: 'Products', rest: 'Restaurants', whole: 'Whole foods' };
     el.innerHTML = order.filter(k => by[k].length).map(k => { const n = k === top ? 8 : 4; return `<div class="sec-h grp-h"><h2>${L[k]}</h2>${by[k].length > n ? `<button data-sg="${k}">See all ${by[k].length} ›</button>` : ''}</div><div class="list">${by[k].slice(0, n).map(rowHTML).join('')}</div>`; }).join('') + (pending ? `<div class="small" style="text-align:center;margin-top:10px">Still checking other sources…</div>` : '');
     document.querySelectorAll('[data-sg]').forEach(b => b.onclick = () => { rs.group = b.dataset.sg; renderResults(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
@@ -489,7 +496,7 @@ async function viewProduct(id) {
   if ($('#quickLog')) $('#quickLog').onclick = () => $('#addLog').click();
   if (!s.missing) renderSwaps(p, s);
   drawBetter(p, s, hr);
-  bindProduct7(p); bind75(p, s, hr, hp); bind8(p, s);
+  bindProduct7(p); bind75(p, s, hr, hp); bind8(p, s); bind9(p, s);
 }
 function orTryWater(doc, limit = 4) {
   if (doc.ai !== LumiAisles.BYID['bv-soda']) return [];
@@ -501,7 +508,7 @@ function swapsFor(doc, cur, limit = 6) {
   const out = [];
   const SODA = LumiAisles.BYID['bv-soda'], soda = doc.ai === SODA;
   for (const d of engine.docs) {
-    if (!d.keys.includes(leaf) || d.code === doc.code || d.score == null || d.net == null || d.fl) continue;
+    if (!d.keys.includes(leaf) || d.code === doc.code || d.score == null || d.net == null || d.fl || d.bad || d.zc) continue;
     if (soda && d.ai !== SODA) continue; // a soda's swaps are sodas; sparkling water is offered separately
     const gain = d.score - cur.score, red = (cur.net ?? d.net) - d.net;
     if (gain < 5 || red < -2 || (cur.net >= 10 && d.net < cur.net * 0.35)) continue;
@@ -630,6 +637,7 @@ function route() {
   if (view === 'whatsnew') return viewWhatsNew();
   if (view === 'label') return viewLabel(arg);
   if (view === 'alerts') return viewAlerts();
+  if (view === 'meals') return viewMeals9();
   if (view === 'report') return viewReport(arg);
   viewHome();
 }

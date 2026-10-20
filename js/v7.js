@@ -9,6 +9,10 @@ function typeBarcode(msg) {
 }
 document.addEventListener('click', e => { if (e.target && e.target.id === 'scanType') { if (typeof stopScan === 'function') stopScan(); typeBarcode(''); } });
 const V7_NEWS = [
+  ['🎯', 'Carb target per meal (9.0)', 'Set grams for breakfast, lunch, dinner and snacks. Your log shows a bar per meal (green within, amber near, red over, always with the number), the week table is tinted, and product pages show whether a serving fits the meal you are eating now.'],
+  ['✨', 'Better choice (9.0)', 'Near the top of every product page: the best same-category swap with less carb impact, Yuka-style. More swaps are further down.'],
+  ['🍽', 'One-tap saved meals (9.0)', 'Save a plate from the meal builder or your log, then log it from Home in one tap, with undo. Manage them under Browse › Saved meals.'],
+  ['🧭', 'Quick tour, faster start, accessibility (9.0)', 'New intro tour; Home loads about 2 MB less; skip link, visible focus, screen-reader labels and reduced-motion support.'],
   ['🥣', 'Better cereal search (8.1)', 'Searching "cereal" now surfaces mainstream boxes like Cheerios, Frosted Flakes and Special K near the top, still ranked with blood sugar in mind.'],
   ['⚠', 'Ingredient alerts in search (8.1)', 'Your preset alerts (hidden sugars, maltodextrin, seed oils, sweeteners) now show ⚠ right in the results. Custom words still show on the product page.'],
   ['🍌', 'Fixes (8.1)', 'Glycemic index values only match the right preparation (no cooked GI for dry lentils), raw fruit is measured in grams, and the week table shows Net carbs on phones.'],
@@ -32,9 +36,9 @@ const V7_NEWS = [
   ['☰', 'Shopping lists', 'Make lists (Costco run, school snacks…), check items off, see the carb total and share the list.'],
   ['💊', 'Supplements, sorted', 'Protein & collagen, greens powders, creatine & hydration, vitamins. Fresh "super greens" salads moved to Produce.'],
   ['🔎', 'Smarter search filters', 'Ready-to-eat, has photo and hide bad data, plus better near-duplicate grouping (one row per product).']];
-function whatsNewCard() { if (store.get('seen81', false)) return ''; return `<div class="card news7"><div class="n7h"><b>✨ New in Lumi ${VERSION}</b><button class="icon" id="n7x" aria-label="Dismiss">✕</button></div><ul>${V7_NEWS.slice(0, 3).map(n => `<li><span>${n[0]}</span><div><b>${esc(n[1])}</b> <span class="d">${esc(n[2])}</span></div></li>`).join('')}</ul><a class="lnk" href="#/whatsnew">Everything new ›</a></div>`; }
-document.addEventListener('click', e => { if (e.target && e.target.id === 'n7x') { store.set('seen81', true); const c = document.querySelector('.news7'); if (c) c.remove(); } });
-function viewWhatsNew() { document.title = 'New in Lumi'; store.set('seen81', true);
+function whatsNewCard() { if (store.get('seen90', false)) return ''; return `<div class="card news7"><div class="n7h"><b>✨ New in Lumi ${VERSION}</b><button class="icon" id="n7x" aria-label="Dismiss">✕</button></div><ul>${V7_NEWS.slice(0, 3).map(n => `<li><span>${n[0]}</span><div><b>${esc(n[1])}</b> <span class="d">${esc(n[2])}</span></div></li>`).join('')}</ul><a class="lnk" href="#/whatsnew">Everything new ›</a></div>`; }
+document.addEventListener('click', e => { if (e.target && e.target.id === 'n7x') { store.set('seen90', true); const c = document.querySelector('.news7'); if (c) c.remove(); } });
+function viewWhatsNew() { document.title = 'New in Lumi'; store.set('seen90', true);
   app.innerHTML = `<h1>New in Lumi ${VERSION}</h1><div class="card news7 full"><ul>${V7_NEWS.map(n => `<li><span>${n[0]}</span><div><b>${esc(n[1])}</b> ${esc(n[2])}</div></li>`).join('')}</ul></div><p class="foot">Informational only, not medical advice. Dose from the physical label.</p>`; }
 /* ready-to-eat: index docs use the aisle + staple rules; outside items (USDA/OFF live) use the name rules only */
 function readyToEat(i) { if (i.src === 'whole' || i.src === 'rest' || i.src === 'chain') return true; const d = { name: i.name || '', ai: i.ai == null ? -1 : i.ai }; return !isStaple(d) && !RAW.has(d.ai); }

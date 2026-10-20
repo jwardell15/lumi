@@ -5,7 +5,7 @@ const KINDS74 = [['yogurt', /yogurt|yoghurt|skyr|kefir|light and free|light \+ f
 function kind74(d) { const t = d.name + ' ' + d.brand + ' ' + d.cat + ' ' + ((d.keys || []).map(k => C.KEYS[k]).join(' ')); for (const [k, re] of KINDS74) if (re.test(t)) return k; return 'ai' + d.ai; }
 function homePicks() {
   const out = [], brands = new Map(), cats = new Set(); let nd = 0; const ks = new Set(['sauces', 'drinks', 'sweets'].map(k => C.KEYS.indexOf(k)));
-  const pool = engine.docs.filter(d => d.src === 'local' && d.score != null && d.score >= 82 && d.net != null && d.net >= 2 && d.net <= 25 && !d.fl && !d.bad && d.img && d.brand && d.rank < 40000
+  const pool = engine.docs.filter(d => d.src === 'local' && d.score != null && d.score >= 82 && d.net != null && d.net >= 2 && d.net <= 25 && !d.fl && !d.bad && !d.zc && !(d.wf & 1) && d.img && d.brand && d.rank < 40000
     && !isStaple(d) && !isSugaryDrink(d) && usEnglish(d) && !ALC74.test(d.name + ' ' + d.cat) && !COND74.test(d.name + ' ' + d.cat) && !d.keys.some(k => ks.has(k)) && !/\bwater\b/i.test(d.name) && !/\b(protein powder|powder|supplement|vitamins?|capsules?|gummies|shake mix|peanut butter|nut butter|peanuts?|creamy)\b|\bprotein (shake|drink)|^organic protein\b/i.test(d.name) && d.net >= 2);
   const KB = LumiSearch.KNOWNB; pool.sort((a, b) => (KB.test(b.brand) - KB.test(a.brand)) || a.rank - b.rank);
   for (const d of pool) { const b = d.brand.toLowerCase().split(/[\s,]/)[0], c = kind74(d); const dairy = ['yogurt', 'milk', 'cheese'].includes(c); if (cats.has(c) || (brands.get(b) || 0) >= 1 || (dairy && nd >= 2)) continue; if (dairy) nd++; out.push(d); cats.add(c); brands.set(b, (brands.get(b) || 0) + 1); if (out.length >= 6) break; }
@@ -35,7 +35,7 @@ function viewHome() {
   const draw = () => { const el = $('#picks'); if (!el) return; let p = []; try { p = homePicks(); } catch (e) { console.warn(e); }
     el.innerHTML = p.length ? `<div class="list">${p.map(d => rowHTML(itemFromDoc(d))).join('')}</div>` : skel(3);
     const rl = $('#restList'); if (rl) rl.innerHTML = restPicks74().map(d => rowHTML(itemFromDoc(d))).join(''); };
-  loadIndex().then(() => { draw(); return loadIndexFull(); }).then(draw).catch(draw);
+  loadIndex().then(draw).catch(draw); // v9: home needs only tier 0 (≈0.65 MB gz); the larger tiers load when you search
 }
 function viewBrowseHub() {
   document.title = 'Browse — Lumi';
@@ -52,6 +52,7 @@ function viewBrowseHub() {
       <a href="#/cosmetics"><b>Cosmetics</b><span>Shampoo, sunscreen…</span></a>
       <a href="#/label"><b>Scan a label</b><span>Photo of Nutrition Facts</span></a>
       <a href="#/alerts"><b>Ingredient alerts</b><span>Your watchlist</span></a>
+      <a href="#/meals"><b>Saved meals</b><span>One-tap logging</span></a>
       <a href="#/report"><b>Log report</b><span>Printable summary for your endo</span></a>
     </div></section>`;
 }
