@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '7.3';
+const VERSION = '7.4';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -166,7 +166,7 @@ function todayCard() {
     <svg viewBox="0 0 64 64" width="64" height="64" class="tm-ring"><circle cx="32" cy="32" r="${R}" class="trk"/>${pct != null ? `<circle cx="32" cy="32" r="${R}" class="val ${t.carbs > st.target ? 'over' : ''}" stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - pct)}" transform="rotate(-90 32 32)"/>` : ''}<text x="32" y="37" text-anchor="middle">${Math.round(t.carbs)}</text></svg>
     <div><b>${es.length ? `${Math.round(t.carbs)} g carbs today` : 'Nothing logged today'}</b><span>${es.length ? `${es.length} item${es.length > 1 ? 's' : ''} · ${Math.round(t.net)} g net · ${Math.round(t.kcal)} Cal${st.target ? ` · ${Math.max(0, Math.round(st.target - t.carbs))} g left` : ''}` : 'Tap to open your log'}</span></div><span class="chev">›</span></a>`;
 }
-function viewHome() {
+function viewHomeOld() {
   const rec = store.get('recent', []), viewed = histItems('viewed').slice(0, 4), pl = plate(), nc = cmpIds().length;
   app.innerHTML = `<section class="hello">${MASCOT(72, 'wave')}<div><h1>${greeting()}!</h1><p class="lead" id="lead">${leadText(META)}</p></div></section>
   ${whatsNewCard()}
@@ -603,10 +603,11 @@ function route() {
   rs = null; window.scrollTo(0, 0); document.title = 'Lumi — food scanner';
   if (typeof closeSheet === 'function' && !document.querySelector('.onb')) closeSheet(); app.classList.remove('enter', 'prodv'); void app.offsetWidth; app.classList.add('enter'); setTimeout(drawCmpTray, 0);
   const h = location.hash.replace(/^#\/?/, ''); const i = h.indexOf('/'); const view = i < 0 ? h : h.slice(0, i); const arg = i < 0 ? '' : decodeURIComponent(h.slice(i + 1));
-  document.querySelectorAll('.tabbar a').forEach(a => a.classList.toggle('on', a.dataset.v === (['search', 'browse', 'product', ''].includes(view) ? 'home' : view === 'favorites' ? 'saved' : ['about', 'custom'].includes(view) ? 'settings' : ['compare', 'meal', 'cosmetics', 'cos', 'additive', 'additives', 'ingredient'].includes(view) ? 'home' : ['overview', 'lists', 'list'].includes(view) ? 'saved' : view)));
+  document.querySelectorAll('.tabbar a').forEach(a => a.classList.toggle('on', a.dataset.v === (['browse', 'store', 'aisle', 'meal', 'cosmetics', 'cos', 'overview', 'additives', 'additive', 'ingredient'].includes(view) ? 'browse' : ['search', 'product', ''].includes(view) ? 'home' : view === 'favorites' ? 'saved' : ['about', 'custom'].includes(view) ? 'settings' : ['compare', 'meal', 'cosmetics', 'cos', 'additive', 'additives', 'ingredient'].includes(view) ? 'home' : ['overview', 'lists', 'list'].includes(view) ? 'saved' : view)));
   if (view === 'product' && arg) return viewProduct(/^\d+$/.test(arg.replace(/\s/g, '')) ? arg.replace(/\s/g, '') : arg);
   if (view === 'search' && arg) return viewSearch(arg);
   if (view === 'browse' && arg) return viewBrowse(arg);
+  if (view === 'browse') return viewBrowseHub();
   if (view === 'saved' || view === 'favorites') return viewSaved();
   if (view === 'about') return viewAbout();
   if (view === 'credits') return viewCredits();

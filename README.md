@@ -22,6 +22,13 @@ Local dev: `python3 serve.py 8765`.
 - v5.1: every item also gets a Yuka-style Health rating (js/health.js: Nutri-Score 2023 ~60%, additive risk tiers ~30%, organic ~10%; nutrition-only when ingredients are unknown). Precomputed in tools/build.js; organic/fruit-veg share come from `offdata/side.py`.
 - v6: additive & cosmetic-ingredient pages with cited sources (`js/encyc.js`; every link checked), allergen/diet alerts (`js/diet.js`, OFF allergen/traces/analysis tags via `tools/side2.py` plus ingredient text), cosmetics from the Open Beauty Facts bulk export (`tools/extract_obf.py`, then `node tools/build_cos.js`; run it after `tools/build.js`, which clears `data/`), better options after a scan, and a local Overview.
 
+## v7.4 (calm home)
+- Home now has: greeting, one line, a big search bar with a Scan button (and a small "type a barcode" link), a compact log summary only on days with entries, 5 shortcuts, a slim recent-searches row, and 6 Top picks.
+  - Top picks are everyday foods: score 82+, 2–25 g net carbs. No sauces/condiments, alcohol, supplements, staples or sugary drinks. One per food type and one per brand, known brands first.
+- Restaurant picks are a collapsed section with at most 4 items and no alcohol.
+- New Browse page (#/browse, also in the nav): stores, aisles, categories and tools (Meal builder, Compare, Lists, Overview, Additives, Cosmetics).
+- What's new is now a small pill you can dismiss, shown once per version. The Compare bar only appears with 2+ items and adds bottom padding so it doesn't cover content.
+
 ## v7.3 (diabetes-aware relevance)
 - The query can match anywhere in the name, with a small penalty for later words ("Greek Yogurt" ranks for "yogurt").
 - For popular or known-brand results, Carb score counts 0.13×(score−50); for obscure items only 0.03×, so obscure items can't win on score alone.

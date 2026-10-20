@@ -29,7 +29,7 @@ const OFFAL = /\b(liver|livers|gizzards?|hearts?|kidneys?|tongue|tripe|giblets?|
 const MEATQ = /\b(chicken|beef|pork|turkey|lamb|steak)\b/;
 const COMMON = /\b(breasts?|thighs?|tenders?|tenderloins?|nuggets?|rotisserie|wings?|drumsticks?|ground|strips?|grilled|patties|sirloin|ribeye|chops?|loin)\b/;
 /* v7.2 brand cleanup: source labels, apostrophe casing, parent→consumer brand, known misspellings, generic words used as brands */
-const BRAND_FIX = [[/^usda\s+usda\s+/i, 'USDA '], [/\bSr Legacy\b/i, 'SR Legacy'], [/\bFndds\b/i, 'FNDDS'], [/(\w)['’]S\b/g, "$1's"], [/^bel+[ao]w?ther farms?$/i, 'Bellwether Farms'], [/^siggi'?s?$|^siggi s$/i, "Siggi's"], [/^nancy'?s$|^nancy s$/i, "Nancy's"], [/^fage( total)?$/i, 'Fage'], [/^two good$/i, 'Two Good'], [/^chobani(,? llc| inc\.?)?$/i, 'Chobani']];
+const BRAND_FIX = [[/^usda\s+usda\s+/i, 'USDA '], [/\bSr Legacy\b/i, 'SR Legacy'], [/\bFndds\b/i, 'FNDDS'], [/(\w)['’]S\b/g, "$1's"], [/^bel+[ao]w?ther farms?$/i, 'Bellwether Farms'], [/^siggi'?s?$|^siggi s$/i, "Siggi's"], [/^nancy'?s$|^nancy s$/i, "Nancy's"], [/^fage( total)?$/i, 'Fage'], [/^two good$/i, 'Two Good'], [/^fa!?r?life$|^fa!rlife$/i, 'fairlife'], [/^chobani(,? llc| inc\.?)?$/i, 'Chobani']];
 const GENERIC_BRAND = /^(skyr|yogurt|yoghurt|greek yogurt|milk|cheese|cereal|bread|soda|chips|organic|natural|plain|vanilla|generic|unknown|n\/a|none|food|foods)$/i;
 const bnorm = b => norm(fixBrand(b)).replace(/\s+/g, '');
 function fixBrand(b, name) {
@@ -204,5 +204,5 @@ function relAdj(query, it) {
   for (const w of nq.split(" ")) { const o = OFFTOPIC[w] || OFFTOPIC[w + "s"]; if (o && o.test(nn) && !o.test(nq)) { r -= 55; break; } }
   return r;
 }
-root.LumiSearch = { fixBrand, relAdj, Engine, norm, toks, dl, imgURL, groupKey, dedupe, fixName };
+root.LumiSearch = { KNOWNB, fixBrand, relAdj, Engine, norm, toks, dl, imgURL, groupKey, dedupe, fixName };
 })(typeof self !== "undefined" ? self : globalThis);

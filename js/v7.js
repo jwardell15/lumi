@@ -9,6 +9,7 @@ function typeBarcode(msg) {
 }
 document.addEventListener('click', e => { if (e.target && e.target.id === 'scanType') { if (typeof stopScan === 'function') stopScan(); typeBarcode(''); } });
 const V7_NEWS = [
+  ['🏠', 'A calmer home (7.4)', 'Search and Scan up top, five shortcuts, and six everyday top picks. Stores, aisles, Meal builder, Cosmetics, Overview and Additives are now on the new Browse page.'],
   ['🩸', 'Diabetes-aware search (7.3)', 'Among popular brands, lower-carb options rank first: Chobani and Oikos plain Greek for "yogurt", Magic Spoon and Catalina Crunch for "cereal", zero-sugar sodas for "soda". The search word can appear anywhere in the name. Misspelled brands are merged automatically.'],
   ['🎯', 'Smarter search ranking (7.2)', 'Big US brands (Chobani, Fage, Oikos, Siggi\'s, Yoplait, Kirkland, Great Value…) rank first. Imported, foreign-label and no-brand items rank lower. Off-topic matches (soda crackers, Chips Ahoy, bread flour, pickle chips) are pushed down.'],
   ['🏷️', 'Cleaner brand names (7.2)', 'Misspelled and mis-cased brands are merged (Bellwether Farms, Nancy\'s, Siggi\'s), Danone shows as Oikos/Activia/Dannon, and USDA sources read "USDA Foundation" and "USDA SR Legacy".'],

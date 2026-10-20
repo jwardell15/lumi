@@ -38,7 +38,7 @@ function toggleCompare(p) {
 function drawCmpTray() {
   let t = $('#cmpTray'); const l = cmpIds();
   if (!t) { t = document.createElement('a'); t.id = 'cmpTray'; t.className = 'cmp-tray'; t.href = '#/compare'; document.body.appendChild(t); }
-  const on = l.length > 0 && !/^#\/compare/.test(location.hash);
+  const on = l.length >= 2 && !/^#\/compare/.test(location.hash); document.body.classList.toggle('has-tray', on);
   t.classList.toggle('on', on); t.innerHTML = `<span class="cnt">${l.length}</span> Compare${l.length < 2 ? ' · add one more' : ' now'} ›`;
 }
 async function viewCompare() {
