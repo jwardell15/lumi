@@ -15,7 +15,7 @@ function factRows75(p, s, hr) {
   if (n.kcal != null) row('kcal', 'kcal', 'Calories', n.kcal, liq ? [14, 35, 70] : [160, 360, 560], liq ? 140 : 800, 'low', ['Low calorie', 'Moderate calories', 'A bit too caloric', 'Too caloric'], ' Cal', 0);
   const implaus = s.netNote && s.netNote.includes('implausible');
   if (n.fiber != null && !implaus && !liq) row('fiber', 'fiber', 'Fiber', n.fiber, [1.5, 3], 8, 'high', ['Excellent amount of fiber', 'Some fiber', 'Low fiber'], 'g');
-  if (n.protein != null && !implaus && !(liq && n.protein < 4)) row('protein', 'protein', 'Protein', n.protein, [4, 8], 16, 'high', ['Excellent amount of protein', 'Some protein', 'Low protein'], 'g');
+  if (n.protein != null && !implaus && !(liq && n.protein < 4)) row('protein', 'protein', 'Protein', n.protein, [4, 8], 16, 'high', ['Excellent amount of protein', 'Some protein', 'Low protein'], 'g'); { const r = out[out.length - 1]; if (r && r.key === 'protein' && r.l === 2.4) r.l = 1; } // v7.5.1: 4–8 g is a green positive, like Yuka
   // hazardous substances (additives)
   // low fiber/protein stay visible as neutral (grey) rows; they don't change the score
   const adds = (hr && hr.adds) || [];
@@ -29,7 +29,7 @@ function factRows75(p, s, hr) {
 }
 const DOT75 = l => l === 2.5 || l === 2.4 ? 'na' : l === 1.5 ? 'gd' : LV[l];
 function scaleBar(sc, v) {
-  const cols = sc.good === 'low' ? ['ex', 'gd', 'pr', 'bd'] : ['na', 'gd', 'ex'];
+  const cols = sc.good === 'low' ? ['ex', 'gd', 'pr', 'bd'] : ['na', 'gd', 'ex']; // high-good: below → grey, middle → light green, top → green
   const edges = [0, ...sc.cuts, sc.max]; const pct = x => Math.min(100, Math.max(0, x / sc.max * 100));
   const segs = edges.slice(0, -1).map((a, i) => `<i class="bg-${cols[i]}" style="left:${pct(a)}%;width:${pct(edges[i + 1]) - pct(a)}%"></i>`).join('');
   const lab = sc.cuts.map(c => `<span style="left:${pct(c)}%">${Math.round(c * sc.k * 10) / 10}</span>`).join('');
