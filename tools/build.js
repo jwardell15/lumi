@@ -70,7 +70,7 @@ for (const l of lines) {
   if (r.src !== 'usda-branded') comp.push(null, null); comp.push(hx);
   const p = S.fromCompact(comp); const s = S.score(p); audit.total++;
   const hr = H.rate(p, { organic: !!hx.o, fvl: hx.fv }); cov(r.src === 'usda-branded' ? 'USDA Branded (no photo)' : 'Open Food Facts', hr);
-  const q = S.quality(p); q.issues.forEach(i => audit.issues[i] = (audit.issues[i] || 0) + 1);
+  const q = S.quality(p); q.issues.forEach(i => { i = i.replace(/\d+ kcal/g, 'n kcal'); audit.issues[i] = (audit.issues[i] || 0) + 1; });
   if (p.n.carbs == null) audit.carbsUnknown++; else if (!q.ok) audit.inconsistent++; else if (q.dropFiber) audit.fiberDropped++;
   if (q.ok && p.n.carbs === 0) audit.zeroCarbOk++;
   if (!catIdx.has(cat)) { catIdx.set(cat, cats.length); cats.push(cat); }
@@ -78,11 +78,11 @@ for (const l of lines) {
   const parts = r.code.length > 8 ? r.code.padStart(13, '0').match(/^(...)(...)(...)(.*)$/).slice(1).join('/') : r.code;
   let short = img.replace(/\.(100|200|400|full)\.jpg$/, '');
   if (short.startsWith(parts + '/')) short = '~' + short.slice(parts.length + 1); else if (!img.startsWith('http')) short = img;
-  const sm = ST63.mask(r.brand, r.stores); const ai = AI.classify({ cats: isU ? (r.offcats || '') : r.cats, ucat: r.ucat || (isU ? r.cat : ''), name: r.name, brand: r.brand || '' });
+  const sm = ST63.mask(r.brand, r.stores); const ai = AI.classify({ cats: isU ? (r.offcats || '') : r.cats, ucat: r.ucat || (isU ? r.cat : ''), name: r.name, brand: r.brand || '', n: r.n });
   if (ai >= 0) A63.aisle[AI.SUB[ai][1]] = (A63.aisle[AI.SUB[ai][1]] || 0) + 1; else A63.aisle.none = (A63.aisle.none || 0) + 1;
   ST63.STORES.forEach((x, i) => { if (sm & (1 << i)) A63.stores[x[0] + ':brand'] = (A63.stores[x[0] + ':brand'] || 0) + 1; if (sm & (1 << (16 + i))) A63.stores[x[0] + ':soldAt'] = (A63.stores[x[0] + ':soldAt'] || 0) + 1; });
   if (SRC.p === 'o2') A63.photoOther++;
-  docs.push([r.code, r.name, r.brand, s.score == null ? -1 : s.score, s.score == null || s.net == null ? -1 : Math.round(s.net), catIdx.get(cat), img ? short : '', keys, m.sugars == null ? -1 : Math.round(m.sugars), hr.score == null ? -1 : hr.score, (hr.basis === 'nutrition' ? 1 : 0) | (hr.est.length ? 2 : 0) | (S.isFiller(p) ? 4 : 0), hx.am | hx.tm << 9, hx.df, sm, ai]);
+  docs.push([r.code, r.name, r.brand, s.score == null ? -1 : s.score, s.score == null || s.net == null ? -1 : Math.round(s.net), catIdx.get(cat), img ? short : '', keys, m.sugars == null ? -1 : Math.round(m.sugars), hr.score == null ? -1 : hr.score, (hr.basis === 'nutrition' ? 1 : 0) | (hr.est.length ? 2 : 0) | (S.isFiller(p) ? 4 : 0) | (s.bad ? 8 : 0), hx.am | hx.tm << 9, hx.df, sm, ai]);
   const k = r.code.slice(-3); (shards[k] = shards[k] || {})[r.code] = comp;
 }
 const TIERS = [[0, 15000], [15000, 70000], [70000, 130000]]; for (let a = 130000; a < docs.length; a += 70000) TIERS.push([a, Math.min(docs.length, a + 70000)]);
@@ -125,7 +125,7 @@ if (gsrc) {
     let keys = r.keys.filter(k => k === 'rest' || k === 'whole' || !k.startsWith('rest-') || okKeys.has(k) || k === 'rest-other');
     if (r.keys[1] && r.keys[1].startsWith('rest-') && !okKeys.has(r.keys[1]) && r.keys[1] !== 'rest-other') keys = ['rest', 'rest-other'];
     if (!gci.has(r.group)) { gci.set(r.group, gcats.length); gcats.push(r.group); }
-    gdocs.push([r.id, r.name, r.brand, s.score == null ? -1 : s.score, s.score == null || s.net == null ? -1 : Math.round(s.net), gci.get(r.group), comp[4] || '', keys.join('.'), n.sugars == null ? -1 : Math.round(n.sugars), hr.score == null ? -1 : hr.score, (hr.basis === 'nutrition' ? 1 : 0) | (hr.est.length ? 2 : 0) | (S.isFiller(p) ? 4 : 0), hx.am | hx.tm << 9, hx.df, 0, (() => { const w = r.keys.find(k => AI.WHOLE[k]); return w && isWhole ? AI.BYID[AI.WHOLE[w]] : -1; })()]);
+    gdocs.push([r.id, r.name, r.brand, s.score == null ? -1 : s.score, s.score == null || s.net == null ? -1 : Math.round(s.net), gci.get(r.group), comp[4] || '', keys.join('.'), n.sugars == null ? -1 : Math.round(n.sugars), hr.score == null ? -1 : hr.score, (hr.basis === 'nutrition' ? 1 : 0) | (hr.est.length ? 2 : 0) | (S.isFiller(p) ? 4 : 0) | (s.bad ? 8 : 0), hx.am | hx.tm << 9, hx.df, 0, (() => { const w = r.keys.find(k => AI.WHOLE[k]); return w && isWhole ? AI.BYID[AI.WHOLE[w]] : -1; })()]);
     const k = hash(r.id); (gsh[k] = gsh[k] || {})[r.id] = comp;
   }
   fs.mkdirSync(path.join(out, 'g'), { recursive: true });
@@ -134,5 +134,5 @@ if (gsrc) {
   META.whole = gdocs.filter(d => d[7].startsWith('whole')).length; META.restaurant = gdocs.length - META.whole; META.chains = dyn.length; META.chainCounts = dyn.map(x => [x[1], chainCount[x[0]], G.some(r => r.keys[1] === x[0] && r.src.includes('official')) ? 'official' : 'USDA']);
   console.log('generic', JSON.stringify(ga), 'chains', dyn.map(x => x[1] + ':' + chainCount[x[0]]).join(', '));
 }
-META.health = COV; META.v63 = A63; META.fillers = { grocery: docs.filter(d => d[10] & 4).length }; console.log('V63', JSON.stringify(A63)); META.sources = ST; console.log('SOURCES', JSON.stringify(ST, null, 1)); META.allergenData = ALC; console.log('ALLERGEN', JSON.stringify(ALC)); console.log('HEALTH', JSON.stringify(COV));
+META.health = COV; META.audit = audit; META.version = '7.0'; META.v63 = A63; META.fillers = { grocery: docs.filter(d => d[10] & 4).length }; console.log('V63', JSON.stringify(A63)); META.sources = ST; console.log('SOURCES', JSON.stringify(ST, null, 1)); META.allergenData = ALC; console.log('ALLERGEN', JSON.stringify(ALC)); console.log('HEALTH', JSON.stringify(COV));
 fs.writeFileSync(path.join(out, 'meta.json'), JSON.stringify(META));

@@ -14,6 +14,23 @@ const num = v => (v === '' || v == null || isNaN(+v)) ? null : +v;
 /* Data sanity: never treat missing/implausible carbs as zero. Returns {ok, issues, dropFiber}. */
 const DRY = /breakfast-cereals|breakfast cereals|granola|muesli|crisps|chips|crackers|biscuits|cookies|pretzel|puff/i;
 const CARBY = /cereal|bread|biscuit|cookie|cracker|crisps|chips|pasta|noodle|\brice\b|cake|cand(y|ies)|granola|muesli|\bbars?\b|pretzel|tortilla|flour|oat|puff/i;
+/* v7: 4/4/9 Atwater cross-check. Calories that carbs+protein+fat can't explain (or that are far below what they imply) mean the
+   label was entered wrong (often a missing carb value), so the item is marked "data looks wrong" and never scored 100.
+   Allowances: fiber/polyols/allulose-type sweeteners lower real energy; alcohol (7 kcal/g) and vinegar (acetic acid) raise it. */
+const ALC = /\b(beer|ale|lager|ipa|stout|porter|wine|vodka|whiske?y|bourbon|rum|gin|tequila|tequilla|brandy|cognac|liqueur|sake|soju|hard seltzer|spiked|cocktail|margarita|spirits?|long drink|mezcal|scotch|cider|abv|proof|sangria|mead)\b/i;
+const LOWCAL_SWEET = /\b(allulose|erythritol|monk ?fruit|stevia|sugar[- ]free|zero sugar|no sugar|keto|sweetener|xylitol|lakanto|swerve|maltitol|sugar alcohol|fiber syrup|inulin|chicory|sucralose|splenda)\b/i;
+const CARBYNAME = /\b(milk chocolate|chocolate bar|candy|cookies?|brownies?|cake|muffins?|bread|bagels?|croissants?|crackers|pretzels|cereal|granola|pasta|spaghetti|tortillas?|honey|donuts?|pancakes?|waffles?)\b/i;
+const NOTCARBY = /\b(cauliflower|konjac|shirataki|hearts of palm|palm|zucchini|pork rinds?|cheese|keto|low.?carb|zero|sugar[- ]free|no sugar|protein|egg|chicken|meat|fish|seaweed|kale|almond flour|coconut flour|lettuce|cloud)\b/i;
+function implausible(p) {
+  const n = p.n || {}; const c = n.carbs, pr = n.protein, fa = n.fat, k = n.kcal, nm = String(p.name || '');
+  if (c == null || k == null || (p.meta && (p.meta.perItem || (p.meta.src && !/Branded/i.test(p.meta.src))))) return null; // curated USDA SR/Foundation and official restaurant data: rounding on small portions makes this check noisy
+  const est = 4 * c + 4 * (pr || 0) + 9 * (fa || 0);
+  const lo = est - 4 * (n.fiber || 0) - 4 * (n.polyols || 0) - (LOWCAL_SWEET.test(nm) ? 4 * c : 0);
+  if (pr != null && fa != null && k > est + Math.max(40, 0.4 * k) && !ALC.test(nm) && !(/vinegar|essig|vinaigre/i.test(nm) && k <= 60)) return `calories (${Math.round(k)} kcal) are far higher than carbs, protein and fat explain (${Math.round(est)} kcal by 4/4/9)`;
+  if (k < lo - Math.max(40, 0.4 * lo)) return `calories (${Math.round(k)} kcal) are far lower than carbs, protein and fat imply (${Math.round(est)} kcal by 4/4/9)`;
+  if (c === 0 && (pr || 0) === 0 && (fa || 0) === 0 && k === 0 && CARBYNAME.test(nm) && !NOTCARBY.test(nm) && !LOWCAL_SWEET.test(nm)) return 'every nutrient is 0, which is impossible for this kind of food';
+  return null;
+}
 function quality(p) {
   const n = p.n || {}, issues = []; let dropFiber = false;
   const c = n.carbs, f = n.fiber, su = n.sugars, pr = n.protein, fa = n.fat, k = n.kcal;
@@ -21,15 +38,14 @@ function quality(p) {
   if (c != null && su != null && su > c + 1) issues.push('sugars exceed carbs');
   if (!(p.meta && p.meta.perItem) && c != null && (c + (pr || 0) + (fa || 0)) > 105) issues.push('macros exceed 100 g');
   if (c != null && f != null && c > 5 && f > c * 0.6) { dropFiber = true; }
-  if (c != null && k != null && k > 0 && pr != null && fa != null) {
-    const est = 4 * c + 4 * pr + 9 * fa; // fiber/polyols/alcohol make this a loose check
-    if (Math.abs(est - k) > Math.max(70, 0.4 * k)) issues.push('energy doesn’t match macros');
-  }
+  const aw = implausible(p); if (aw) issues.push(aw);
+  // v7: cow/goat/sheep milk, yogurt and kefir always carry milk sugar (~3-5 g/100 g); 0 g means the carb value is missing
+  if (c != null && c < 1 && (/\b(milk|yog(h)?urts?|yogourt|yoghourt|kefir|skyr|lassi)\b/i.test(p.name || '') || (/^(fage|chobani|oikos|siggi'?s|icelandic provisions|noosa|dannon|yoplait|stonyfield|two good)\b/i.test(p.brand || '') && !/\b(creamer|cheese|oat|coffee|dip|bar)\b/i.test(p.name || ''))) && !/\b(almond|coconut|cashew|soy|oat|rice|hemp|pea|flax|macadamia|pistachio|walnut|hazelnut|plant|non-?dairy|dairy[- ]free|vegan|keto|zero carb|carb ?master|protein (powder|isolate)|whey|casein|powder|cheese|butter|cream|creamer|half|chocolate|milk thistle|milkweed|grains|cultures?|starter)\b/i.test(p.name || '')) issues.push('0 g carbs is impossible for milk or yogurt (milk sugar)');
   if (c === 0 && (su || 0) > 0.5) issues.push('0 carbs but has sugar');
   if (c != null && c > 2 && k === 0) issues.push('0 calories but has carbs');
   if (c != null && f != null && p.naLabel && f > c + 1) issues.push('fiber exceeds total carbs');
   const carby = p.carby != null ? p.carby : CARBY.test((p.cats || '') + ' ' + (p.cat || ''));
-  if (c != null && c < 3 && carby && !/keto|low.?carb|zero.?carb/i.test(p.name || '')) issues.push('carbs implausibly low for category');
+  if (c != null && c < 3 && (carby || (CARBYNAME.test(p.name || '') && !NOTCARBY.test(p.name || ''))) && !/keto|low.?carb|zero.?carb/i.test(p.name || '')) issues.push('carbs implausibly low for category');
   if (c === 0 && k == null) issues.push('zero carbs unverified (no energy value)');
   const dry = (p.dry != null ? p.dry : DRY.test((p.cats || '') + ' ' + (p.cat || ''))) && !p.liquid && !/ready.to.eat|overnight|\bcups?\b|pouch|cooked|prepared|soup/i.test(p.name || '');
   if (dry && k != null && k < 250) issues.push('values look per serving, not per 100 g (too few calories for a dry food)');
@@ -54,7 +70,7 @@ function score(p) {
   if (p.servQ) base.perServ = { net: net == null ? null : net * p.servQ / 100 };
   const q = quality(p); base.quality = q;
   if (net == null) return Object.assign(base, { score: null, band: 'na', label: 'Carbs unknown', items, missing: true });
-  if (!q.ok) return Object.assign(base, { score: null, band: 'na', label: 'Data inconsistent', items, missing: true, bad: true });
+  if (!q.ok) return Object.assign(base, { score: null, band: 'na', label: 'Data looks wrong', items, missing: true, bad: true });
   const ing = (p.ing || '').toLowerCase();
   let hidden = 0; // v6.3: small terms still count toward the total (so near-identical items don't all tie at 100); they're just not listed
   const add = (key, label, pts, detail) => { if (Math.abs(pts) >= 0.5) items.push({ key, label, pts: Math.round(pts * 10) / 10, detail }); else hidden += pts; };
@@ -163,5 +179,5 @@ function fromCompact(a) {
   return { id: code, code: /^\d+$/.test(code) ? code : '', src: meta ? (meta.src.includes('official') ? 'chain' : 'usda') : 'local', fdcId: /^fdc-/.test(code) ? code.slice(4) : undefined, name, brand, qty, img: img ? (img.startsWith('w:') ? 'img/w/' + img.slice(2) + '-200.webp' : img.startsWith('http') ? img : 'https://images.openfoodfacts.org/images/products/' + img) : '', servQ, serv, nova, additives: adds ? adds.split(',') : [], ing, cat, cats: cat, naLabel: !!(fl & 1), liquid: !!(fl & 2), carby: fl & 16 ? !!(fl & 4) : undefined, dry: fl & 16 ? !!(fl & 8) : undefined, portions: portions || null, meta: meta || null, hx: a[15] || null, n };
 }
 const imgSize = (u, n) => u ? u.replace(/\.(100|200|400|full)\.jpg$/, '.' + n + '.jpg').replace(/-(200|400)\.webp$/, '-' + n + '.webp') : '';
-return { isFiller, DRY, CARBY, imgSize, score, quality, fromOFF, fromUSDA, fromCompact, band, label, netCarbs, addTags, isNA, isLiquid, DK, ADDITIVES };
+return { implausible, isFiller, DRY, CARBY, imgSize, score, quality, fromOFF, fromUSDA, fromCompact, band, label, netCarbs, addTags, isNA, isLiquid, DK, ADDITIVES };
 });

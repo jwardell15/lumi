@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '6.3.4';
+const VERSION = '7.0';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -92,7 +92,7 @@ async function usdaByGtin(code) { const r = await usdaSearch(gtinKey(code)); ret
 
 /* ---------------- result items ---------------- */
 function itemFromProduct(p, rel) { const s = S.score(p); memo.set(p.id, p); const hr = HR(p); return { m: p.src === 'cos' ? null : dietM(p), h: hr.score, hn: hr.basis === 'nutrition', id: p.id, code: p.code, name: p.name, brand: p.brand, score: s.score, net: s.score == null ? null : s.net, img: p.img, src: p.src, cat: p.cat, rel }; }
-function itemFromDoc(d) { return { sizes: d.sizes, fl: d.fl, al: d.al, df: d.df, h: d.h, hn: d.hn, id: d.code, code: d.code, name: d.name, brand: d.brand, score: d.score, net: d.score == null ? null : d.net, img: d.img, src: d.src || 'local', cat: d.cat, keys: d.keys, rel: d.rel }; }
+function itemFromDoc(d) { return { ai: d.ai, bad: d.bad, sizes: d.sizes, fl: d.fl, al: d.al, df: d.df, h: d.h, hn: d.hn, id: d.code, code: d.code, name: d.name, brand: d.brand, score: d.score, net: d.score == null ? null : d.net, img: d.img, src: d.src || 'local', cat: d.cat, keys: d.keys, rel: d.rel }; }
 function textRel(q, name, brand) {
   const qt = LumiSearch.toks(q), nt = new Set(LumiSearch.toks(name + ' ' + brand)); if (!qt.length) return 0;
   let hit = 0; for (const t of qt) if (nt.has(t) || [...nt].some(x => x.startsWith(t) || (t.length > 4 && LumiSearch.dl(t, x, 1) <= 1))) hit++;
@@ -122,7 +122,7 @@ function thumb(img, name, keys, cat, big, brand) {
   return `<div class="thumb${big ? ' big' : ''}">${bg}${src ? `<img src="${esc(src)}" alt="" ${big ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async" onload="LumiImg.ok(this)" onerror="LumiImg.err(this)">` : ''}</div>`;
 }
 const SRC = { local: '', off: '<span class="tag">OFF</span>', usda: '<span class="tag">USDA</span>', whole: '<span class="tag t-whole">Whole food</span>', rest: '<span class="tag t-rest">Restaurant</span>', chain: '<span class="tag t-rest">Restaurant</span>', custom: '<span class="tag">My food</span>' };
-function rowHTML(it) { return `<a class="row" href="#/product/${esc(it.id)}">${thumb(it.img, it.name, it.keys, it.cat, false, it.brand)}<div class="t"><div class="n">${alertIcon(it)}${esc(it.name)}</div><div class="b">${SRC[it.src] || ''}${esc(it.brand || '')}${it.sizes > 1 ? ` · ${it.sizes} sizes` : ''}${it.score == null ? ' · <span class="c-pr">data incomplete</span>' : it.net != null ? ` · ${r1(it.net)}g net carbs/100` : ''}</div></div>${mini(it)}</a>`; }
+function rowHTML(it) { return `<a class="row" href="#/product/${esc(it.id)}">${thumb(it.img, it.name, it.keys, it.cat, false, it.brand)}<div class="t"><div class="n">${alertIcon(it)}${esc(it.name)}</div><div class="b">${SRC[it.src] || ''}${esc(it.brand || '')}${it.sizes > 1 ? ` · ${it.sizes} sizes` : ''}${it.bad ? ' · <span class="c-bd badchip" title="Calories don\'t add up from carbs, protein and fat (4/4/9), so this label data is probably wrong">⚠ data looks wrong</span>' : it.score == null ? ' · <span class="c-pr">data incomplete</span>' : it.net != null ? ` · ${r1(it.net)}g net carbs/100` : ''}</div></div>${mini(it)}</a>`; }
 const skel = n => `<div class="list">${Array.from({ length: n }, () => `<div class="row skel"><div class="thumb sk"></div><div class="t"><div class="sk skl" style="width:80%"></div><div class="sk skl" style="width:45%"></div></div><div class="sk" style="width:44px;height:44px;border-radius:50%"></div></div>`).join('')}</div>`;
 function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 2200); }
 const go = h => { if (location.hash !== h) location.hash = h; else route(); };
@@ -169,12 +169,14 @@ function todayCard() {
 function viewHome() {
   const rec = store.get('recent', []), viewed = histItems('viewed').slice(0, 4), pl = plate(), nc = cmpIds().length;
   app.innerHTML = `<section class="hello">${MASCOT(72, 'wave')}<div><h1>${greeting()}!</h1><p class="lead" id="lead">${leadText(META)}</p></div></section>
+  ${whatsNewCard()}
   ${todayCard()}
   ${searchBox()}
   <div class="chips">${C.TOP.map(k => `<a class="chip" href="#/browse/${k}">${C.CATS[k][0]} ${C.CATS[k][1]}</a>`).join('')}</div>
   <div class="quick">
     <button class="hero-scan" id="heroScan"><div class="ic"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10 8v8M13 8v8M17 8v8"/></svg></div><div><b>Scan a barcode</b><span>Score + add to log in seconds</span></div></button>
     <a class="qa-tile" href="#/meal"><span class="qi">🍽</span><b>Meal builder</b><span>${pl.length ? `${pl.length} on plate · ${Math.round(totals(pl).carbs)} g` : 'Build a plate'}</span></a>
+    <a class="qa-tile" href="#/lists"><span class="qi">☰</span><b>Lists</b><span>${listsSummary()}</span></a>
     <a class="qa-tile" href="#/compare"><span class="qi">⇆</span><b>Compare</b><span>${nc ? `${nc} selected` : 'Side by side'}</span></a>
     <a class="qa-tile" href="#/cosmetics"><span class="qi">🧴</span><b>Cosmetics</b><span>Shampoo, sunscreen…</span></a>
     <a class="qa-tile" href="#/overview"><span class="qi">📊</span><b>Overview</b><span>Your stats</span></a>
@@ -188,7 +190,7 @@ function viewHome() {
   <div id="foryou"></div>
   <div class="sec-h"><h2>Top-scoring picks</h2></div><div id="picks">${skel(4)}</div>
   <div class="sec-h"><h2>Best at restaurants</h2><a href="#/browse/rest">All chains</a></div><div id="restBest"><div class="swaps">${'<div class="swap skel"></div>'.repeat(4)}</div></div>
-  <p class="foot">Informational only — not medical advice.</p>`;
+  <p class="foot">Lumi ${VERSION} · <a class="lnk" href="#/whatsnew">What's new</a> · Informational only — not medical advice.</p>`;
   bindSearch();
   $('#heroScan').onclick = startScan;
   $('#bform').onsubmit = e => { e.preventDefault(); const c = $('#bc').value.replace(/\D/g, ''); if (c.length >= 8) go('#/product/' + c); else toast('Enter an 8–14 digit barcode'); };
@@ -216,7 +218,7 @@ function topPicks() {
     if (d.score == null || d.net == null || d.fl) continue;
     if (d.src === 'whole') { if (d.score >= 70 && d.net >= 5) whole.push(d); continue; }
     if (d.src === 'rest') { if (d.score >= 65 && d.net >= 8 && /^r-/.test(d.code) && !NOTMEAL.test(d.name)) rest.push(d); continue; }
-    if (d.rank < 40000 && d.score >= 72 && d.net >= 2 && d.brand && usEnglish(d) && !/\bwater\b/i.test(d.name)) off.push(d);
+    if (d.rank < 40000 && d.score >= 72 && d.net >= 2 && d.brand && !isStaple(d) && usEnglish(d) && !/\bwater\b/i.test(d.name)) off.push(d);
   }
   const out = [], brands = new Set(), cats = new Set();
   const bkey = d => d.src === 'whole' ? d.code : (d.brand || '').toLowerCase().split(/[\s,]/)[0];
@@ -263,14 +265,14 @@ let rs = null; // current result state
 function resultsShell(title, q) {
   app.innerHTML = `${searchBox(q)}
   <div class="tools"><div class="seg" id="sort"><button data-s="rel">Relevance</button><button data-s="score">Carb score</button><button data-s="health">Health</button><button data-s="carb">Low carb</button></div>
-  <button class="chip tog" id="fGood">Good+ carb</button><button class="chip tog" id="fHealthy">Healthy 50+</button><button class="chip tog" id="fLow">≤10g carbs</button><button class="chip tog" id="fHide">Hide conflicts</button></div>
+  <button class="chip tog" id="fGood">Good+ carb</button><button class="chip tog" id="fHealthy">Healthy 50+</button><button class="chip tog" id="fLow">≤10g carbs</button><button class="chip tog" id="fHide">Hide conflicts</button><button class="chip tog" id="fReady">📦 Ready-to-eat</button><button class="chip tog" id="fPhoto">📷 Has photo</button><button class="chip tog" id="fBad">Hide bad data</button></div>
   <div class="chips grp" id="grp"></div><div id="dym"></div><div id="cosHint"></div>
   <div class="status" id="status"></div><div id="res">${skel(6)}</div>`;
   bindSearch();
   const sortSel = store.get('sort', 'rel');
   document.querySelectorAll('#sort button').forEach(b => { b.classList.toggle('on', b.dataset.s === sortSel); b.onclick = () => { store.set('sort', b.dataset.s); document.querySelectorAll('#sort button').forEach(x => x.classList.toggle('on', x === b)); renderResults(); }; });
   const fl = store.get('filters', {});
-  [['fGood', 'good'], ['fHealthy', 'healthy'], ['fLow', 'low'], ['fHide', 'hide']].forEach(([id, k]) => { const b = $('#' + id); b.classList.toggle('on', !!fl[k]); b.onclick = () => { const f = store.get('filters', {}); f[k] = !f[k]; store.set('filters', f); b.classList.toggle('on', f[k]); renderResults(); }; });
+  [['fGood', 'good'], ['fHealthy', 'healthy'], ['fLow', 'low'], ['fHide', 'hide'], ['fReady', 'ready'], ['fPhoto', 'photo'], ['fBad', 'nobad']].forEach(([id, k]) => { const b = $('#' + id); b.classList.toggle('on', !!fl[k]); b.onclick = () => { const f = store.get('filters', {}); f[k] = !f[k]; store.set('filters', f); b.classList.toggle('on', f[k]); renderResults(); }; });
 }
 function renderResults() {
   if (!rs) return; const el = $('#res'); if (!el) return;
@@ -285,7 +287,7 @@ function renderResults() {
     document.querySelectorAll('#grp button').forEach(b => b.onclick = () => { rs.group = b.dataset.g; rs.limit = 40; renderResults(); });
     if (cur !== 'all') items = items.filter(i => grpOf(i) === cur);
   }
-  if (f.good) items = items.filter(i => i.score >= 50); if (f.healthy) items = items.filter(i => i.h >= 50); if (f.low) items = items.filter(i => i.net != null && i.net <= 10); if (f.hide || prefs().hide) items = items.filter(i => !conflicts(i));
+  if (f.good) items = items.filter(i => i.score >= 50); if (f.healthy) items = items.filter(i => i.h >= 50); if (f.low) items = items.filter(i => i.net != null && i.net <= 10); if (f.hide || prefs().hide) items = items.filter(i => !conflicts(i)); if (f.ready) items = items.filter(readyToEat); if (f.photo) items = items.filter(i => !!i.img); if (f.nobad) items = items.filter(i => !i.bad);
   const sk = sortKey(sort); const unknown = sort === 'rel' && !f.good && !f.low && !f.healthy ? items.filter(i => i[sk] == null) : [];
   items = items.filter(i => i[sk] != null);
   if (sort === 'score') items.sort((a, b) => b.score - a.score || b.rel - a.rel);
@@ -454,17 +456,17 @@ async function viewProduct(id) {
     ${sourceLine(p)}
     ${alertBanner(p, s.net)}
     ${mascotReact(hp ? hr.score : s.score)}
-    ${issues ? `<div class="note"><b>Not scored:</b> ${esc(issues.join(', '))}. The label data in the database looks wrong — check the package.</div>` : s.missing ? `<div class="note">No carbohydrate data — Lumi won't guess. Check the package.</div>` : (s.missingFields.length ? `<div class="note">Missing: ${esc(s.missingFields.join(', '))} (treated as zero).</div>` : '')}
+    ${issues ? `<div class="note"><b>⚠ Data looks wrong — not scored:</b> ${esc(issues.join('; '))}. The label data in the database doesn't add up, so Lumi won't give it a score. Check the package.</div>` : s.missing ? `<div class="note">No carbohydrate data — Lumi won't guess. Check the package.</div>` : (s.missingFields.length ? `<div class="note">Missing: ${esc(s.missingFields.join(', '))} (treated as zero).</div>` : '')}
     ${s.netNote && s.netNote.includes('implausible') ? `<div class="note">${esc(s.netNote)}.</div>` : ''}
     ${scanned && n.carbs != null ? `<div class="scanned"><span>✓ Scanned</span><button class="btn pri" id="quickLog">＋ Add to log</button></div>` : ''}
-    <div class="actions"><button class="btn pri" id="share">↗ Share</button><button class="btn" id="save">${isSaved(p.id) ? '♥ Saved' : '♡ Save'}</button><button class="btn" id="cmp">${cmpIds().includes(p.id) ? '✓ Comparing' : '⇆ Compare'}</button></div>
+    <div class="actions"><button class="btn pri" id="share">↗ Share</button><button class="btn" id="save">${isSaved(p.id) ? '♥ Saved' : '♡ Save'}</button><button class="btn" id="cmp">${cmpIds().includes(p.id) ? '✓ Comparing' : '⇆ Compare'}</button><button class="btn" id="addList">☰ Add to list</button><button class="btn" id="copyLink" title="Copy a link to this product">🔗 Copy link</button></div>
   </div>
   <div id="better"></div>
   ${hp ? healthCard(hr, unit) : ''}
   ${F ? `<div class="card fxcard">${F.neg.length ? `<div class="fx-h"><h2>${hp ? 'Carb score · ' : ''}Negatives</h2><span class="small">${p.meta && p.meta.perItem ? 'per item' : 'per 100' + unit}</span></div><ul class="fxl">${F.neg.map(factLi).join('')}</ul>` : ''}
     ${F.pos.length ? `<div class="fx-h"><h2>${hp ? 'Carb score · ' : ''}Positives</h2><span class="small">${p.meta && p.meta.perItem ? 'per item' : 'per 100' + unit}</span></div><ul class="fxl">${F.pos.map(factLi).join('')}</ul>` : ''}</div>` : ''}
   ${hp ? '' : healthCard(hr, unit)}
-  ${n.carbs != null ? portionCard(p) : ''}
+  ${n.carbs != null && !s.bad ? portionCard(p) : ''}
   <div id="swapsCard"></div>
   ${n.carbs != null ? `<div class="card"><h2>Nutrition</h2><table><tr><th></th><th>per 100${unit}</th>${ps ? `<th>per serving<br>${esc(p.serv || p.servQ + unit)}</th>` : ''}</tr>
     ${row('Total carbohydrate', n.carbs, 'g', 1)}${row('Net carbs', s.net, 'g', 1)}${row(n.added === 0 && n.sugars > 0 ? 'Total sugars (all natural)' : 'Total sugars', n.sugars)}${n.added != null ? row('Added sugars', n.added) : `<tr><td>Added sugars</td><td colspan="2" class="small">not declared${p.ing && /\b(sugar|syrup|honey|dextrose|cane)\b/i.test(p.ing) ? ' (ingredients list a sugar)' : ''}</td></tr>`}${row('Fiber', n.fiber)}${n.polyols ? row('Polyols', n.polyols) : ''}${row('Protein', n.protein)}${row('Fat', n.fat)}${row('Saturated fat', n.sat)}${n.trans != null ? row('Trans fat', n.trans) : ''}${row('Sodium', n.sodiumMg, 'mg')}${row('Energy (kcal)', n.kcal, 'kcal')}</table>
@@ -473,6 +475,7 @@ async function viewProduct(id) {
     ${s.items.map(i => `<li><span class="l">${esc(i.label)}${i.detail ? `<small>${esc(i.detail)}</small>` : ''}</span><span class="bar-s"><i class="${i.pts < 0 ? 'bg-bd' : 'bg-ex'}" style="width:${Math.round(Math.abs(i.pts) / maxAbs * 100)}%"></i></span><span class="v ${i.pts < 0 ? 'neg' : 'pos'}">${i.pts > 0 ? '+' : ''}${i.pts}</span></li>`).join('')}
     <li><span class="l"><b>Final</b> <small>clamped to 0–100</small></span><span class="v">${s.score}</span></li></ul>
     ${s.assumedServing ? `<div class="small" style="margin-top:6px">No serving size on file — per-serving term assumes ${p.liquid ? '240 ml' : '50 g'}.</div>` : ''}</details>`}
+  ${n.carbs != null ? dataCheckCard(p, s) : ''}
   ${altCard(p)}
   ${p.ing ? `<div class="card"><h2>Ingredients</h2><div class="ing">${esc(p.ing)}</div></div>` : ''}
   <p class="foot">${p.hx && p.hx.s ? '' : 'Source: ' + srcLink + '. '} Informational only — not medical advice. Dose from the physical label.</p>`;
@@ -480,11 +483,12 @@ async function viewProduct(id) {
   $('#share').onclick = () => share(p, s);
   $('#save').onclick = () => { const on = toggleSave(p); $('#save').textContent = on ? '♥ Saved' : '♡ Save'; toast(on ? 'Saved — available offline' : 'Removed'); };
   if (p.code && p.src !== 'off') offProduct(p.code).then(o => { if (o && o.img && (!p.img || !/\.400\.jpg$/.test(p.img))) { p.img = o.img; const el = document.querySelector('.ph .thumb'); if (el) el.outerHTML = thumb(o.img, p.name, keys, p.cat, true); } }).catch(() => {});
-  if (n.carbs != null) bindPortion(p);
+  if (n.carbs != null && !s.bad) bindPortion(p);
   $('#cmp').onclick = () => { const on = toggleCompare(p); $('#cmp').textContent = on ? '✓ Comparing' : '⇆ Compare'; toast(on ? (cmpIds().length >= 2 ? 'Added — tap Compare at the bottom' : 'Added — pick one more to compare') : 'Removed from compare'); };
   if ($('#quickLog')) $('#quickLog').onclick = () => $('#addLog').click();
   if (!s.missing) renderSwaps(p, s);
   drawBetter(p, s, hr);
+  bindProduct7(p);
 }
 function orTryWater(doc, limit = 4) {
   if (doc.ai !== LumiAisles.BYID['bv-soda']) return [];
@@ -527,7 +531,7 @@ async function share(p, s) {
 function viewSaved() {
   const sv = saved(); document.title = 'Saved — Lumi';
   const sc = histItems('scans'), vw = histItems('viewed');
-  app.innerHTML = `<h1>Saved</h1><p class="lead">Stored on this device and available offline. <a class="lnk" href="#/overview">📊 Overview ›</a></p>
+  app.innerHTML = `<h1>Saved</h1><p class="lead">Stored on this device and available offline. <a class="lnk" href="#/lists">☰ Shopping lists ›</a> <a class="lnk" href="#/overview">📊 Overview ›</a></p>
   <div class="seg wide" id="svTab"><button data-t="saved" class="on">♥ Saved</button><button data-t="scans">Scans</button><button data-t="viewed">Viewed</button></div><div id="svList"></div>`;
   const draw = t => { const L = t === 'saved' ? sv.map(x => itemFromProduct(x.p)) : t === 'scans' ? sc : vw;
     $('#svList').innerHTML = L.length ? `<div class="list">${L.map(rowHTML).join('')}</div>${t !== 'saved' ? `<button class="more" id="hClr">Clear ${t === 'scans' ? 'scan' : 'view'} history</button>` : ''}` : `<div class="card empty">${MASCOT(96, 'big')}<b>${t === 'saved' ? 'Nothing saved yet' : t === 'scans' ? 'No scans yet' : 'Nothing viewed yet'}</b>${t === 'saved' ? 'Tap ♡ Save on any product.' : t === 'scans' ? 'Tap Scan below, point at a barcode, then add it to your log in one tap.' : 'Products you open show up here.'}</div>`;
@@ -599,7 +603,7 @@ function route() {
   rs = null; window.scrollTo(0, 0); document.title = 'Lumi — food scanner';
   if (typeof closeSheet === 'function' && !document.querySelector('.onb')) closeSheet(); app.classList.remove('enter', 'prodv'); void app.offsetWidth; app.classList.add('enter'); setTimeout(drawCmpTray, 0);
   const h = location.hash.replace(/^#\/?/, ''); const i = h.indexOf('/'); const view = i < 0 ? h : h.slice(0, i); const arg = i < 0 ? '' : decodeURIComponent(h.slice(i + 1));
-  document.querySelectorAll('.tabbar a').forEach(a => a.classList.toggle('on', a.dataset.v === (['search', 'browse', 'product', ''].includes(view) ? 'home' : view === 'favorites' ? 'saved' : ['about', 'custom'].includes(view) ? 'settings' : ['compare', 'meal', 'cosmetics', 'cos', 'additive', 'additives', 'ingredient'].includes(view) ? 'home' : view === 'overview' ? 'saved' : view)));
+  document.querySelectorAll('.tabbar a').forEach(a => a.classList.toggle('on', a.dataset.v === (['search', 'browse', 'product', ''].includes(view) ? 'home' : view === 'favorites' ? 'saved' : ['about', 'custom'].includes(view) ? 'settings' : ['compare', 'meal', 'cosmetics', 'cos', 'additive', 'additives', 'ingredient'].includes(view) ? 'home' : ['overview', 'lists', 'list'].includes(view) ? 'saved' : view)));
   if (view === 'product' && arg) return viewProduct(/^\d+$/.test(arg.replace(/\s/g, '')) ? arg.replace(/\s/g, '') : arg);
   if (view === 'search' && arg) return viewSearch(arg);
   if (view === 'browse' && arg) return viewBrowse(arg);
@@ -619,6 +623,9 @@ function route() {
   if (view === 'cosmetics') return viewCosmetics(arg);
   if (view === 'cos' && arg) return viewCosProduct(arg);
   if (view === 'overview') return viewOverview(arg);
+  if (view === 'lists') return viewLists();
+  if (view === 'list' && arg) return viewList(arg);
+  if (view === 'whatsnew') return viewWhatsNew();
   viewHome();
 }
 window.addEventListener('hashchange', route);

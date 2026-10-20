@@ -48,6 +48,7 @@ function rate(p, opt = {}) {
     if (m > 0 || n.kcal) { const f = 100 / g; n = Object.fromEntries(Object.entries(n).map(([k, v]) => [k, v == null ? v : v * f])); est0.push('item weight'); }
   }
   const out = { score: null, band: 'unknown', basis: 'full', est: est0, neg: [], pos: [], adds: [] };
+  { const LS = typeof self !== 'undefined' && self.LumiScore ? self.LumiScore : (typeof require === 'function' ? require('./score.js') : null); const bad = LS && LS.implausible && !(p.meta && p.meta.perItem) ? LS.implausible(p) : null; if (bad) { out.reason = 'Nutrition data looks wrong (4/4/9 check)'; out.detail = bad; out.bad = true; return out; } } // v7
   let kcal = n.kcal; const mac = [n.carbs, n.protein, n.fat];
   if (kcal == null && mac.some(v => v != null)) { kcal = (n.carbs || 0) * 4 + (n.protein || 0) * 4 + (n.fat || 0) * 9; out.est.push('energy'); }
   if (kcal == null || kcal > 950 || [n.carbs, n.sugars, n.fat, n.sat, n.protein, n.fiber].some(v => v != null && (v < 0 || v > 100))) { out.reason = kcal == null ? 'Calories and macros not reported' : kcal > 950 ? 'Over 950 kcal per 100 g, which is impossible, so the label data is wrong' : 'A nutrient is listed above 100 g per 100 g, so the label data is wrong'; return out; }

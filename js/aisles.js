@@ -107,10 +107,15 @@ const SUB = [
   ['by-formula', 'baby', 'Baby formula', /en:infant-formulas|en:baby-milks/, /children's nutritional/i, /\binfant formula\b/],
   ['by-food', 'baby', 'Baby food & snacks', /en:baby-foods|en:baby-food/, /baby\/infant/i, null],
   // v6.3.3 (appended so stored indexes stay valid)
-  ['sp-powder', 'supp', 'Protein, greens & supplement powders', /en:protein-powders|en:bodybuilding-supplements|en:dietary-supplements/, /vitamins|herbal supplements|^supplements|sport supplements/i, /\b(protein powder|greens powder|superfood (blend|powder)|collagen (peptides|powder)|whey (protein|isolate)|pre-?workout|creatine|supplement)\b/],
+  ['sp-powder', 'supp', 'Other supplements', /en:protein-powders|en:bodybuilding-supplements|en:dietary-supplements/, /vitamins|herbal supplements|^supplements|sport supplements/i, /\b(protein powder|greens powder|superfood (blend|powder)|collagen (peptides|powder)|whey (protein|isolate)|pre-?workout|creatine|supplement)\b/],
   // v6.3.4
   ['bv-sparkling', 'bev', 'Flavored sparkling water', null, null, null],
-  ['bv-tonic', 'bev', 'Kombucha, tonics & functional drinks', /en:kombuchas/, /kombucha/i, /\bkombucha\b/]
+  ['bv-tonic', 'bev', 'Kombucha, tonics & functional drinks', /en:kombuchas/, /kombucha/i, /\bkombucha\b/],
+  // v7 supplement subcategories (assigned by refineSupp after classification)
+  ['sp-protein', 'supp', 'Protein & collagen powders', null, null, null],
+  ['sp-greens', 'supp', 'Greens & superfood powders', null, null, null],
+  ['sp-sport', 'supp', 'Creatine, pre-workout & hydration', null, null, null],
+  ['sp-vitamin', 'supp', 'Vitamins, gummies & capsules', null, null, null]
 ];
 const BYID = Object.fromEntries(SUB.map((s, i) => [s[0], i]));
 // name keyword fallback (only when no category tag or USDA category matched), most specific first
@@ -158,7 +163,43 @@ const PET = /en:pet-foods?|en:dog-foods?|en:cat-foods?|en:animal-foods/;
 
 const WHOLE = { 'whole-fruit': 'pr-fruit', 'whole-veg': 'pr-veg' };
 /* r: {cats (OFF tags string), ucat (USDA category), name} -> sub index or -1 */
-function classify(r) {
+/* v7 post-classification fixes: chocolate/nut butters/meals out of Dairy, fresh "super greens" salad out of Supplements, supplement subcategories */
+const SUPP_PROT = /\b(protein|whey|casein|collagen|peptides|isolate|bone broth protein|mass gainer|gainer|colostrum|amino|bcaa|eaa|glutamine)\b/;
+const SUPP_GREEN = /\b(greens?|superfood|super food|spirulina|chlorella|moringa|wheatgrass|wheat grass|barley grass|beet(root)? powder|mushroom (blend|powder|coffee)|ashwagandha|maca|reds|fiber|psyllium|cacao powder|cocoa powder|matcha powder|acai powder|organic powder)\b/;
+const SUPP_SPORT = /\b(creatine|pre-?workout|pump|electrolytes?|hydration|bcaa|nitric|beta[- ]alanine|caffeine pills?|energy chews|recovery|lmnt|liquid i\.?v|nuun)\b/;
+const SUPP_VIT = /\b(vitamins?|multi( ?vitamin)?s?|gummies|gummy|capsules?|caps|softgels?|tablets?|tabs|chewables?|melatonin|magnesium|zinc|iron|calcium|biotin|probiotics?|prebiotic|omega|fish oil|krill|turmeric|elderberry|apple cider vinegar gummies|b12|d3|k2|supplement)\b/;
+const SUPP_FOOD = /\b(soup|burger|patty|patties|veggie burger|salad|kit|chips|bars?|pasta|cereal|crackers|wrap|cookies?|bites|bread|ravioli|pizza|smoothie bowl|frozen)\b/;
+const POWDERY = /\b(powder|powdered|blend|mix|scoops?|servings|drink mix|superfood|supplement|capsules?|tablets?|gummies)\b/;
+function post7(i, r) {
+  const n = String(r.name || '').toLowerCase(), b = String(r.brand || '').toLowerCase(), nb = n + ' ' + b; const N = r.n || {};
+  const prot = N.proteins != null ? N.proteins : N.protein, carb = N.carbohydrates != null ? N.carbohydrates : N.carbs, kcal = N['energy-kcal'] != null ? N['energy-kcal'] : N.kcal;
+  const sub = i >= 0 ? SUB[i][0] : '', aisle = i >= 0 ? SUB[i][1] : '';
+  if (aisle === 'dairy' || sub === 'dy-plantmilk') {
+    if (/\b(milk|dark|white|ruby|swiss|belgian|european|semi[- ]sweet|bittersweet) chocolates?\b|\bchocolate (bars?|candy|truffles?|squares|bites|minis)\b|\bcacao\b/.test(n) && !/\b(drink|beverage|shake|lowfat|low fat|reduced fat|fat free|1%|2%|whole milk|chocolate milk|almondmilk|oatmilk|creamer|pudding|mousse|yog(h)?urt|kefir|ice cream|protein milk)\b/.test(n)) return BYID['sn-choc'];
+    if (sub === 'dy-butter' && ((prot != null && prot > 8) || /\bbear butter\b/.test(nb))) return BYID['pt-nutbutter']; // dairy butter has <1 g protein; >8 g means a nut/seed butter
+    if (/\b(roasted (carrots|vegetables|veggies|potatoes)|meal simple|stir fry|broccoli|chicken|turkey|burrito|sandwich|wrap|salad kit|pasta salad|bowl|carrots)\b/.test(n) && !/\b(yog(h)?urt|kefir|cream cheese|milk)\b/.test(n)) return BYID['dl-prep'];
+    if (/\b(sabra|hummus)\b/.test(nb)) return BYID['dl-dips'];
+    if (/\b(thins|cookies?|biscuits?|wafers?|shortbread)\b/.test(n) && sub !== 'dy-yogurt' && sub !== 'dy-pudding' && !/yog|skyr|ice-cream|frozen/.test(String(r.cats || '') + ' ' + String(r.ucat || '').toLowerCase()) && !/\b(chobani|oikos|yoplait|dannon|siggi|fage|noosa|ratio|two good|activia)\b/.test(b) && !/\b(yog(h)?urt|skyr|ice cream|milk|kefir|pudding|cheese|dessert|snack)\b/.test(n)) return BYID['sn-cookies'];
+    if (/\b(chocolate|peanut butter|creme|candy) eggs\b|\bchocolonely\b|\breese/.test(nb)) return BYID['sn-candy'];
+    if (/\b(coconut|cashew|almond|peanut|sunflower|seed|nut) butter\b/.test(n)) return BYID['pt-nutbutter'];
+  }
+  if (/\bsuper ?greens\b|\bsupergreens\b/.test(n) || sub === 'sp-powder') {
+    const fresh = carb != null && kcal != null ? carb < 10 && kcal < 80 : (/\b(kale|spinach|chard|arugula|lettuce|salad|spring mix|baby)\b/.test(n) || SALADCO.test(b) || /organic ?girl|wellsley|wegmans|central market/.test(b)); // greens powders are ~300 kcal and 30-60 g carbs per 100 g
+    if (/\bsuper ?greens\b|\bsupergreens\b/.test(n) && fresh && !/\b(powder|capsules?|tablets?|gummies|drink|shake|protein|scoops?|supplement|juice|smoothie)\b/.test(n)) return BYID['pr-veg'];
+  }
+  if (sub === 'bv-protein' && !/\b(shakes?|drinks?|beverage|ready to drink|rtd|bottles?|milk|juice|water|soda|coffee|latte)\b/.test(n) && (SUPP_VIT.test(n) || SUPP_SPORT.test(n) || /\b(powder|isolate|scoops?|peptides|creatine)\b/.test(n))) i = BYID['sp-powder'];
+  if (i >= 0 && SUB[i][1] === 'supp') {
+    if (SUPP_FOOD.test(n) && !POWDERY.test(n)) { if (/\bsoup\b/.test(n)) return BYID['cn-soup']; if (/\b(burger|patty|patties)\b/.test(n)) return BYID['mt-plant']; if (/\bbars?\b/.test(n)) return BYID['sn-bars']; }
+    if (SUPP_SPORT.test(n)) return BYID['sp-sport'];
+    if (SUPP_PROT.test(n)) return BYID['sp-protein'];
+    if (SUPP_VIT.test(n)) return BYID['sp-vitamin'];
+    if (SUPP_GREEN.test(n)) return BYID['sp-greens'];
+    return BYID['sp-powder'];
+  }
+  return i;
+}
+function classify(r) { return post7(classify6(r), r); }
+function classify6(r) {
   const c = (r.cats || '').toLowerCase(), u = r.ucat || '', n = (r.name || '').toLowerCase();
   const refine = i => { const a = SUB[i][1]; for (let j = 0; j < SUB.length; j++) if (j !== i && SUB[j][1] === a && SUB[j][5] && SUB[j][5].test(n)) return j; return i; };
   // v6.3.1 strong name overrides: items whose identity is unambiguous beat loose category tags (seed butters were landing in Dairy, beans/tempeh in Snacks)
