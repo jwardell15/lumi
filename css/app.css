@@ -318,3 +318,5 @@ h1{letter-spacing:-.02em}
  #app.prodv.split .pcol.l>.card:first-child .thumb.big{width:100%;height:auto;aspect-ratio:1;max-width:340px;margin:0 auto}#app.prodv.split .pcol.l>.card:first-child .ph{flex-direction:column;align-items:stretch}}
 .actions{flex-wrap:wrap}.actions .btn{flex:1 1 auto;min-width:96px}
 @media (max-width:767px){.news7:not(.full) li .d{display:none}.news7:not(.full) ul{gap:4px}}
+/* v7.1 */ .ph-t{min-width:0}.b2.lg{white-space:normal;flex-wrap:wrap;max-width:100%}
+.lnkbtn{background:none;border:0;color:#fff;text-decoration:underline;font:inherit;cursor:pointer;padding:0}

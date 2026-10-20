@@ -21,7 +21,9 @@ const nutArr = m => [m.carbohydrates, m.sugars, m['added-sugars'], m.fiber, m.pr
 const ST = {}; const st = (k, f) => { const c = ST[k] = ST[k] || { n: 0, photoBefore: 0, photoAfter: 0, ingBefore: 0, ingAfter: 0, verifiableBefore: 0, verifiableAfter: 0, nutritionSwapped: 0, altNutrition: 0, ingFrom: {} }; f(c); };
 const audit = { total: 0, carbsUnknown: 0, inconsistent: 0, fiberDropped: 0, zeroCarbOk: 0, issues: {} };
 const src = process.argv[2]; const out = path.join(__dirname, '..', 'data');
-fs.rmSync(out, { recursive: true, force: true }); fs.mkdirSync(path.join(out, 'd'), { recursive: true });
+// v7.1: keep data/cos (cosmetics, built separately by build_cos.js); only clear what this script writes
+for (const f of fs.existsSync(out) ? fs.readdirSync(out) : []) if (f === 'd' || f === 'g' || /^index-.*\.json$|^meta\.json$/.test(f)) fs.rmSync(path.join(out, f), { recursive: true, force: true });
+fs.mkdirSync(path.join(out, 'd'), { recursive: true });
 const IMG = 'https://images.openfoodfacts.org/images/products/';
 const lines = fs.readFileSync(src, 'utf8').split('\n').filter(Boolean);
 const nOFF = lines.length;
@@ -134,5 +136,5 @@ if (gsrc) {
   META.whole = gdocs.filter(d => d[7].startsWith('whole')).length; META.restaurant = gdocs.length - META.whole; META.chains = dyn.length; META.chainCounts = dyn.map(x => [x[1], chainCount[x[0]], G.some(r => r.keys[1] === x[0] && r.src.includes('official')) ? 'official' : 'USDA']);
   console.log('generic', JSON.stringify(ga), 'chains', dyn.map(x => x[1] + ':' + chainCount[x[0]]).join(', '));
 }
-META.health = COV; META.audit = audit; META.version = '7.0'; META.v63 = A63; META.fillers = { grocery: docs.filter(d => d[10] & 4).length }; console.log('V63', JSON.stringify(A63)); META.sources = ST; console.log('SOURCES', JSON.stringify(ST, null, 1)); META.allergenData = ALC; console.log('ALLERGEN', JSON.stringify(ALC)); console.log('HEALTH', JSON.stringify(COV));
+META.health = COV; META.audit = audit; META.version = '7.1'; META.v63 = A63; META.fillers = { grocery: docs.filter(d => d[10] & 4).length }; console.log('V63', JSON.stringify(A63)); META.sources = ST; console.log('SOURCES', JSON.stringify(ST, null, 1)); META.allergenData = ALC; console.log('ALLERGEN', JSON.stringify(ALC)); console.log('HEALTH', JSON.stringify(COV));
 fs.writeFileSync(path.join(out, 'meta.json'), JSON.stringify(META));

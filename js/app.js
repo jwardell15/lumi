@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '7.0';
+const VERSION = '7.1';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -218,7 +218,7 @@ function topPicks() {
     if (d.score == null || d.net == null || d.fl) continue;
     if (d.src === 'whole') { if (d.score >= 70 && d.net >= 5) whole.push(d); continue; }
     if (d.src === 'rest') { if (d.score >= 65 && d.net >= 8 && /^r-/.test(d.code) && !NOTMEAL.test(d.name)) rest.push(d); continue; }
-    if (d.rank < 40000 && d.score >= 72 && d.net >= 2 && d.brand && !isStaple(d) && usEnglish(d) && !/\bwater\b/i.test(d.name)) off.push(d);
+    if (d.rank < 40000 && d.score >= 72 && d.net >= 2 && d.brand && !isStaple(d) && !isSugaryDrink(d) && usEnglish(d) && !/\bwater\b/i.test(d.name)) off.push(d);
   }
   const out = [], brands = new Set(), cats = new Set();
   const bkey = d => d.src === 'whole' ? d.code : (d.brand || '').toLowerCase().split(/[\s,]/)[0];
@@ -581,7 +581,7 @@ Bands: 75+ Excellent · 50–74 Good · 25–49 Poor · &lt;25 Bad</pre>
 let scanner = null, scanLib = null;
 function loadScanLib() { if (!scanLib) scanLib = new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js'; s.onload = res; s.onerror = () => { scanLib = null; rej(new Error('Scanner library failed to load')); }; document.head.appendChild(s); }); return scanLib; }
 async function startScan() {
-  if (!window.isSecureContext || !navigator.mediaDevices) return toast('Camera needs HTTPS');
+  if (!window.isSecureContext || !navigator.mediaDevices) return typeBarcode('The camera needs a secure (HTTPS) page.');
   const ov = $('#scanner'); ov.hidden = false;
   try {
     await loadScanLib();
@@ -589,7 +589,7 @@ async function startScan() {
     scanner = new Html5Qrcode('reader', { formatsToSupport: [F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E], useBarCodeDetectorIfSupported: true, verbose: false });
     await scanner.start({ facingMode: 'environment' }, { fps: 15, qrbox: (w, h) => ({ width: Math.floor(Math.min(320, w * 0.85)), height: Math.floor(Math.min(180, h * 0.4)) }), aspectRatio: 1.333 },
       async txt => { const c = txt.replace(/\D/g, ''); if (c.length < 8) return; if (navigator.vibrate) navigator.vibrate(50); await stopScan(); sessionStorage.setItem('lumi.scanned', c); go('#/product/' + c); }, () => {});
-  } catch (e) { await stopScan(); toast(/Permission|NotAllowed/i.test(e && (e.name || e.message || e)) ? 'Camera permission denied' : 'Camera unavailable'); }
+  } catch (e) { await stopScan(); typeBarcode(/Permission|NotAllowed/i.test(e && (e.name || e.message || e)) ? 'Camera permission was denied. You can allow it in your browser settings, or type the number under the barcode.' : 'No camera is available here. Type the number under the barcode instead.'); }
 }
 async function stopScan() { const ov = $('#scanner'); if (scanner) { try { await scanner.stop(); } catch {} try { scanner.clear(); } catch {} scanner = null; } ov.hidden = true; $('#reader').innerHTML = ''; }
 document.querySelectorAll('[data-scan]').forEach(b => b.onclick = startScan); $('#scanClose').onclick = stopScan;

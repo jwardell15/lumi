@@ -31,6 +31,9 @@ function implausible(p) {
   if (c === 0 && (pr || 0) === 0 && (fa || 0) === 0 && k === 0 && CARBYNAME.test(nm) && !NOTCARBY.test(nm) && !LOWCAL_SWEET.test(nm)) return 'every nutrient is 0, which is impossible for this kind of food';
   return null;
 }
+const CARBS_EXPECTED = /\b(juices?|lemonade|nectar|smoothies?|fruit punch|sports? drinks?|gatorade|powerade|sweet tea|chocolate milk|sorbet|sherbet|popsicles?|ice pops?|grapes|raspberries|strawberries|blueberries|blackberries|cherries|mangos?|mangoes|bananas?|apples?|pineapple|peaches|pears|plums|watermelon|cantaloupe|raisins|dates|jam|jelly|preserves|marmalade|honey|maple syrup|ketchup|bbq sauce|barbecue sauce|teriyaki|salsa|latte|frappuccino|mocha|hot chocolate|hot cocoa|coconut water|root beer|ginger ale|cream soda|grape soda|orange soda)\b/i;
+const NOT_EXPECTED = /\b(zero|diet|sugar[- ]?free|no sugar|unsweetened|keto|0 ?(g|calorie|cal)|zero calorie|water|sparkling|seltzer|extract|flavou?r(ed|ing)? (drops|enhancer)|enhancer|drops|tablets?|electrolyte|konjac|vinegar|seasoning|spice|tea bags?|herbal|wipes|lip|shampoo|candle|scent|pickled?|peppers?|jalape|cider vinegar|apple cider|lite|light)\b/i;
+const DRYNAME = /\b((sugar|waffle|cake|ice cream) cones?|crackers|pretzels|tortilla chips|potato chips|cereal|granola|muesli|cookies|biscotti|rice cakes|graham|wafers|flour|pancake mix|muffin mix|cake mix|brownie mix|cocoa powder|cacao powder|breadcrumbs|panko)\b/i;
 function quality(p) {
   const n = p.n || {}, issues = []; let dropFiber = false;
   const c = n.carbs, f = n.fiber, su = n.sugars, pr = n.protein, fa = n.fat, k = n.kcal;
@@ -39,6 +42,7 @@ function quality(p) {
   if (!(p.meta && p.meta.perItem) && c != null && (c + (pr || 0) + (fa || 0)) > 105) issues.push('macros exceed 100 g');
   if (c != null && f != null && c > 5 && f > c * 0.6) { dropFiber = true; }
   const aw = implausible(p); if (aw) issues.push(aw);
+  if (c != null && c < 0.5 && CARBS_EXPECTED.test(p.name || '') && !NOT_EXPECTED.test(p.name || '') && !LOWCAL_SWEET.test(p.name || '')) issues.push('0 g carbs is implausible for this food (juice, fruit, sweetened drinks and sauces always have carbs)');
   // v7: cow/goat/sheep milk, yogurt and kefir always carry milk sugar (~3-5 g/100 g); 0 g means the carb value is missing
   if (c != null && c < 1 && (/\b(milk|yog(h)?urts?|yogourt|yoghourt|kefir|skyr|lassi)\b/i.test(p.name || '') || (/^(fage|chobani|oikos|siggi'?s|icelandic provisions|noosa|dannon|yoplait|stonyfield|two good)\b/i.test(p.brand || '') && !/\b(creamer|cheese|oat|coffee|dip|bar)\b/i.test(p.name || ''))) && !/\b(almond|coconut|cashew|soy|oat|rice|hemp|pea|flax|macadamia|pistachio|walnut|hazelnut|plant|non-?dairy|dairy[- ]free|vegan|keto|zero carb|carb ?master|protein (powder|isolate)|whey|casein|powder|cheese|butter|cream|creamer|half|chocolate|milk thistle|milkweed|grains|cultures?|starter)\b/i.test(p.name || '')) issues.push('0 g carbs is impossible for milk or yogurt (milk sugar)');
   if (c === 0 && (su || 0) > 0.5) issues.push('0 carbs but has sugar');
@@ -47,7 +51,7 @@ function quality(p) {
   const carby = p.carby != null ? p.carby : CARBY.test((p.cats || '') + ' ' + (p.cat || ''));
   if (c != null && c < 3 && (carby || (CARBYNAME.test(p.name || '') && !NOTCARBY.test(p.name || ''))) && !/keto|low.?carb|zero.?carb/i.test(p.name || '')) issues.push('carbs implausibly low for category');
   if (c === 0 && k == null) issues.push('zero carbs unverified (no energy value)');
-  const dry = (p.dry != null ? p.dry : DRY.test((p.cats || '') + ' ' + (p.cat || ''))) && !p.liquid && !/ready.to.eat|overnight|\bcups?\b|pouch|cooked|prepared|soup/i.test(p.name || '');
+  const dry = (p.dry != null ? p.dry || DRYNAME.test(p.name || '') : DRY.test((p.cats || '') + ' ' + (p.cat || '')) || DRYNAME.test(p.name || '')) && !p.liquid && !/ready.to.eat|overnight|\bcups?\b|pouch|cooked|prepared|soup/i.test(p.name || '');
   if (dry && k != null && k < 250) issues.push('values look per serving, not per 100 g (too few calories for a dry food)');
   if (dry && k == null && c != null && c < 20 && !/keto|protein|grain.?free|nut granola|low.?carb/i.test(p.name || '')) issues.push('carbs implausibly low for a dry food');
   return { ok: issues.length === 0, issues, dropFiber };
@@ -114,6 +118,8 @@ function score(p) {
   if (p.nova === 4) add('nova', 'Ultra-processed (NOVA 4)', -4, 'processing is weighed fully in the Health rating'); else if (p.nova === 3) add('nova', 'Processed (NOVA 3)', -2, '');
   const adds = (p.additives || []).filter((t, i, s) => ADDITIVES[t] && s.indexOf(t) === i);
   if (adds.length) add('additives', 'Additives of concern', -Math.min(8, adds.length * 2), adds.map(t => t.toUpperCase() + ' ' + ADDITIVES[t]).join(', '));
+  // v7.1: US labels round under 0.5 g (and "less than 1 g") per serving down to 0, so "0 g" on a small serving can hide real carbs. Penalize the possible hidden amount.
+  if (n.carbs != null && n.carbs < 0.5 && p.naLabel && p.servQ && p.servQ < 100 && !(p.meta && p.meta.perItem)) { const unc = 0.99 * 100 / p.servQ; if (unc >= 1.5) add('round0', 'Label rounding: "0 g" per serving can hide up to 0.99 g', -Math.min(8, unc * 0.6), 'up to ' + r1(unc) + ' g/100 possible'); }
   if (Math.abs(hidden) >= 0.05) items.push({ key: 'small', label: 'Small amounts (sodium, sat fat, sugar…) combined', pts: Math.round(hidden * 10) / 10, detail: 'each under 0.5' });
   const raw = 100 + items.reduce((s, i) => s + i.pts, 0);
   const sc = Math.max(0, Math.min(100, Math.round(raw)));

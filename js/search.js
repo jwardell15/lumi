@@ -28,6 +28,11 @@ let WATER_; const water = () => WATER_ ?? (WATER_ = typeof self !== 'undefined' 
 const OFFAL = /\b(liver|livers|gizzards?|hearts?|kidneys?|tongue|tripe|giblets?|feet|paws|necks?|brains?|spleen|lungs?|chitterlings|offal|mechanically separated|separable fat|skin only|backs?|frames?|testes|sweetbreads?|blood|marrow|ears?|snouts?)\b/;
 const MEATQ = /\b(chicken|beef|pork|turkey|lamb|steak)\b/;
 const COMMON = /\b(breasts?|thighs?|tenders?|tenderloins?|nuggets?|rotisserie|wings?|drumsticks?|ground|strips?|grilled|patties|sirloin|ribeye|chops?|loin)\b/;
+const NONEN = /\b(le|la|les|du|des|et|au|aux|avec|sans|nature|fromage|lait|sucre|chocolat|yaourt|leche|con|sin|del|azucar|queso|und|mit|vanille|fraise|eau|pain|beurre|creme|natur|saveur|parfum|sabor|blanc|petit|recette|aceite|agua|bebida|dulce|avena|cereales|céréales|intero|greco|bianco|biscottes|onctueux|mousse a)\b/i;
+const ALCQ = /\b(vodka|tequila|rum|gin|whiskey|whisky|bourbon|beer|wine|cocktail|hard|spiked|alcohol|margarita|seltzer|mixer)\b/;
+const ALCN = /\b(vodka|tequila|rum|gin|whiskey|whisky|bourbon|beer|wine|cocktail|hard seltzer|spiked|liqueur|margarita)\b/;
+const PACKQ = /\b(soda|yogurt|yoghurt|cereal|bread|chips|crackers?|cookies?|bars?|protein|granola|ice cream|pizza|pasta sauce|salsa|hummus|juice|candy|chocolate|tortillas?|bagels?|muffins?|waffles?|pancakes?|frozen|snacks?|jerky|popcorn|pretzels?|creamer|milk|cheese|sausage|bacon|hot dogs?|soup|dressing|ketchup|mustard|mayo|peanut butter|jam|coffee|tea|energy drink|sparkling water|kombucha|kefir|oatmeal)\b/;
+const CHAINQ = /\b(chick ?fil ?a|starbucks|mcdonalds?|subway|chipotle|taco bell|wendys?|burger king|dunkin|panera|kfc|popeyes|arbys?|sonic|dominos|pizza hut|papa johns|five guys|in n out|shake shack|culvers|jack in the box|panda express|wingstop|dairy queen|ihop|dennys|applebees|chilis|olive garden|whataburger|raising canes|jersey mikes|jimmy johns|firehouse)\b/;
 const fixName = s => String(s || '').replace(/([A-Za-z])['’]S\b/g, "$1's");
 /* v6.3.3 fuzzy near-duplicate grouping: same brand (first brand word), token-set similarity >= 0.85 after
    stemming/singularizing and removing size/pack/store/brand/filler words, and nutrition within ~10% */
@@ -117,6 +122,11 @@ class Engine {
       if (!OFFAL.test(nq) && OFFAL.test(d.nn)) r -= 30;
       if (MEATQ.test(nq) && COMMON.test(d.nn)) r += 12;
       if (d.score != null) r += 0.08 * d.score;
+      // v7.1: shoppers want US packaged products first: demote non-English/non-US labels, unasked-for alcohol, generic FNDDS rows for packaged-type queries, and bad data
+      if (d.src !== 'whole' && d.src !== 'rest') { if (!/^[\x20-\x7e]+$/.test(d.name + d.brand) || NONEN.test(d.name) || !(d.code.length === 12 || (d.code.length === 13 && /^[01]/.test(d.code)))) r -= 22; if (d.bad) r -= 15; if (!d.img) r -= 3; if (d.name.split(' ').length <= 1 && d.brand && nq.split(' ').length === 1) r -= 6; }
+      if (!ALCQ.test(nq) && ALCN.test(d.nn)) r -= 28;
+      if (d.src === 'whole' && PACKQ.test(nq)) r -= 30;
+      if (d.src === 'rest') r += CHAINQ.test(nq) ? 6 : -12;
       if (d.src === 'whole') { const nn = norm(d.name), w = nn.split(' '); if (nn.startsWith(qt[0])) r += 14; if (/\braw\b/.test(nn)) r += 6; r -= Math.min(10, Math.max(0, w.length - qt.length - 1) * 1.5); }
       res.push([r, d]);
     }

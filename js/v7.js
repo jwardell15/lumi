@@ -1,13 +1,25 @@
 /* Lumi v7: shopping lists, data-check card (4/4/9 Atwater), copy link, ready-to-eat filter, what's-new card, "/" to search. Uses globals from app.js/v63.js at call time. */
+/* v7.1: manual barcode entry when the camera isn't available (or by choice) */
+function typeBarcode(msg) {
+  const el = document.createElement('div'); el.className = 'lp-wrap';
+  el.innerHTML = `<form class="lp" role="dialog" aria-label="Type a barcode"><b>Type the barcode number</b>${msg ? `<p class="small">${esc(msg)}</p>` : ''}<input inputmode="numeric" pattern="[0-9 ]*" maxlength="16" placeholder="e.g. 049000028911" aria-label="Barcode number" style="padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg2);color:var(--ink);font:inherit;font-size:18px;letter-spacing:.06em"><button class="btn pri">Look up</button><button type="button" class="btn lp-x">Cancel</button></form>`;
+  document.body.appendChild(el); const close = () => el.remove(); const inp = el.querySelector('input'); setTimeout(() => inp.focus(), 30);
+  el.onclick = e => { if (e.target === el || e.target.classList.contains('lp-x')) close(); };
+  el.querySelector('form').onsubmit = e => { e.preventDefault(); const c = inp.value.replace(/\D/g, ''); if (c.length < 8 || c.length > 14) { toast('Enter the 8–14 digits under the barcode'); return; } close(); go('#/product/' + c); };
+}
+document.addEventListener('click', e => { if (e.target && e.target.id === 'scanType') { if (typeof stopScan === 'function') stopScan(); typeBarcode(''); } });
 const V7_NEWS = [
+  ['🔎', 'Better search (7.1)', 'US products first, fewer foreign-label and generic rows, no cocktails when you search "soda", chains rank higher for chain names.'],
+  ['🧹', 'Cleaner aisles & data checks (7.1)', 'Spinach is no longer in Baby, sushi not in Bakery; 0 g carbs on juice, fruit or chocolate milk is flagged; "0 g" on small servings is scored with label rounding in mind; juice and sports drinks are no longer store picks.'],
+  ['🧴', 'Cosmetics are back (7.1)', 'The cosmetics scanner data had gone missing in an earlier update. It\'s restored.'],
   ['📦', 'Packaged picks are ready-to-eat', 'Canned tomatoes, pumpkin, broth, coffee, cones, flour and other ingredients moved to "Staples & ingredients".'],
   ['⚠️', 'Bad label data is flagged', 'If calories don\'t add up from carbs, protein and fat (4/4/9), the item says "data looks wrong" and gets no score.'],
   ['☰', 'Shopping lists', 'Make lists (Costco run, school snacks…), check items off, see the carb total and share the list.'],
   ['💊', 'Supplements, sorted', 'Protein & collagen, greens powders, creatine & hydration, vitamins. Fresh "super greens" salads moved to Produce.'],
   ['🔎', 'Smarter search filters', 'Ready-to-eat, has photo and hide bad data, plus better near-duplicate grouping (one row per product).']];
-function whatsNewCard() { if (store.get('seen7', false)) return ''; return `<div class="card news7"><div class="n7h"><b>✨ New in Lumi 7.0</b><button class="icon" id="n7x" aria-label="Dismiss">✕</button></div><ul>${V7_NEWS.slice(0, 3).map(n => `<li><span>${n[0]}</span><div><b>${esc(n[1])}</b> <span class="d">${esc(n[2])}</span></div></li>`).join('')}</ul><a class="lnk" href="#/whatsnew">Everything new ›</a></div>`; }
-document.addEventListener('click', e => { if (e.target && e.target.id === 'n7x') { store.set('seen7', true); const c = document.querySelector('.news7'); if (c) c.remove(); } });
-function viewWhatsNew() { document.title = 'New in 7.0 — Lumi'; store.set('seen7', true);
+function whatsNewCard() { if (store.get('seen71', false)) return ''; return `<div class="card news7"><div class="n7h"><b>✨ New in Lumi ${VERSION}</b><button class="icon" id="n7x" aria-label="Dismiss">✕</button></div><ul>${V7_NEWS.slice(0, 3).map(n => `<li><span>${n[0]}</span><div><b>${esc(n[1])}</b> <span class="d">${esc(n[2])}</span></div></li>`).join('')}</ul><a class="lnk" href="#/whatsnew">Everything new ›</a></div>`; }
+document.addEventListener('click', e => { if (e.target && e.target.id === 'n7x') { store.set('seen71', true); const c = document.querySelector('.news7'); if (c) c.remove(); } });
+function viewWhatsNew() { document.title = 'New in 7.0 — Lumi'; store.set('seen71', true);
   app.innerHTML = `<h1>New in Lumi ${VERSION}</h1><div class="card news7 full"><ul>${V7_NEWS.map(n => `<li><span>${n[0]}</span><div><b>${esc(n[1])}</b> ${esc(n[2])}</div></li>`).join('')}</ul></div><p class="foot">Informational only, not medical advice. Dose from the physical label.</p>`; }
 /* ready-to-eat: index docs use the aisle + staple rules; outside items (USDA/OFF live) use the name rules only */
 function readyToEat(i) { if (i.src === 'whole' || i.src === 'rest' || i.src === 'chain') return true; const d = { name: i.name || '', ai: i.ai == null ? -1 : i.ai }; return !isStaple(d) && !RAW.has(d.ai); }

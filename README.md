@@ -22,6 +22,13 @@ Local dev: `python3 serve.py 8765`.
 - v5.1: every item also gets a Yuka-style Health rating (js/health.js: Nutri-Score 2023 ~60%, additive risk tiers ~30%, organic ~10%; nutrition-only when ingredients are unknown). Precomputed in tools/build.js; organic/fruit-veg share come from `offdata/side.py`.
 - v6: additive & cosmetic-ingredient pages with cited sources (`js/encyc.js`; every link checked), allergen/diet alerts (`js/diet.js`, OFF allergen/traces/analysis tags via `tools/side2.py` plus ingredient text), cosmetics from the Open Beauty Facts bulk export (`tools/extract_obf.py`, then `node tools/build_cos.js`; run it after `tools/build.js`, which clears `data/`), better options after a scan, and a local Overview.
 
+## v7.1 (audit release)
+- Search: US packaged products first. Foreign and non-English labels, generic USDA rows on packaged-type queries, and unrequested alcohol are ranked lower. Restaurant rows rank higher only when you search a chain.
+- Store picks: juice and sports/sugary drinks are left out of picks. More pantry staples (cones, sauces, chopped nuts, beans) moved to Staples & ingredients. Aisle pages use a blended ranking instead of tied 100s.
+- Data checks: 0 g carbs on juice, fruit, chocolate milk or sauces is flagged (1,394 items). Per-serving entry errors on dry foods are flagged (3,396). Small servings that say "0 g" get a label-rounding penalty.
+- Aisles: produce no longer appears in Baby, Bakery or Deli. Supplements are split into Protein, Greens, Vitamins and Sport. Vinegar, ground meat and tuna steaks are fixed.
+- Cosmetics data restored (it had been missing since 6.3). Mobile product header no longer overflows. Scan falls back to typing the barcode when there is no camera.
+
 ## v7.0
 - Data check: every product is cross-checked with 4/4/9 Atwater factors (`LumiScore.implausible`). If calories are far above or below what carbs, protein and fat explain (with allowances for fiber, polyols, low-calorie sweeteners, alcohol and vinegar), or every nutrient is 0 for a food that must have carbs, the item is marked "data looks wrong", gets no Carb score or Health rating, and is left out of rankings. Curated USDA SR/Foundation and official restaurant data are not checked (rounding noise). Index flag: `d[10] & 8`.
 - Packaged picks are ready-to-eat only: pantry staples and cooking ingredients (canned tomatoes/pumpkin/beans, soup and broth, coffee and tea, cones, flour, sugar, oats, rice, pasta, spices, oils, eggs, tofu…) are under "Staples & ingredients" (`isStaple` in `js/v63.js`).
