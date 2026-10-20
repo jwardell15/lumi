@@ -125,6 +125,13 @@ const NAMEMAP = [[/\bfrozen\b.*\bpizza|\bpizza\b.*\bfrozen/, 'fz-pizza'], [/\bic
   [/\bmac(aroni)? (and|&) cheese|\bramen\b|instant noodles|\bhelper\b|rice mix|stuffing/, 'pt-boxed'], [/\bpasta\b|spaghetti|penne|macaroni|fettuccine|linguine|rotini|lasagna noodles|\bnoodles\b/, 'pt-pasta'], [/\brice\b|quinoa|couscous|farro|barley/, 'pt-rice'], [/\blentils|split peas|dry beans/, 'pt-beans'],
   [/\boil\b|vinegar/, 'pt-oil'], [/\bseasoning|\bspices?\b|\bsalt\b|pepper(corns)?\b|\bpaprika|cinnamon|\boregano|\bcumin|\brub\b/, 'pt-spice'], [/\bflour\b|cornmeal/, 'bk2-flour'], [/\bsugar\b|sweetener|stevia|monk fruit/, 'bk2-sugar'], [/\b(cake|brownie|muffin|cookie|pancake) mix/, 'bk2-mix'], [/chocolate chips|sprinkles|frosting|icing/, 'bk2-chips'], [/baking (soda|powder)|\bextract\b|\byeast\b/, 'bk2-other'],
   [/\bbaby\b|\binfant|toddler/, 'by-food'], [/\b(apples?|bananas?|oranges?|grapes|berries|strawberries|blueberries|avocados?|lemons?|limes?|peaches|pears|mangos?|pineapple|watermelon|cherries)\b/, 'pr-fruit'], [/\b(lettuce|spinach|kale|salad|carrots?|broccoli|onions?|potatoes|peppers?|cucumbers?|celery|mushrooms?|tomatoes|zucchini|cauliflower|cabbage)\b/, 'pr-veg']];
+const OVR = [[/\b(peanut|almond|cashew|sunflower( seed)?|pumpkin seed|seed|nut|hazelnut|pecan|walnut|pistachio|macadamia|soy ?nut|watermelon seed) butter\b|\btahini\b/, 'pt-nutbutter', /\b(cookies?|cups?|bars?|crackers?|pretzels?|filled|sandwich|wafers?|candy|bites|ice cream|frozen|gelato|pies?|fudge|chocolate|cheesecake|cereal|granola|puffs|eggs?|balls|protein (shake|drink|powder)|shakes?|trail|mix|clusters|popcorn|dessert|cakes?|brownies?|bread|swirl|squares|truffles?|nougat|bark|treats?|dog|oats|oatmeal|yogurt|smoothie|creamer|syrup|sauce)\b/],
+  [/\b(chips|crisps)\b/, 'sn-chips', /\b(chocolate|baking|cookies?|ice cream|mint chip|ahoy|pickles?)\b/],
+  [/\b(almonds|cashews|peanuts|pistachios|pecans|walnuts|mixed nuts|trail mix|sunflower seeds|pumpkin seeds)\b/, 'sn-nuts', /\b(milk|butter|bars?|chocolate covered|flour|cereal|granola|beverage|creamer|yogurt|cheese)\b/],
+  [/\b(egg noodles|noodles)\b/, 'pt-pasta', /\b(soup|ramen|instant|cup|bowl|meal|frozen|with|alfredo|stroganoff|chicken)\b/],
+  [/\b(cacao|cocoa) powder\b/, 'bk2-other', /\b(drink|hot cocoa|mix|protein)\b/],
+  [/\b(tofu|tempeh|seitan)\b/, 'mt-plant', /\b(chips|jerky|snack)\b/],
+  [/\b(black|pinto|kidney|garbanzo|navy|cannellini|refried|great northern|butter|lima|mayocoba|white) beans\b|\bchick ?peas\b|\blentils\b/, 'cn-beans', /\b(chips|crisps|snacks?|roasted|crunchy|puffs|pasta|soup|chili|dip|hummus|frozen|burritos?|rice and|& rice|salad)\b/]];
 const PET = /en:pet-foods?|en:dog-foods?|en:cat-foods?|en:animal-foods/;
 
 const WHOLE = { 'whole-fruit': 'pr-fruit', 'whole-veg': 'pr-veg' };
@@ -132,6 +139,13 @@ const WHOLE = { 'whole-fruit': 'pr-fruit', 'whole-veg': 'pr-veg' };
 function classify(r) {
   const c = (r.cats || '').toLowerCase(), u = r.ucat || '', n = (r.name || '').toLowerCase();
   const refine = i => { const a = SUB[i][1]; for (let j = 0; j < SUB.length; j++) if (j !== i && SUB[j][1] === a && SUB[j][5] && SUB[j][5].test(n)) return j; return i; };
+  // v6.3.1 strong name overrides: items whose identity is unambiguous beat loose category tags (seed butters were landing in Dairy, beans/tempeh in Snacks)
+  const base = classify0(c, u, n, refine);
+  if (base >= 0 && (SUB[base][1] === 'frozen' || /^(pt-beans|cn-beans|pt-nutbutter|cn-soup|dl-dips|cd-pickles|sn-bars)$/.test(SUB[base][0]))) return base;
+  for (const [re, id, not] of OVR) if (re.test(n) && !(not && not.test(n))) return BYID[id];
+  return base;
+}
+function classify0(c, u, n, refine) {
   if (c) for (let i = 0; i < SUB.length; i++) if (SUB[i][3] && SUB[i][3].test(c)) return i;
   if (u) for (let i = 0; i < SUB.length; i++) if (SUB[i][4] && SUB[i][4].test(u)) return refine(i);
   for (const [re, id] of NAMEMAP) if (re.test(n)) return BYID[id];

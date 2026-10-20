@@ -258,3 +258,33 @@ td.neg{color:#c0392b;font-weight:700}
 /* v6.3 */
 .aisles{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px;margin:6px 0 14px}.aisle{display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 6px;border-radius:16px;background:var(--card,#fff);border:1px solid var(--line);text-align:center;font-size:12.5px;color:inherit;text-decoration:none}.aisle span{font-size:26px}
 .storechips{flex-wrap:wrap}.sortchips{margin-top:4px}.btn.wide{width:100%;margin:10px 0}
+/* v6.3.1 responsive tablet/desktop (phone layout under 768px unchanged) */
+@media (min-width:768px){
+  body{padding-left:92px}
+  main{max-width:1280px;padding:10px 28px 40px}
+  header.bar{padding-left:28px}
+  .tabbar{left:0!important;top:0;bottom:0!important;right:auto!important;transform:none!important;width:92px!important;height:100vh;border-radius:0!important;border:0!important;border-right:1px solid var(--line)!important;flex-direction:column;justify-content:flex-start;gap:6px;padding:76px 0 16px!important}
+  .tabbar>a,.tabbar>button{flex:0 0 auto;width:100%;padding:10px 0}
+  .tab-scan .scan-btn{margin-top:0!important;transform:none!important}
+  .cmp-tray{bottom:24px}
+  .list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .list .row{margin:0}
+  .swaps{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;overflow:visible!important}
+  .swaps .swap{width:auto!important;min-width:0}
+  .quick{grid-template-columns:repeat(4,1fr)!important}
+  .aisles{grid-template-columns:repeat(5,1fr)!important}
+  #app.prodv{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:0 22px;align-items:start;grid-auto-flow:row dense}
+  #app.prodv>*{grid-column:2;min-width:0}
+  #app.prodv>.card:first-child,#app.prodv>#hcard,#app.prodv>.portion,#app.prodv>.foot{grid-column:1}
+  #app.prodv>.card:first-child .thumb.big{width:100%;height:auto;aspect-ratio:1;max-width:none}
+  #app.prodv>.card:first-child .ph{flex-direction:column;align-items:stretch}
+  .cmp{overflow:visible}.cmpt{font-size:15px}.cmpt th{width:auto}
+}
+@media (min-width:1100px){
+  .list{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .swaps{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .quick{grid-template-columns:repeat(7,1fr)!important}.quick .hero-scan{grid-column:span 2}
+  .aisles{grid-template-columns:repeat(7,1fr)!important}
+}
+@media (min-width:1400px){.list{grid-template-columns:repeat(4,minmax(0,1fr))}}
+#app.prodv .list{grid-template-columns:1fr}

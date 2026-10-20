@@ -56,7 +56,8 @@ function score(p) {
   if (net == null) return Object.assign(base, { score: null, band: 'na', label: 'Carbs unknown', items, missing: true });
   if (!q.ok) return Object.assign(base, { score: null, band: 'na', label: 'Data inconsistent', items, missing: true, bad: true });
   const ing = (p.ing || '').toLowerCase();
-  const add = (key, label, pts, detail) => { if (Math.abs(pts) >= 0.5) items.push({ key, label, pts: Math.round(pts * 10) / 10, detail }); };
+  let hidden = 0; // v6.3: small terms still count toward the total (so near-identical items don't all tie at 100); they're just not listed
+  const add = (key, label, pts, detail) => { if (Math.abs(pts) >= 0.5) items.push({ key, label, pts: Math.round(pts * 10) / 10, detail }); else hidden += pts; };
   const nc = net != null ? net : n.sugars;
   const liquid = !!p.liquid;
   // --- glycemic core
@@ -97,11 +98,21 @@ function score(p) {
   if (p.nova === 4) add('nova', 'Ultra-processed (NOVA 4)', -4, 'processing is weighed fully in the Health rating'); else if (p.nova === 3) add('nova', 'Processed (NOVA 3)', -2, '');
   const adds = (p.additives || []).filter((t, i, s) => ADDITIVES[t] && s.indexOf(t) === i);
   if (adds.length) add('additives', 'Additives of concern', -Math.min(8, adds.length * 2), adds.map(t => t.toUpperCase() + ' ' + ADDITIVES[t]).join(', '));
+  if (Math.abs(hidden) >= 0.05) items.push({ key: 'small', label: 'Small amounts (sodium, sat fat, sugar…) combined', pts: Math.round(hidden * 10) / 10, detail: 'each under 0.5' });
   const raw = 100 + items.reduce((s, i) => s + i.pts, 0);
   const sc = Math.max(0, Math.min(100, Math.round(raw)));
   items.sort((a, b) => a.pts - b.pts);
   const missing = [['fiber', 'fiber'], ['sugars', 'sugars'], ['sat', 'sat fat'], ['sodiumMg', 'sodium'], ['protein', 'protein']].filter(([k]) => n[k] == null).map(x => x[1]);
   return Object.assign(base, { score: sc, band: band(sc), label: label(sc), items, missingFields: missing, assumedServing: !p.servQ, netServ });
+}
+/* v6.3 "filler": basics with ~no calories or carbs (water, plain tea/coffee, salt, spices, extracts, zero-cal sweeteners, gum).
+   They still get a score, but they're kept out of "best of" rankings (home, stores, aisles, swaps, better options). */
+const FILLER = /\b(water|seltzer|club soda|ice|salt|pepper(corns)?|spices?|seasoning|herbs?|oregano|basil|paprika|cumin|cinnamon|garlic powder|onion powder|chili powder|turmeric|extract|vinegar|baking (soda|powder)|cream of tartar|yeast|gelatin|sweetener|stevia|sucralose|monk fruit|gum|mints?|tea|coffee|espresso|bouillon|broth|stock|hot sauce|mustard|food colou?ring|flavou?r drops|water enhancer|liquid enhancer)\b/i;
+function isFiller(p) {
+  const n = p.n || {}; const k = n.kcal, c = n.carbs, nm = String(p.name || '');
+  if (!FILLER.test(nm)) return false;
+  if (/\b(latte|mocha|frappuccino|chai latte|milk tea|bubble tea|sweet tea|creamer|cake|cookie|bar|chips|nuts?|candy|chocolate|jerky|cracker|pretzel)\b/i.test(nm)) return false;
+  return (k == null || k <= 25) && (c == null || c <= 5) || /\b(salt|spices?|seasoning|pepper(corns)?|oregano|basil|paprika|cumin|cinnamon|garlic powder|onion powder|chili powder|turmeric|extract|baking (soda|powder)|yeast|gelatin|food colou?ring)\b/i.test(nm) && (p.servQ == null || p.servQ <= 10);
 }
 const band = s => s == null ? 'na' : s >= 75 ? 'ex' : s >= 50 ? 'gd' : s >= 25 ? 'pr' : 'bd';
 const label = s => ({ ex: 'Excellent', gd: 'Good', pr: 'Poor', bd: 'Bad', na: 'Not enough data' })[band(s)];
@@ -149,5 +160,5 @@ function fromCompact(a) {
   return { id: code, code: /^\d+$/.test(code) ? code : '', src: meta ? (meta.src.includes('official') ? 'chain' : 'usda') : 'local', fdcId: /^fdc-/.test(code) ? code.slice(4) : undefined, name, brand, qty, img: img ? (img.startsWith('w:') ? 'img/w/' + img.slice(2) + '-200.webp' : img.startsWith('http') ? img : 'https://images.openfoodfacts.org/images/products/' + img) : '', servQ, serv, nova, additives: adds ? adds.split(',') : [], ing, cat, cats: cat, naLabel: !!(fl & 1), liquid: !!(fl & 2), carby: fl & 16 ? !!(fl & 4) : undefined, dry: fl & 16 ? !!(fl & 8) : undefined, portions: portions || null, meta: meta || null, hx: a[15] || null, n };
 }
 const imgSize = (u, n) => u ? u.replace(/\.(100|200|400|full)\.jpg$/, '.' + n + '.jpg').replace(/-(200|400)\.webp$/, '-' + n + '.webp') : '';
-return { DRY, CARBY, imgSize, score, quality, fromOFF, fromUSDA, fromCompact, band, label, netCarbs, addTags, isNA, isLiquid, DK, ADDITIVES };
+return { isFiller, DRY, CARBY, imgSize, score, quality, fromOFF, fromUSDA, fromCompact, band, label, netCarbs, addTags, isNA, isLiquid, DK, ADDITIVES };
 });

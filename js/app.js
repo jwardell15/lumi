@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '6.3.0';
+const VERSION = '6.3.1';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -92,7 +92,7 @@ async function usdaByGtin(code) { const r = await usdaSearch(gtinKey(code)); ret
 
 /* ---------------- result items ---------------- */
 function itemFromProduct(p, rel) { const s = S.score(p); memo.set(p.id, p); const hr = HR(p); return { m: p.src === 'cos' ? null : dietM(p), h: hr.score, hn: hr.basis === 'nutrition', id: p.id, code: p.code, name: p.name, brand: p.brand, score: s.score, net: s.score == null ? null : s.net, img: p.img, src: p.src, cat: p.cat, rel }; }
-function itemFromDoc(d) { return { al: d.al, df: d.df, h: d.h, hn: d.hn, id: d.code, code: d.code, name: d.name, brand: d.brand, score: d.score, net: d.score == null ? null : d.net, img: d.img, src: d.src || 'local', cat: d.cat, keys: d.keys, rel: d.rel }; }
+function itemFromDoc(d) { return { sizes: d.sizes, fl: d.fl, al: d.al, df: d.df, h: d.h, hn: d.hn, id: d.code, code: d.code, name: d.name, brand: d.brand, score: d.score, net: d.score == null ? null : d.net, img: d.img, src: d.src || 'local', cat: d.cat, keys: d.keys, rel: d.rel }; }
 function textRel(q, name, brand) {
   const qt = LumiSearch.toks(q), nt = new Set(LumiSearch.toks(name + ' ' + brand)); if (!qt.length) return 0;
   let hit = 0; for (const t of qt) if (nt.has(t) || [...nt].some(x => x.startsWith(t) || (t.length > 4 && LumiSearch.dl(t, x, 1) <= 1))) hit++;
@@ -122,7 +122,7 @@ function thumb(img, name, keys, cat, big, brand) {
   return `<div class="thumb${big ? ' big' : ''}">${bg}${src ? `<img src="${esc(src)}" alt="" ${big ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async" onload="LumiImg.ok(this)" onerror="LumiImg.err(this)">` : ''}</div>`;
 }
 const SRC = { local: '', off: '<span class="tag">OFF</span>', usda: '<span class="tag">USDA</span>', whole: '<span class="tag t-whole">Whole food</span>', rest: '<span class="tag t-rest">Restaurant</span>', chain: '<span class="tag t-rest">Restaurant</span>', custom: '<span class="tag">My food</span>' };
-function rowHTML(it) { return `<a class="row" href="#/product/${esc(it.id)}">${thumb(it.img, it.name, it.keys, it.cat, false, it.brand)}<div class="t"><div class="n">${alertIcon(it)}${esc(it.name)}</div><div class="b">${SRC[it.src] || ''}${esc(it.brand || '')}${it.score == null ? ' · <span class="c-pr">data incomplete</span>' : it.net != null ? ` · ${r1(it.net)}g net carbs/100` : ''}</div></div>${mini(it)}</a>`; }
+function rowHTML(it) { return `<a class="row" href="#/product/${esc(it.id)}">${thumb(it.img, it.name, it.keys, it.cat, false, it.brand)}<div class="t"><div class="n">${alertIcon(it)}${esc(it.name)}</div><div class="b">${SRC[it.src] || ''}${esc(it.brand || '')}${it.sizes > 1 ? ` · ${it.sizes} sizes` : ''}${it.score == null ? ' · <span class="c-pr">data incomplete</span>' : it.net != null ? ` · ${r1(it.net)}g net carbs/100` : ''}</div></div>${mini(it)}</a>`; }
 const skel = n => `<div class="list">${Array.from({ length: n }, () => `<div class="row skel"><div class="thumb sk"></div><div class="t"><div class="sk skl" style="width:80%"></div><div class="sk skl" style="width:45%"></div></div><div class="sk" style="width:44px;height:44px;border-radius:50%"></div></div>`).join('')}</div>`;
 function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 2200); }
 const go = h => { if (location.hash !== h) location.hash = h; else route(); };
@@ -213,7 +213,7 @@ const usEnglish = d => /^[\x20-\x7e]+$/.test(d.name + d.brand) && !NONEN.test(d.
 function topPicks() {
   const off = [], whole = [], rest = [];
   for (const d of engine.docs) {
-    if (d.score == null || d.net == null) continue;
+    if (d.score == null || d.net == null || d.fl) continue;
     if (d.src === 'whole') { if (d.score >= 70 && d.net >= 5) whole.push(d); continue; }
     if (d.src === 'rest') { if (d.score >= 65 && d.net >= 8 && /^r-/.test(d.code) && !NOTMEAL.test(d.name)) rest.push(d); continue; }
     if (d.rank < 40000 && d.score >= 72 && d.net >= 2 && d.brand && usEnglish(d) && !/\bwater\b/i.test(d.name)) off.push(d);
@@ -312,11 +312,11 @@ function renderResults() {
   if ($('#more')) $('#more').onclick = () => { rs.limit = lim + 40; renderResults(); };
 }
 function mergeItems(list) {
-  if (!rs.keyIdx) { rs.keyIdx = new Map(); for (const x of rs.items.values()) { const g = gtinKey(x.code); if (g) rs.keyIdx.set('g' + g, x); rs.keyIdx.set('n' + LumiSearch.norm(x.name + '|' + x.brand), x); } }
+  if (!rs.keyIdx) { rs.keyIdx = new Map(); for (const x of rs.items.values()) { const g = gtinKey(x.code); if (g) rs.keyIdx.set('g' + g, x); rs.keyIdx.set('n' + LumiSearch.groupKey(x.name, x.brand), x); } }
   for (const it of list) {
-    const g = gtinKey(it.code), nk = 'n' + LumiSearch.norm(it.name + '|' + it.brand);
+    const g = gtinKey(it.code), nk = 'n' + LumiSearch.groupKey(it.name, it.brand);
     const dup = (g && rs.keyIdx.get('g' + g)) || rs.keyIdx.get(nk);
-    if (dup && dup.id !== it.id) { if (!dup.img && it.img) dup.img = it.img; continue; }
+    if (dup && dup.id !== it.id) { if (!dup.img && it.img) dup.img = it.img; dup.sizes = (dup.sizes || 1) + 1; continue; }
     rs.items.set(it.id, it); if (g) rs.keyIdx.set('g' + g, it); rs.keyIdx.set(nk, it);
   }
 }
@@ -354,7 +354,7 @@ function viewBrowse(key) {
 }
 
 /* ---------------- product ---------------- */
-async function resolveProduct(id) { const p = await resolveProduct0(id); if (p && p.brand && window.LumiStores) { const a = LumiStores.alias(p.brand); if (a) p.brand = a; } return p; }
+async function resolveProduct(id) { const p = await resolveProduct0(id); if (p && p.name) p.name = LumiSearch.fixName(p.name); if (p && p.brand && window.LumiStores) { const a = LumiStores.alias(p.brand); if (a) p.brand = a; } return p; }
 async function resolveProduct0(id) {
   if (/^(fdc-|r-|ms-|cnf-)/.test(id)) { const g = await genericProduct(id); if (g) return g; }
   if (memo.has(id)) return memo.get(id);
@@ -445,6 +445,7 @@ async function viewProduct(id) {
   const srcLink = p.meta && p.meta.url ? `<a style="color:var(--acc)" href="${esc(p.meta.url)}" target="_blank" rel="noopener">${esc(p.meta.src)}</a>${p.meta.date ? ', ' + esc(p.meta.date) : ''}` : p.src === 'custom' ? 'your custom food' : p.src === 'usda' ? `<a style="color:var(--acc)" href="https://fdc.nal.usda.gov/food-details/${p.fdcId}/nutrients" target="_blank" rel="noopener">USDA FoodData Central</a>` : `<a style="color:var(--acc)" href="https://world.openfoodfacts.org/product/${esc(p.code)}" target="_blank" rel="noopener">Open Food Facts</a>`;
   const F = s.missing ? null : factRows(p, s);
   const issues = s.quality && s.quality.issues.length ? s.quality.issues : null;
+  app.classList.add('prodv');
   app.innerHTML = `
   <div class="card">
     <div class="ph">${thumb(p.img, p.name, keys, p.cat, true, p.brand)}
@@ -489,13 +490,13 @@ function swapsFor(doc, cur, limit = 6) {
   const leaf = (doc.keys || []).slice(-1)[0]; if (leaf == null || cur.score == null || ['whole', 'rest'].includes(C.KEYS[leaf])) return [];
   const out = [];
   for (const d of engine.docs) {
-    if (!d.keys.includes(leaf) || d.code === doc.code || d.score == null || d.net == null) continue;
+    if (!d.keys.includes(leaf) || d.code === doc.code || d.score == null || d.net == null || d.fl) continue;
     const gain = d.score - cur.score, red = (cur.net ?? d.net) - d.net;
     if (gain < 5 || red < -2 || (cur.net >= 10 && d.net < cur.net * 0.35)) continue;
     out.push({ d, gain, red, sug: cur.sugar != null && d.sugar != null ? cur.sugar - d.sugar : 0, rank: gain + 0.6 * red - d.rank / engine.docs.length * 5 });
   }
   out.sort((a, b) => Math.abs(a.d.score - b.d.score) <= 5 ? (a.d.net - b.d.net) || b.rank - a.rank : b.rank - a.rank); // within ~5 points, lower net carbs wins
-  const seen = new Set(); return out.filter(x => { const k = LumiSearch.norm(x.d.name + x.d.brand); if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, limit)
+  const seen = new Set(); return out.filter(x => { const k = LumiSearch.groupKey(x.d.name, x.d.brand); if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, limit)
     .map(x => Object.assign({}, x.d, { reason: [x.red >= 1 ? `−${Math.round(x.red)}g net carbs` : '', x.sug >= 3 ? 'less sugar' : '', `+${x.gain} pts`].filter(Boolean).join(', ') }));
 }
 async function renderSwaps(p, s) {
@@ -588,7 +589,7 @@ $('#theme').onclick = () => { const cur = document.documentElement.dataset.theme
 function route() {
   if (scanner) stopScan();
   rs = null; window.scrollTo(0, 0); document.title = 'Lumi — food scanner';
-  if (typeof closeSheet === 'function' && !document.querySelector('.onb')) closeSheet(); app.classList.remove('enter'); void app.offsetWidth; app.classList.add('enter'); setTimeout(drawCmpTray, 0);
+  if (typeof closeSheet === 'function' && !document.querySelector('.onb')) closeSheet(); app.classList.remove('enter', 'prodv'); void app.offsetWidth; app.classList.add('enter'); setTimeout(drawCmpTray, 0);
   const h = location.hash.replace(/^#\/?/, ''); const i = h.indexOf('/'); const view = i < 0 ? h : h.slice(0, i); const arg = i < 0 ? '' : decodeURIComponent(h.slice(i + 1));
   document.querySelectorAll('.tabbar a').forEach(a => a.classList.toggle('on', a.dataset.v === (['search', 'browse', 'product', ''].includes(view) ? 'home' : view === 'favorites' ? 'saved' : ['about', 'custom'].includes(view) ? 'settings' : ['compare', 'meal', 'cosmetics', 'cos', 'additive', 'additives', 'ingredient'].includes(view) ? 'home' : view === 'overview' ? 'saved' : view)));
   if (view === 'product' && arg) return viewProduct(/^\d+$/.test(arg.replace(/\s/g, '')) ? arg.replace(/\s/g, '') : arg);

@@ -35,7 +35,8 @@ if (xsrc) {
 const ST63 = require('../js/stores.js'), AI = require('../js/aisles.js');
 const BC = new Map(); for (const l of lines) { const m = l.match(/"brand":"((?:[^"\\]|\\.)*)"/); if (!m) continue; let b; try { b = JSON.parse('"' + m[1] + '"'); } catch { continue; } const k = ST63.key(b); if (!k) continue; const c = BC.get(k) || {}; c[b] = (c[b] || 0) + 1; BC.set(k, c); }
 const pretty = b => b === b.toUpperCase() && /[A-Z]{3}/.test(b) ? b.toLowerCase().replace(/(^|[\s\-&/(])([a-z])/g, (m, a, c) => a + c.toUpperCase()).replace(/'S\b/g, "'s") : b;
-const canonBrand = b => { const k = ST63.key(b); if (!k) return b || ''; const a = ST63.alias(b); if (a) return a; const c = BC.get(k); if (!c) return pretty(b); const top = Object.entries(c).sort((x, y) => (y[0] !== y[0].toUpperCase()) - (x[0] !== x[0].toUpperCase()) || y[1] - x[1])[0][0]; return pretty(top); };
+const SLUG = /^[a-z0-9]+(-[a-z0-9]+)+$/; const unslug = b => b.replace(/-/g, ' ').replace(/(^|\s)([a-z])/g, (m, a, c) => a + c.toUpperCase());
+const canonBrand = b => { const k = ST63.key(b); if (!k) return b || ''; const a = ST63.alias(b); if (a) return a; const c = BC.get(k); if (!c) return SLUG.test(b) ? unslug(b) : pretty(b); const top = Object.entries(c).sort((x, y) => (SLUG.test(x[0]) - SLUG.test(y[0])) || (y[0] !== y[0].toUpperCase()) - (x[0] !== x[0].toUpperCase()) || y[1] - x[1])[0][0]; return SLUG.test(top) ? unslug(top) : pretty(top); };
 const A63 = { brandsBefore: BC.size, aisle: {}, stores: {}, pets: 0, photoOther: 0 };
 const cats = [], catIdx = new Map(), docs = [], shards = {}; const seen = new Set();
 const rnd = v => v == null ? null : Math.round(v * 10) / 10;
@@ -81,7 +82,7 @@ for (const l of lines) {
   if (ai >= 0) A63.aisle[AI.SUB[ai][1]] = (A63.aisle[AI.SUB[ai][1]] || 0) + 1; else A63.aisle.none = (A63.aisle.none || 0) + 1;
   ST63.STORES.forEach((x, i) => { if (sm & (1 << i)) A63.stores[x[0] + ':brand'] = (A63.stores[x[0] + ':brand'] || 0) + 1; if (sm & (1 << (16 + i))) A63.stores[x[0] + ':soldAt'] = (A63.stores[x[0] + ':soldAt'] || 0) + 1; });
   if (SRC.p === 'o2') A63.photoOther++;
-  docs.push([r.code, r.name, r.brand, s.score == null ? -1 : s.score, s.score == null || s.net == null ? -1 : Math.round(s.net), catIdx.get(cat), img ? short : '', keys, m.sugars == null ? -1 : Math.round(m.sugars), hr.score == null ? -1 : hr.score, (hr.basis === 'nutrition' ? 1 : 0) | (hr.est.length ? 2 : 0), hx.am | hx.tm << 9, hx.df, sm, ai]);
+  docs.push([r.code, r.name, r.brand, s.score == null ? -1 : s.score, s.score == null || s.net == null ? -1 : Math.round(s.net), catIdx.get(cat), img ? short : '', keys, m.sugars == null ? -1 : Math.round(m.sugars), hr.score == null ? -1 : hr.score, (hr.basis === 'nutrition' ? 1 : 0) | (hr.est.length ? 2 : 0) | (S.isFiller(p) ? 4 : 0), hx.am | hx.tm << 9, hx.df, sm, ai]);
   const k = r.code.slice(-3); (shards[k] = shards[k] || {})[r.code] = comp;
 }
 const TIERS = [[0, 15000], [15000, 70000], [70000, 130000]]; for (let a = 130000; a < docs.length; a += 70000) TIERS.push([a, Math.min(docs.length, a + 70000)]);
@@ -124,7 +125,7 @@ if (gsrc) {
     let keys = r.keys.filter(k => k === 'rest' || k === 'whole' || !k.startsWith('rest-') || okKeys.has(k) || k === 'rest-other');
     if (r.keys[1] && r.keys[1].startsWith('rest-') && !okKeys.has(r.keys[1]) && r.keys[1] !== 'rest-other') keys = ['rest', 'rest-other'];
     if (!gci.has(r.group)) { gci.set(r.group, gcats.length); gcats.push(r.group); }
-    gdocs.push([r.id, r.name, r.brand, s.score == null ? -1 : s.score, s.score == null || s.net == null ? -1 : Math.round(s.net), gci.get(r.group), comp[4] || '', keys.join('.'), n.sugars == null ? -1 : Math.round(n.sugars), hr.score == null ? -1 : hr.score, (hr.basis === 'nutrition' ? 1 : 0) | (hr.est.length ? 2 : 0), hx.am | hx.tm << 9, hx.df, 0, (() => { const w = r.keys.find(k => AI.WHOLE[k]); return w && isWhole ? AI.BYID[AI.WHOLE[w]] : -1; })()]);
+    gdocs.push([r.id, r.name, r.brand, s.score == null ? -1 : s.score, s.score == null || s.net == null ? -1 : Math.round(s.net), gci.get(r.group), comp[4] || '', keys.join('.'), n.sugars == null ? -1 : Math.round(n.sugars), hr.score == null ? -1 : hr.score, (hr.basis === 'nutrition' ? 1 : 0) | (hr.est.length ? 2 : 0) | (S.isFiller(p) ? 4 : 0), hx.am | hx.tm << 9, hx.df, 0, (() => { const w = r.keys.find(k => AI.WHOLE[k]); return w && isWhole ? AI.BYID[AI.WHOLE[w]] : -1; })()]);
     const k = hash(r.id); (gsh[k] = gsh[k] || {})[r.id] = comp;
   }
   fs.mkdirSync(path.join(out, 'g'), { recursive: true });
@@ -133,5 +134,5 @@ if (gsrc) {
   META.whole = gdocs.filter(d => d[7].startsWith('whole')).length; META.restaurant = gdocs.length - META.whole; META.chains = dyn.length; META.chainCounts = dyn.map(x => [x[1], chainCount[x[0]], G.some(r => r.keys[1] === x[0] && r.src.includes('official')) ? 'official' : 'USDA']);
   console.log('generic', JSON.stringify(ga), 'chains', dyn.map(x => x[1] + ':' + chainCount[x[0]]).join(', '));
 }
-META.health = COV; META.v63 = A63; console.log('V63', JSON.stringify(A63)); META.sources = ST; console.log('SOURCES', JSON.stringify(ST, null, 1)); META.allergenData = ALC; console.log('ALLERGEN', JSON.stringify(ALC)); console.log('HEALTH', JSON.stringify(COV));
+META.health = COV; META.v63 = A63; META.fillers = { grocery: docs.filter(d => d[10] & 4).length }; console.log('V63', JSON.stringify(A63)); META.sources = ST; console.log('SOURCES', JSON.stringify(ST, null, 1)); META.allergenData = ALC; console.log('ALLERGEN', JSON.stringify(ALC)); console.log('HEALTH', JSON.stringify(COV));
 fs.writeFileSync(path.join(out, 'meta.json'), JSON.stringify(META));
