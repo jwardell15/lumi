@@ -24,7 +24,7 @@ const SIZEW = /\b\d+(\.\d+)?\s*(fl\.? ?oz|oz|ounces?|ct|count|pk|pack|packs|g|gr
 /* v6.3 duplicate group: same brand + same name once sizes/pack words are removed */
 const groupKey = (name, brand) => { const b = norm(String(brand || '').toLowerCase().replace(/[’']/g, '')); let n = norm(String(name || '').toLowerCase().replace(/[’']/g, '').replace(SIZEW, ' '));
   const bw = b.split(' ').filter(w => w.length > 2); n = n.split(' ').filter(w => !bw.includes(w)).map(w => w.length > 3 ? w.replace(/(es|s)$/, '') : w).join(' '); return b + '|' + n; };
-let WATER_; const water = () => WATER_ ?? (WATER_ = typeof self !== 'undefined' && self.LumiAisles ? self.LumiAisles.BYID['bv-water'] : -2); // plain/sparkling water with ~0 carbs counts as filler even when the name doesn't say "water"
+let WATER_; const water = () => WATER_ ?? (WATER_ = typeof self !== 'undefined' && self.LumiAisles ? [self.LumiAisles.BYID['bv-water'], self.LumiAisles.BYID['bv-sparkling']] : []); // plain/sparkling water with ~0 carbs counts as filler even when the name doesn't say "water"
 const OFFAL = /\b(liver|livers|gizzards?|hearts?|kidneys?|tongue|tripe|giblets?|feet|paws|necks?|brains?|spleen|lungs?|chitterlings|offal|mechanically separated|separable fat|skin only|backs?|frames?|testes|sweetbreads?|blood|marrow|ears?|snouts?)\b/;
 const MEATQ = /\b(chicken|beef|pork|turkey|lamb|steak)\b/;
 const COMMON = /\b(breasts?|thighs?|tenders?|tenderloins?|nuggets?|rotisserie|wings?|drumsticks?|ground|strips?|grilled|patties|sirloin|ribeye|chops?|loin)\b/;
@@ -36,11 +36,14 @@ const dstem = w => w.length > 4 && w.endsWith('ies') ? w.slice(0, -3) + 'y' : w.
 function dtoks(d) { const bw = new Set(norm(String(d.brand || '').toLowerCase()).split(' ')); const W = norm(String(d.name || '').toLowerCase().replace(/[’']/g, '').replace(SIZEW, ' ')).split(' ').filter(w => w && !DSTOP.has(w) && !/^\d+$/.test(w)); const W2 = W.filter(w => !bw.has(w)); return new Set((W2.length ? W2 : W).map(dstem)); }
 const near = (a, b, tol = 0.1, abs = 1) => a == null || b == null ? a == b : Math.abs(a - b) <= Math.max(abs, tol * Math.max(a, b));
 function simTok(A, B) { if (!A.size || !B.size) return A.size === B.size ? 1 : 0; let k = 0; for (const t of A) if (B.has(t)) k++; const m = Math.min(A.size, B.size); return (m < 2 && A.size !== B.size) ? k / Math.max(A.size, B.size) : k / m; }
+const ADJ = new Set('hand shelled snacking snack halve halves piece pieces whole chopped raw natural premium select fancy jumbo large medium small extra light golden california giant mammoth bulk bag resealable'.split(' '));
+const core = T => { const o = [...T].filter(t => !ADJ.has(t)); return o.sort().join(' '); };
+function sameNut5(a, b) { return near(a.net, b.net, 0.05, 0.5) && near(a.sugar, b.sugar, 0.05, 0.5) && near(a.score, b.score, 0.05, 2) && near(a.h, b.h, 0.05, 3); }
 function sameNut(a, b) { return near(a.net, b.net) && near(a.sugar, b.sugar) && near(a.score, b.score, 0.1, 3) && near(a.h, b.h, 0.1, 5); }
 function dedupe(list, get = x => x, max = Infinity) { const seen = new Map(), buck = new Map(), out = [];
   for (const x of list) { if (out.length >= max) break; const d = get(x); const k = groupKey(d.name, d.brand);
     let f = seen.get(k); const bk = (norm(String(d.brand || '').toLowerCase()).split(' ')[0] || '?'); const T = dtoks(d);
-    if (!f) { const B = buck.get(bk) || []; for (let i = 0; i < B.length && i < 400; i++) { const [t2, d2] = B[i]; if (simTok(T, t2) >= 0.85 && sameNut(d, d2)) { f = d2; break; } } }
+    if (!f) { const B = buck.get(bk) || []; for (let i = 0; i < B.length && i < 400; i++) { const [t2, d2] = B[i]; if ((simTok(T, t2) >= 0.85 && sameNut(d, d2)) || (core(T) && core(T) === core(t2) && sameNut5(d, d2))) { f = d2; break; } } }
     if (f) { f.sizes = (f.sizes || 1) + 1; continue; }
     d.sizes = 0; seen.set(k, d); if (!buck.has(bk)) buck.set(bk, []); buck.get(bk).push([T, d]); out.push(x); }
   return out; }
@@ -58,7 +61,7 @@ class Engine {
     const cats = data.generic ? data.cats : this.cats; const KC = root.LumiCats;
     for (const d of data.docs) {
       const i = this.docs.length;
-      const doc = { code: d[0], name: fixName(d[1]), brand: d[2] || '', score: d[3] < 0 ? null : d[3], net: d[4] < 0 ? null : d[4], cat: cats[d[5]] || '', img: imgURL(d[0], d[6]), keys: d[7] ? d[7].split('.').map(k => /^\d+$/.test(k) ? +k : (KC ? KC.KEYS.indexOf(k) : -1)).filter(k => k >= 0) : [], sugar: d[8] == null || d[8] < 0 ? null : d[8], h: d[9] == null || d[9] < 0 ? null : d[9], hn: !!(d[10] & 1), al: d[11] || 0, df: d[12] == null ? null : d[12], src: data.generic ? (d[7] && d[7].startsWith('rest') ? 'rest' : 'whole') : 'local', rank: i, sm: d[13] || 0, ai: d[14] == null ? -1 : d[14], fl: !!(d[10] & 4) || (d[14] === water() && d[4] >= 0 && d[4] <= 0.5) };
+      const doc = { code: d[0], name: fixName(d[1]), brand: d[2] || '', score: d[3] < 0 ? null : d[3], net: d[4] < 0 ? null : d[4], cat: cats[d[5]] || '', img: imgURL(d[0], d[6]), keys: d[7] ? d[7].split('.').map(k => /^\d+$/.test(k) ? +k : (KC ? KC.KEYS.indexOf(k) : -1)).filter(k => k >= 0) : [], sugar: d[8] == null || d[8] < 0 ? null : d[8], h: d[9] == null || d[9] < 0 ? null : d[9], hn: !!(d[10] & 1), al: d[11] || 0, df: d[12] == null ? null : d[12], src: data.generic ? (d[7] && d[7].startsWith('rest') ? 'rest' : 'whole') : 'local', rank: i, sm: d[13] || 0, ai: d[14] == null ? -1 : d[14], fl: !!(d[10] & 4) || (water().includes(d[14]) && d[4] >= 0 && d[4] <= 0.5) };
       doc.nn = norm(doc.name + ' ' + doc.brand);
       this.docs.push(doc);
       const seen = new Map();

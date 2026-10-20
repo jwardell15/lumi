@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '6.3.3';
+const VERSION = '6.3.4';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -488,8 +488,8 @@ async function viewProduct(id) {
 }
 function orTryWater(doc, limit = 4) {
   if (doc.ai !== LumiAisles.BYID['bv-soda']) return [];
-  const W = LumiAisles.BYID['bv-water'], sp = /\b(sparkling|seltzer|bubly|la ?croix|spindrift|pellegrino|perrier|topo chico|polar)\b/i;
-  return LumiSearch.dedupe(engine.docs.filter(d => d.ai === W && d.score != null && sp.test(d.name + ' ' + d.brand)).sort((a, b) => (b.img ? 1 : 0) - (a.img ? 1 : 0) || a.rank - b.rank), x => x, limit);
+  const WW = [LumiAisles.BYID['bv-water'], LumiAisles.BYID['bv-sparkling']], sp = /\b(sparkling|seltzer|bubly|la ?croix|spindrift|pellegrino|perrier|topo chico|polar)\b/i;
+  return LumiSearch.dedupe(engine.docs.filter(d => WW.includes(d.ai) && d.score != null && sp.test(d.name + ' ' + d.brand)).sort((a, b) => (b.img ? 1 : 0) - (a.img ? 1 : 0) || a.rank - b.rank), x => x, limit);
 }
 function swapsFor(doc, cur, limit = 6) {
   const leaf = (doc.keys || []).slice(-1)[0]; if (leaf == null || cur.score == null || ['whole', 'rest'].includes(C.KEYS[leaf])) return [];

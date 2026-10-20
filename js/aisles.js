@@ -107,7 +107,10 @@ const SUB = [
   ['by-formula', 'baby', 'Baby formula', /en:infant-formulas|en:baby-milks/, /children's nutritional/i, /\binfant formula\b/],
   ['by-food', 'baby', 'Baby food & snacks', /en:baby-foods|en:baby-food/, /baby\/infant/i, null],
   // v6.3.3 (appended so stored indexes stay valid)
-  ['sp-powder', 'supp', 'Protein, greens & supplement powders', /en:protein-powders|en:bodybuilding-supplements|en:dietary-supplements/, /vitamins|herbal supplements|^supplements|sport supplements/i, /\b(protein powder|greens powder|superfood (blend|powder)|collagen (peptides|powder)|whey (protein|isolate)|pre-?workout|creatine|supplement)\b/]
+  ['sp-powder', 'supp', 'Protein, greens & supplement powders', /en:protein-powders|en:bodybuilding-supplements|en:dietary-supplements/, /vitamins|herbal supplements|^supplements|sport supplements/i, /\b(protein powder|greens powder|superfood (blend|powder)|collagen (peptides|powder)|whey (protein|isolate)|pre-?workout|creatine|supplement)\b/],
+  // v6.3.4
+  ['bv-sparkling', 'bev', 'Flavored sparkling water', null, null, null],
+  ['bv-tonic', 'bev', 'Kombucha, tonics & functional drinks', /en:kombuchas/, /kombucha/i, /\bkombucha\b/]
 ];
 const BYID = Object.fromEntries(SUB.map((s, i) => [s[0], i]));
 // name keyword fallback (only when no category tag or USDA category matched), most specific first
@@ -129,10 +132,21 @@ const NAMEMAP = [[/\bfrozen\b.*\bpizza|\bpizza\b.*\bfrozen/, 'fz-pizza'], [/\bic
   [/\bbaby\b|\binfant|toddler/, 'by-food'], [/\b(apples?|bananas?|oranges?|grapes|berries|strawberries|blueberries|avocados?|lemons?|limes?|peaches|pears|mangos?|pineapple|watermelon|cherries)\b/, 'pr-fruit'], [/\b(lettuce|spinach|kale|salad|carrots?|broccoli|onions?|potatoes|peppers?|cucumbers?|celery|mushrooms?|tomatoes|zucchini|cauliflower|cabbage)\b/, 'pr-veg']];
 const SALADCO = /\b(fresh express|little salad bar|dole|taylor farms|earthbound|organic girl|marketside|bowery|gotham greens|vertical roots|little leaf|revol|plenty|brightfarms|ready pac|church brothers|tanimura|josie'?s)\b/;
 const EGGSUB = /\b(egg (substitute|replacer|alternative)s?|vegan egg|plant[- ]based egg|just egg|egg[- ]free egg|eggless)\b/;
-const OVR = [[/\b((almond|oat|coconut|soy|cashew|plant[- ]based|pea|macadamia|hemp|non-?dairy|dairy[- ]free|vegan)( milk)? (coffee )?creamers?|(almond|oat|soy|cashew|coconut|pea|macadamia|hemp|rice) (milk|beverage|drink)|non-?dairy (milk|beverage))\b/, 'dy-plantmilk', /\b(chocolate bar|ice cream|frozen|yogurt|cheese)\b/],
+// brand-aware drink rules (tested on name + brand)
+const DRINK = [[/\b(glow|celsius|red ?bull|monster|c4|alani( nu)?|ghost|bang|reign|rockstar|nos|full throttle|prime energy|zoa|3d energy|bucked up|ryse|accelerator|5[- ]hour|energy drink|sparkling energy|energy)\b/, 'bv-energy', /\b(bars?|gummies|chews|powder|shot blocks|cereal|protein bar|bites)\b/],
+  [/\b(olipop|poppi|culture pop|zevia|wild wonder|slice soda|health-?ade soda|bloom pop|diet (coke|cola|pepsi|dr pepper|sprite|7up|mountain dew|soda)|(coke|coca-?cola|pepsi|sprite|dr pepper|mountain dew|fanta|7up) (zero|diet|max)|zero sugar (cola|soda)|coke zero)\b/, 'bv-soda', /\b(syrup|candy|gummies|cake|chips)\b/],
+  [/\b(alive|mushroom elixir|elixir|kombucha|tonic(?! water)|apple cider vinegar drink|adaptogen|functional (drink|beverage)|probiotic drink|kefir water|jun|switchel|recess|kin euphorics)\b/, 'bv-tonic', /\b(tonic water|gin)\b/],
+  [/\b(bubly|la ?croix|spindrift|waterloo|polar|topo chico|maison perrier|perrier|san pellegrino|s\.? ?pellegrino|aha|klarbrunn|sparkling ice|sparkling water|seltzer|essentia sparkling|ozarka sparkling|nixie|hal'?s)\b/, 'bv-sparkling', /\b(hard|vodka|tequila|alcohol|spiked|truly|white claw|high noon|coors|smirnoff|bud light|beer|abv|cocktail|rum|gin)\b/]];
+const DAIRYOUT = [[/\bmac(aroni)? ?(&|and|n) ?cheese|\bcheese (pizza|crackers|puffs|curls|balls|its|nips|bread|sticks? snack)|\bquesadilla|\bburrito|\blasagna|\bravioli/, 'pt-boxed'],
+  [/\b(shakes?|protein (drink|shake|milk|beverage)|muscle milk|premier protein|core power|ensure|boost|slimfast|atkins)\b/, 'bv-protein'],
+  [/\b(latte mix|drink mix|cocoa mix|powder|powdered)\b/, 'sp-powder'],
+  [/\b(konjac|jelly|gummies|candy)\b/, 'sn-candy'], [/\b(not ?milk|pecanmilk|oatmilk|almondmilk|cashewmilk)\b/, 'dy-plantmilk'], [/\b(chocolate bar|candy bar|wafer bar|bars?)\b/, 'sn-choc'], [/\b(imitation|flavou?r(ing)?|extract)\b(?!.*(yogurt|milk|cheese|cream))/, 'bk2-other']];
+const EGGPROD = /\b(egg beaters|egg whites?|liquid eggs?|egg product|real egg|hard[- ]boiled eggs?|egg bites|cage[- ]free eggs?|large eggs|eggs)\b/;
+const OVR = [[/\b(omega[- ]?3|fish oil|krill (oil|oul)|multi ?vitamins?|vitamin [a-k]\d*|capsules|softgels|tablets|probiotic capsules|fiber supplement|melatonin|magnesium (glycinate|citrate)|electrolyte tablets)\b/, 'sp-powder', /\b(fortified|with vitamin|juice|milk|cereal|water)\b/],
+  [/\b((almond|oat|coconut|soy|cashew|plant[- ]based|pea|macadamia|hemp|non-?dairy|dairy[- ]free|vegan)( milk)? (coffee )?creamers?|(almond|oat|soy|cashew|coconut|pea|macadamia|hemp|rice|pecan|flax|walnut|pistachio|hazelnut|banana|potato|quinoa|sesame|peanut|tiger ?nut) (milk|beverage|drink)|non-?dairy (milk|beverage|drink)|milk alternative|plant[- ]based (milk|beverage|drink))\b/, 'dy-plantmilk', /\b(chocolate bar|ice cream|frozen|yogurt|cheese)\b/],
   [/\b(egg (substitute|replacer|alternative)s?|vegan egg|plant[- ]based egg|just egg|egg[- ]free egg|eggless)\b/, 'mt-plant', null],
   [/\b(greens? (powder|blend|superfood)|organic greens|super ?greens|superfood (blend|powder|greens)|protein powder|collagen (peptides|powder)|whey (protein|isolate)|pre-?workout|creatine|plant protein powder|meal replacement powder)\b/, 'sp-powder', /\b(bars?|cookies?|chips|shakes? ready|ready to drink|rtd|yogurt|cereal|pasta)\b/],
-  [/\b(bubly|la ?croix|spindrift|sparkling (mineral |spring )?water|seltzer( water)?|perrier|san pellegrino|s\.? ?pellegrino|topo chico|polar seltzer|waterloo|aha sparkling|klarbrunn|schweppes seltzer|vintage seltzer|canada dry seltzer)\b/, 'bv-water', /\b(hard|vodka|tequila|alcohol|alcoholic|spiked|truly|white claw|high noon|coors|smirnoff|bud light|corona|bon (&|and) viv|vizzy|michelob|bacardi|ketel|cutwater|nutrl|beer|abv|proof|cocktail|rum|gin|whiskey|malt)\b/],
+  [/\b(bubly|la ?croix|spindrift|sparkling (mineral |spring )?water|seltzer( water)?|perrier|maison perrier|san pellegrino|s\.? ?pellegrino|topo chico|polar seltzer|waterloo|aha sparkling|klarbrunn|schweppes seltzer|vintage seltzer|canada dry seltzer)\b/, 'bv-sparkling', /\b(hard|vodka|tequila|alcohol|alcoholic|spiked|truly|white claw|high noon|coors|smirnoff|bud light|corona|bon (&|and) viv|vizzy|michelob|bacardi|ketel|cutwater|nutrl|beer|abv|proof|cocktail|rum|gin|whiskey|malt)\b/],
 [/\b(peanut|almond|cashew|sunflower( seed)?|pumpkin seed|seed|nut|hazelnut|pecan|walnut|pistachio|macadamia|soy ?nut|watermelon seed) butter\b|\btahini\b/, 'pt-nutbutter', /\b(cookies?|cups?|bars?|crackers?|pretzels?|filled|sandwich|wafers?|candy|bites|ice cream|frozen|gelato|pies?|fudge|chocolate|cheesecake|cereal|granola|puffs|eggs?|balls|protein (shake|drink|powder)|shakes?|trail|mix|clusters|popcorn|dessert|cakes?|brownies?|bread|swirl|squares|truffles?|nougat|bark|treats?|dog|oats|oatmeal|yogurt|smoothie|creamer|syrup|sauce)\b/],
   [/\b(chips|crisps)\b/, 'sn-chips', /\b(chocolate|baking|cookies?|ice cream|mint chip|ahoy|pickles?)\b/],
   [/\b(almonds|cashews|peanuts|pistachios|pecans|walnuts|mixed nuts|trail mix|sunflower seeds|pumpkin seeds)\b/, 'sn-nuts', /\b(milk|butter|bars?|chocolate covered|flour|cereal|granola|beverage|creamer|yogurt|cheese)\b/],
@@ -149,6 +163,10 @@ function classify(r) {
   const refine = i => { const a = SUB[i][1]; for (let j = 0; j < SUB.length; j++) if (j !== i && SUB[j][1] === a && SUB[j][5] && SUB[j][5].test(n)) return j; return i; };
   // v6.3.1 strong name overrides: items whose identity is unambiguous beat loose category tags (seed butters were landing in Dairy, beans/tempeh in Snacks)
   const base = classify0(c, u, n, refine);
+  const nb = n + ' ' + String(r.brand || '').toLowerCase();
+  if (base < 0 || SUB[base][1] === 'bev') for (const [re, id, not] of DRINK) if (re.test(nb) && !(not && not.test(n))) return BYID[id];
+  if (base >= 0 && SUB[base][1] === 'dairy') for (const [re, id] of DAIRYOUT) if (re.test(n)) return BYID[id];
+  if (base >= 0 && SUB[base][1] === 'dairy' && EGGPROD.test(n) && !EGGSUB.test(n) && !/\b(noodles?|rolls?|nog|salad|sandwich|pasta|bread)\b/.test(n)) return BYID['dy-eggs'];
   if (SALADCO.test(String(r.brand || '').toLowerCase()) && /\b(butter|lettuce|salad|greens|blend|mix|romaine|spinach|kale|crisp|sweet)\b/.test(n) && !/\b(dressing|kit|croutons?)\b/.test(n)) return BYID['pr-veg']; // salad growers' 'Sweet Butter' is lettuce
   if (base >= 0 && SUB[base][1] === 'dairy' && EGGSUB.test(n)) return BYID['mt-plant'];
   if (base >= 0 && (SUB[base][1] === 'frozen' || /^(pt-beans|cn-beans|pt-nutbutter|cn-soup|dl-dips|cd-pickles|sn-bars|bv-alcohol)$/.test(SUB[base][0]))) return base;

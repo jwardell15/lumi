@@ -108,8 +108,11 @@ function score(p) {
 /* v6.3 "filler": basics with ~no calories or carbs (water, plain tea/coffee, salt, spices, extracts, zero-cal sweeteners, gum).
    They still get a score, but they're kept out of "best of" rankings (home, stores, aisles, swaps, better options). */
 const FILLER = /\b(water|seltzer|club soda|ice|salt|pepper(corns)?|spices?|seasoning|herbs?|oregano|basil|paprika|cumin|cinnamon|garlic powder|onion powder|chili powder|turmeric|extract|vinegar|baking (soda|powder)|cream of tartar|yeast|gelatin|sweetener|stevia|sucralose|monk fruit|gum|mints?|tea|coffee|espresso|bouillon|broth|stock|hot sauce|mustard|food colou?ring|flavou?r drops|water enhancer|liquid enhancer)\b/i;
+/* v6.3.4: cooking ingredients (oils, sprays, flours/meals, dried herbs) are fillers too */
+const INGRED = /\b(oils?|cooking spray|oil spray|olive oil|avocado oil|coconut oil|ghee|shortening|lard|flours?|almond meal|flax ?seed meal|flaxseed|cornmeal|corn meal|masa|semolina|breadcrumbs|panko|starch|xanthan|psyllium|parsley flakes|dried (parsley|basil|oregano|thyme|rosemary|dill|chives|cilantro)|(parsley|basil|oregano|thyme|rosemary|dill|chives|cilantro|bay) (flakes|leaves)|herbes|italian seasoning|curry powder|nutritional yeast|lemon juice|lime juice|(flavou?red|coffee|caramel|vanilla|hazelnut) syrup)\b/i;
 function isFiller(p) {
   const n = p.n || {}; const k = n.kcal, c = n.carbs, nm = String(p.name || '');
+  if (INGRED.test(nm) && !/\b(chips|crackers?|bars?|cookies?|bread|tortillas?|pasta|cereal|popcorn|tuna|sardines|fish|in oil|packed in|fried|dressing|mayo|cake|muffins?|pancake|waffle|pizza|snacks?|pretzels?|nuggets?|tenders|breaded)\b/i.test(nm)) return true;
   if (!FILLER.test(nm)) return false;
   if (/\b(latte|mocha|frappuccino|chai latte|milk tea|bubble tea|sweet tea|creamer|cake|cookie|bar|chips|nuts?|candy|chocolate|jerky|cracker|pretzel)\b/i.test(nm)) return false;
   return (k == null || k <= 25) && (c == null || c <= 5) || /\b(salt|spices?|seasoning|pepper(corns)?|oregano|basil|paprika|cumin|cinnamon|garlic powder|onion powder|chili powder|turmeric|extract|baking (soda|powder)|yeast|gelatin|food colou?ring)\b/i.test(nm) && (p.servQ == null || p.servQ <= 10);
