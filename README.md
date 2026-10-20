@@ -94,3 +94,10 @@ Local dev: `python3 serve.py 8765`.
 - **Performance**: Home loads only tier 0 + generics (about 1.4 MB gz instead of about 3.4 MB); larger tiers load on search.
 - **Accessibility**: skip link, focus-visible outlines, focus moves to the page heading on navigation, aria-live results, reduced-motion support, labeled controls.
 - **Fixes**: restaurant rows hidden from the All view unless they're relevant; Open Food Facts searched one mirror at a time with a 10-minute quiet back-off; 0 g net carbs with ≥3 g sugar is flagged "check label" and kept out of picks and swaps; more non-English words filtered; data-driven big-brand signal alongside the hand list; top picks skip hidden-sugar items.
+
+
+## v9.1 (data)
+- **Products 627,453 → 633,116.** Open Food Facts bulk CSV refreshed (dump of 2026-10-20); USDA FoodData Central Branded is already the latest release (2026-04-30, checked on fdc.nal.usda.gov). Newly allowed: US-only 8-digit UPC-E barcodes (check digit verified; deduped against their UPC-A expansion) and US names with common English loanwords (Creme, Biscuits, Carne, Nature…). Same data-quality checks and GTIN dedupe.
+- **Restaurants 98 → 107 chains, 24,666 → 27,873 items.** New, from each chain's own published nutrition PDF (robots.txt checked, one polite fetch, cached): Buffalo Wild Wings (Aug–Nov 2026 guide), The Cheesecake Factory (Summer 2026), Waffle House (Aug 2026), Portillo's (Sep 2026), Dutch Bros, Taco John's (Sep 2026), Cheddar's Scratch Kitchen (Aug 2026), Pollo Tropical (Aug 2024), Cinnabon (Oct 2025). Values are per item as published; each item links its source PDF. Skipped: Texas Roadhouse (no official per-item table, only calories), Freddy's, Fazoli's, Habit Burger (JS-only pages), Schlotzsky's (official PDF 404), Hungry Howie's (2021 guide only).
+- **Store brands 71,620 → 73,867** products recognized (added Dealworthy, Bakery Fresh Goodness, Big K, Check This Out, Higher Harvest, Midwest Country Fare, Signature Reserve, Value Corner, Purely Meijer).
+- Scripts: `tools/v91/`.

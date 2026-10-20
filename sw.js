@@ -1,5 +1,5 @@
 /* Lumi service worker: network-first for same-origin (fresh updates), cache fallback for offline; SWR for images. */
-const V = 'lumi-v9.0';
+const V = 'lumi-v9.1';
 const SHELL = ['./', 'index.html', 'css/app.css', 'js/score.js', 'js/cats.js', 'js/search.js', 'js/log.js', 'js/health.js', 'js/encyc.js', 'js/diet.js', 'js/v6.js', 'js/v61.js', 'js/stores.js', 'js/aisles.js', 'js/v63.js', 'js/v5.js', 'js/v7.js', 'js/v74.js', 'js/v75.js', 'js/watch8.js','js/v8.js', 'js/v9.js', 'ref/gi2008.json', 'js/app.js', 'manifest.webmanifest', 'icons/mascot-128.png', 'icons/mascot-256.png', 'icons/favicon-32.png', 'icons/icon-192.png', 'icons/apple-touch-icon.png', 'data/index-0.json', 'data/index-g.json', 'data/meta.json', 'ref/additives.json'];
 self.addEventListener('install', e => e.waitUntil(caches.open(V).then(c => c.addAll(SHELL.map(u => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== V && k !== 'lumi-img').map(k => caches.delete(k)))).then(() => self.clients.claim())));
