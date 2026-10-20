@@ -127,6 +127,7 @@ const NAMEMAP = [[/\bfrozen\b.*\bpizza|\bpizza\b.*\bfrozen/, 'fz-pizza'], [/\bic
   [/\bmac(aroni)? (and|&) cheese|\bramen\b|instant noodles|\bhelper\b|rice mix|stuffing/, 'pt-boxed'], [/\bpasta\b|spaghetti|penne|macaroni|fettuccine|linguine|rotini|lasagna noodles|\bnoodles\b/, 'pt-pasta'], [/\brice\b|quinoa|couscous|farro|barley/, 'pt-rice'], [/\blentils|split peas|dry beans/, 'pt-beans'],
   [/\boil\b|vinegar/, 'pt-oil'], [/\bseasoning|\bspices?\b|\bsalt\b|pepper(corns)?\b|\bpaprika|cinnamon|\boregano|\bcumin|\brub\b/, 'pt-spice'], [/\bflour\b|cornmeal/, 'bk2-flour'], [/\bsugar\b|sweetener|stevia|monk fruit/, 'bk2-sugar'], [/\b(cake|brownie|muffin|cookie|pancake) mix/, 'bk2-mix'], [/chocolate chips|sprinkles|frosting|icing/, 'bk2-chips'], [/baking (soda|powder)|\bextract\b|\byeast\b/, 'bk2-other'],
   [/\bbaby\b|\binfant|toddler/, 'by-food'], [/\b(apples?|bananas?|oranges?|grapes|berries|strawberries|blueberries|avocados?|lemons?|limes?|peaches|pears|mangos?|pineapple|watermelon|cherries)\b/, 'pr-fruit'], [/\b(lettuce|spinach|kale|salad|carrots?|broccoli|onions?|potatoes|peppers?|cucumbers?|celery|mushrooms?|tomatoes|zucchini|cauliflower|cabbage)\b/, 'pr-veg']];
+const SALADCO = /\b(fresh express|little salad bar|dole|taylor farms|earthbound|organic girl|marketside|bowery|gotham greens|vertical roots|little leaf|revol|plenty|brightfarms|ready pac|church brothers|tanimura|josie'?s)\b/;
 const EGGSUB = /\b(egg (substitute|replacer|alternative)s?|vegan egg|plant[- ]based egg|just egg|egg[- ]free egg|eggless)\b/;
 const OVR = [[/\b((almond|oat|coconut|soy|cashew|plant[- ]based|pea|macadamia|hemp|non-?dairy|dairy[- ]free|vegan)( milk)? (coffee )?creamers?|(almond|oat|soy|cashew|coconut|pea|macadamia|hemp|rice) (milk|beverage|drink)|non-?dairy (milk|beverage))\b/, 'dy-plantmilk', /\b(chocolate bar|ice cream|frozen|yogurt|cheese)\b/],
   [/\b(egg (substitute|replacer|alternative)s?|vegan egg|plant[- ]based egg|just egg|egg[- ]free egg|eggless)\b/, 'mt-plant', null],
@@ -148,6 +149,7 @@ function classify(r) {
   const refine = i => { const a = SUB[i][1]; for (let j = 0; j < SUB.length; j++) if (j !== i && SUB[j][1] === a && SUB[j][5] && SUB[j][5].test(n)) return j; return i; };
   // v6.3.1 strong name overrides: items whose identity is unambiguous beat loose category tags (seed butters were landing in Dairy, beans/tempeh in Snacks)
   const base = classify0(c, u, n, refine);
+  if (SALADCO.test(String(r.brand || '').toLowerCase()) && /\b(butter|lettuce|salad|greens|blend|mix|romaine|spinach|kale|crisp|sweet)\b/.test(n) && !/\b(dressing|kit|croutons?)\b/.test(n)) return BYID['pr-veg']; // salad growers' 'Sweet Butter' is lettuce
   if (base >= 0 && SUB[base][1] === 'dairy' && EGGSUB.test(n)) return BYID['mt-plant'];
   if (base >= 0 && (SUB[base][1] === 'frozen' || /^(pt-beans|cn-beans|pt-nutbutter|cn-soup|dl-dips|cd-pickles|sn-bars|bv-alcohol)$/.test(SUB[base][0]))) return base;
   for (const [re, id, not] of OVR) if (re.test(n) && !(not && not.test(n))) return BYID[id];

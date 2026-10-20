@@ -78,7 +78,7 @@ for (const l of lines) {
   const parts = r.code.length > 8 ? r.code.padStart(13, '0').match(/^(...)(...)(...)(.*)$/).slice(1).join('/') : r.code;
   let short = img.replace(/\.(100|200|400|full)\.jpg$/, '');
   if (short.startsWith(parts + '/')) short = '~' + short.slice(parts.length + 1); else if (!img.startsWith('http')) short = img;
-  const sm = ST63.mask(r.brand, r.stores); const ai = AI.classify({ cats: isU ? (r.offcats || '') : r.cats, ucat: r.ucat || (isU ? r.cat : ''), name: r.name });
+  const sm = ST63.mask(r.brand, r.stores); const ai = AI.classify({ cats: isU ? (r.offcats || '') : r.cats, ucat: r.ucat || (isU ? r.cat : ''), name: r.name, brand: r.brand || '' });
   if (ai >= 0) A63.aisle[AI.SUB[ai][1]] = (A63.aisle[AI.SUB[ai][1]] || 0) + 1; else A63.aisle.none = (A63.aisle.none || 0) + 1;
   ST63.STORES.forEach((x, i) => { if (sm & (1 << i)) A63.stores[x[0] + ':brand'] = (A63.stores[x[0] + ':brand'] || 0) + 1; if (sm & (1 << (16 + i))) A63.stores[x[0] + ':soldAt'] = (A63.stores[x[0] + ':soldAt'] || 0) + 1; });
   if (SRC.p === 'o2') A63.photoOther++;
