@@ -24,6 +24,7 @@ const SIZEW = /\b\d+(\.\d+)?\s*(fl\.? ?oz|oz|ounces?|ct|count|pk|pack|packs|g|gr
 /* v6.3 duplicate group: same brand + same name once sizes/pack words are removed */
 const groupKey = (name, brand) => { const b = norm(String(brand || '').toLowerCase().replace(/[’']/g, '')); let n = norm(String(name || '').toLowerCase().replace(/[’']/g, '').replace(SIZEW, ' '));
   const bw = b.split(' ').filter(w => w.length > 2); n = n.split(' ').filter(w => !bw.includes(w)).map(w => w.length > 3 ? w.replace(/(es|s)$/, '') : w).join(' '); return b + '|' + n; };
+let WATER_; const water = () => WATER_ ?? (WATER_ = typeof self !== 'undefined' && self.LumiAisles ? self.LumiAisles.BYID['bv-water'] : -2); // plain/sparkling water with ~0 carbs counts as filler even when the name doesn't say "water"
 const fixName = s => String(s || '').replace(/([A-Za-z])['’]S\b/g, "$1's");
 function dedupe(list, get = x => x) { const seen = new Map(), out = []; for (const x of list) { const d = get(x); const k = groupKey(d.name, d.brand); const bk = norm(String(d.brand || '').toLowerCase()).split(' ').slice(0, 2).join(' '); const k2 = d.score != null && d.net != null ? `v|${bk}|${d.score}|${d.h}|${d.net}|${d.sugar}|${d.cat}` : null; const f = seen.get(k) || (k2 && seen.get(k2)); if (k2 && !f) seen.set(k2, d); if (f) { f.sizes = (f.sizes || 1) + 1; continue; } seen.set(k, d); out.push(x); } return out; }
 const IMGBASE = 'https://images.openfoodfacts.org/images/products/';
@@ -40,7 +41,7 @@ class Engine {
     const cats = data.generic ? data.cats : this.cats; const KC = root.LumiCats;
     for (const d of data.docs) {
       const i = this.docs.length;
-      const doc = { code: d[0], name: fixName(d[1]), brand: d[2] || '', score: d[3] < 0 ? null : d[3], net: d[4] < 0 ? null : d[4], cat: cats[d[5]] || '', img: imgURL(d[0], d[6]), keys: d[7] ? d[7].split('.').map(k => /^\d+$/.test(k) ? +k : (KC ? KC.KEYS.indexOf(k) : -1)).filter(k => k >= 0) : [], sugar: d[8] == null || d[8] < 0 ? null : d[8], h: d[9] == null || d[9] < 0 ? null : d[9], hn: !!(d[10] & 1), al: d[11] || 0, df: d[12] == null ? null : d[12], src: data.generic ? (d[7] && d[7].startsWith('rest') ? 'rest' : 'whole') : 'local', rank: i, sm: d[13] || 0, ai: d[14] == null ? -1 : d[14], fl: !!(d[10] & 4) };
+      const doc = { code: d[0], name: fixName(d[1]), brand: d[2] || '', score: d[3] < 0 ? null : d[3], net: d[4] < 0 ? null : d[4], cat: cats[d[5]] || '', img: imgURL(d[0], d[6]), keys: d[7] ? d[7].split('.').map(k => /^\d+$/.test(k) ? +k : (KC ? KC.KEYS.indexOf(k) : -1)).filter(k => k >= 0) : [], sugar: d[8] == null || d[8] < 0 ? null : d[8], h: d[9] == null || d[9] < 0 ? null : d[9], hn: !!(d[10] & 1), al: d[11] || 0, df: d[12] == null ? null : d[12], src: data.generic ? (d[7] && d[7].startsWith('rest') ? 'rest' : 'whole') : 'local', rank: i, sm: d[13] || 0, ai: d[14] == null ? -1 : d[14], fl: !!(d[10] & 4) || (d[14] === water() && d[4] >= 0 && d[4] <= 0.5) };
       doc.nn = norm(doc.name + ' ' + doc.brand);
       this.docs.push(doc);
       const seen = new Map();
