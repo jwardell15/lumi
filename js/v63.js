@@ -1,6 +1,6 @@
 /* Lumi v6.3: shop by store (store brands + OFF "stores" field) and grocery aisles. All local, from the bundled index. */
 const STO = window.LumiStores, AIS = window.LumiAisles;
-function storeChips() { return `<div class="sec-h"><h2>Shop by store</h2></div><div class="chips storechips">${STO.STORES.map(s => `<a class="chip" href="#/store/${s[0]}" data-store="${s[0]}">🏪 ${esc(s[1])}</a>`).join('')}</div>`; }
+function storeChips() { const ch = L => L.map(s => `<a class="chip" href="#/store/${s[0]}" data-store="${s[0]}">${esc(s[1])}</a>`).join(''); return `<div class="sec-h"><h2>Shop by store</h2></div><div class="chips storechips">${ch(STO.STORES.filter(s => s[5] !== 'c'))}</div><div class="sec-h"><h2>Convenience stores</h2></div><div class="chips storechips">${ch(STO.STORES.filter(s => s[5] === 'c'))}</div>`; }
 function aisleTiles() { return `<div class="sec-h"><h2>Grocery aisles</h2></div><div class="aisles">${AIS.AISLES.map(a => `<a class="aisle" href="#/aisle/${a[0]}"><span>${a[2]}</span><b>${esc(a[1])}</b></a>`).join('')}</div>`; }
 const SORTS = [['score', 'Carb score'], ['health', 'Health'], ['carb', 'Lowest net carbs']];
 /* v6.3.4 packaged picks: blend carb score, health, popularity (index order follows Open Food Facts scan counts) and photo/data completeness */
@@ -55,7 +55,7 @@ async function shopLoad() { app.innerHTML = `<div class="card">${'<div class="sk
 async function viewStore(arg) {
   const [id, sub] = String(arg || '').split('/'); const i = STO.STORES.findIndex(s => s[0] === id); if (i < 0) return viewHome();
   const s = STO.STORES[i]; document.title = `${s[2]} — Lumi`; await shopLoad(); if (!location.hash.startsWith('#/store/' + id)) return;
-  const own = d => (d.sm & (1 << i)) !== 0, sold = d => (d.sm & (1 << (16 + i))) !== 0;
+  const own = d => STO.has(d.sm, i), sold = d => STO.has(d.sm, STO.SOLD + i);
   const all = engine.docs.filter(d => own(d) || sold(d)); const nOwn = all.filter(own).length;
   const mode = sub === 'all' ? 'all' : 'own'; const kind = store.get('storeKind', 'packaged'); const L0 = mode === 'own' ? all.filter(own) : all; const L = kind === 'packaged' ? L0.filter(isPackaged) : L0.filter(d => !isPackaged(d));
   const chips = `<div class="chips"><a class="chip${mode === 'own' ? ' on' : ''}" href="#/store/${id}">${esc(s[1])} store brands (${nOwn.toLocaleString()})</a><a class="chip${mode === 'all' ? ' on' : ''}" href="#/store/${id}/all">Everything tagged at ${esc(s[2])} (${all.length.toLocaleString()})</a></div>` + `<div class="chips kindchips"><button class="chip${kind === 'staples' ? ' on' : ''}" data-kind="staples">🥩 Staples & ingredients (${L0.filter(d => !isPackaged(d)).length.toLocaleString()})</button><button class="chip${kind === 'packaged' ? ' on' : ''}" data-kind="packaged">📦 Packaged picks (${L0.filter(isPackaged).length.toLocaleString()})</button></div>` + storeChips().replace(`data-store="${id}"`, `data-store="${id}" aria-current="true" style="outline:2px solid var(--acc)"`).replace(/<div class="sec-h">.*?<\/div>/, '');

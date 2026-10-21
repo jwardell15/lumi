@@ -17,7 +17,15 @@ const STORES = [
   ['safeway', 'Signature / O Organics', 'Safeway & Albertsons', /^(signature (select|kitchens|farms|cafe|care|reserve)|o organics|open nature|lucerne|waterfront bistro|primo taglio|value corner)\b/, /\b(safeway|albertsons|vons|jewel|shaw'?s|acme|tom thumb|randalls)\b/],
   ['wegmans', 'Wegmans', 'Wegmans', /^wegmans( food markets)?\b/, /\bwegmans\b/],
   ['samsclub', "Member's Mark", "Sam's Club", /^member'?s mark\b/, /\bsam'?s club\b/],
-  ['sprouts', 'Sprouts', 'Sprouts', /^sprouts( farmers? market)?\b/, /\bsprouts\b/]
+  ['sprouts', 'Sprouts', 'Sprouts', /^sprouts( farmers? market)?\b/, /\bsprouts\b/],
+  ['seveneleven', '7-Eleven', '7-Eleven', /^(7 ?eleven|7 ?select)\b/, /\b7 ?-? ?eleven\b/, 'c'],
+  ['caseys', "Casey's", "Casey's", /^casey'?s\b/, /\bcasey'?s\b/, 'c'],
+  ['kwiktrip', 'Kwik Trip', 'Kwik Trip / Kwik Star', /^kwik (trip|star)\b/, /\bkwik ?(trip|star)\b/, 'c'],
+  ['quiktrip', 'QuikTrip', 'QuikTrip', /^(quik ?trip|qt kitchens?)\b/, /\bquik ?trip\b/, 'c'],
+  ['wawa', 'Wawa', 'Wawa', /^wawa\b/, /\bwawa\b/, 'c'],
+  ['sheetz', 'Sheetz', 'Sheetz', /^sheetz\b/, /\bsheetz\b/, 'c'],
+  ['circlek', 'Circle K', 'Circle K', /^circle k\b/, /\bcircle ?k\b/, 'c'],
+  ['bucees', "Buc-ee's", "Buc-ee's", /^buc ?ee'?s\b/, /\bbuc-?ee'?s\b/, 'c']
 ];
 // explicit aliases (lower-case key -> canonical); everything else is case/spacing-normalized to its most common spelling at build
 const ALIAS = { 'rlife': 'fairlife', 'fair life': 'fairlife', 'kirkland': 'Kirkland Signature', 'kirkland signature': 'Kirkland Signature', 'kirkland signature organic': 'Kirkland Signature', 'great value': 'Great Value', 'greatvalue': 'Great Value',
@@ -28,11 +36,12 @@ const ALIAS = { 'rlife': 'fairlife', 'fair life': 'fairlife', 'kirkland': 'Kirkl
   'coca cola': 'Coca-Cola', 'coca-cola': 'Coca-Cola', 'pepsico': 'PepsiCo', 'general mills': 'General Mills', 'kellogg': "Kellogg's", "kellogg's": "Kellogg's", 'kelloggs': "Kellogg's" };
 const key = b => String(b || '').toLowerCase().replace(/[®™©]/g, '').replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').replace(/[.,]+$/, '').trim();
 function alias(b) { const k = key(b); return ALIAS[k] || null; }
-/* brand (normalized display) + OFF stores string -> bitmask: own brand bits 0-14, "sold at" bits 16-30 */
+/* brand + OFF stores -> number: own brand = 2^i, "sold at" = 2^(SOLD+i). v11.1: arithmetic (not 32-bit bitwise) so up to 26 stores fit. */
+const SOLD = 26; const has = (m, b) => Math.floor((m || 0) / 2 ** b) % 2 === 1;
 function mask(brand, stores) {
   const b = key(brand).replace(/’/g, "'"), s = String(stores || '').toLowerCase(); let m = 0;
-  STORES.forEach((x, i) => { if (x[3].test(b)) m |= 1 << i; if (s && x[4].test(s)) m |= 1 << (16 + i); });
+  STORES.forEach((x, i) => { if (x[3].test(b)) m += 2 ** i; if (s && x[4].test(s)) m += 2 ** (SOLD + i); });
   return m;
 }
-return { STORES, ALIAS, key, alias, mask };
+return { STORES, ALIAS, key, alias, mask, has, SOLD };
 });

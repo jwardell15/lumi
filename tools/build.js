@@ -83,7 +83,7 @@ for (const l of lines) {
   if (short.startsWith(parts + '/')) short = '~' + short.slice(parts.length + 1); else if (!img.startsWith('http')) short = img;
   const sm = ST63.mask(r.brand, r.stores); const ai = AI.classify({ cats: isU ? (r.offcats || '') : r.cats, ucat: r.ucat || (isU ? r.cat : ''), name: r.name, brand: r.brand || '', n: r.n });
   if (ai >= 0) A63.aisle[AI.SUB[ai][1]] = (A63.aisle[AI.SUB[ai][1]] || 0) + 1; else A63.aisle.none = (A63.aisle.none || 0) + 1;
-  ST63.STORES.forEach((x, i) => { if (sm & (1 << i)) A63.stores[x[0] + ':brand'] = (A63.stores[x[0] + ':brand'] || 0) + 1; if (sm & (1 << (16 + i))) A63.stores[x[0] + ':soldAt'] = (A63.stores[x[0] + ':soldAt'] || 0) + 1; });
+  ST63.STORES.forEach((x, i) => { if (ST63.has(sm, i)) A63.stores[x[0] + ':brand'] = (A63.stores[x[0] + ':brand'] || 0) + 1; if (ST63.has(sm, ST63.SOLD + i)) A63.stores[x[0] + ':soldAt'] = (A63.stores[x[0] + ':soldAt'] || 0) + 1; });
   if (SRC.p === 'o2') A63.photoOther++;
   docs.push([r.code, r.name, r.brand, s.score == null ? -1 : s.score, s.score == null || s.net == null ? -1 : Math.round(s.net), catIdx.get(cat), img ? short : '', keys, m.sugars == null ? -1 : Math.round(m.sugars), hr.score == null ? -1 : hr.score, (hr.basis === 'nutrition' ? 1 : 0) | (hr.est.length ? 2 : 0) | (S.isFiller(p) ? 4 : 0) | (s.bad ? 8 : 0), hx.am | hx.tm << 9, hx.df, sm, ai, wflags(r.ing)]);
   const k = r.code.slice(-3); (shards[k] = shards[k] || {})[r.code] = comp;
@@ -137,5 +137,5 @@ if (gsrc) {
   META.whole = gdocs.filter(d => d[7].startsWith('whole')).length; META.restaurant = gdocs.length - META.whole; META.chains = dyn.length; META.chainCounts = dyn.map(x => [x[1], chainCount[x[0]], G.some(r => r.keys[1] === x[0] && r.src.includes('official')) ? 'official' : 'USDA']);
   console.log('generic', JSON.stringify(ga), 'chains', dyn.map(x => x[1] + ':' + chainCount[x[0]]).join(', '));
 }
-META.health = COV; META.audit = audit; META.version = '11.0'; META.v63 = A63; META.fillers = { grocery: docs.filter(d => d[10] & 4).length }; console.log('V63', JSON.stringify(A63)); META.sources = ST; console.log('SOURCES', JSON.stringify(ST, null, 1)); META.allergenData = ALC; console.log('ALLERGEN', JSON.stringify(ALC)); console.log('HEALTH', JSON.stringify(COV));
+META.health = COV; META.audit = audit; META.version = '11.1'; META.v63 = A63; META.fillers = { grocery: docs.filter(d => d[10] & 4).length }; console.log('V63', JSON.stringify(A63)); META.sources = ST; console.log('SOURCES', JSON.stringify(ST, null, 1)); META.allergenData = ALC; console.log('ALLERGEN', JSON.stringify(ALC)); console.log('HEALTH', JSON.stringify(COV));
 fs.writeFileSync(path.join(out, 'meta.json'), JSON.stringify(META));

@@ -9,6 +9,7 @@ function typeBarcode(msg) {
 }
 document.addEventListener('click', e => { if (e.target && e.target.id === 'scanType') { if (typeof stopScan === 'function') stopScan(); typeBarcode(''); } });
 const V7_NEWS = [
+  ['🏪', 'Stores and chains (11.1)', 'Browse › Shop by store now has 23 stores, including 8 convenience stores (7-Eleven, Casey\'s, Kwik Trip, QuikTrip, Wawa, Sheetz, Circle K, Buc-ee\'s). New official restaurant nutrition: Donatos, Jollibee, Gold Star Chili, Huddle House and QuikTrip hot food.'],
   ['📈', 'Glucose after meals (11.0)', 'Import a Dexcom Clarity CSV and each logged meal can show your real readings for the 3 hours after it, with peak and 2-hour values. Lumi never estimates or invents glucose. A direct Dexcom connection needs a small backend (Dexcom requires a server-side secret); setup is in Settings › Dexcom glucose.'],
   ['❤️', 'Apple Health via Shortcuts (11.0)', 'Send a meal\'s carbs, protein, fat and calories to Apple Health with one tap, through a Shortcut you build once. Step-by-step guide in Settings › Apple Health.'],
   ['👪', 'Share with family (11.0)', 'Share a shopping list or saved meal as a link or code. Opening it imports a copy. It is a one-time copy, not live sync.'],
@@ -48,9 +49,9 @@ const V7_NEWS = [
   ['☰', 'Shopping lists', 'Make lists (Costco run, school snacks…), check items off, see the carb total and share the list.'],
   ['💊', 'Supplements, sorted', 'Protein & collagen, greens powders, creatine & hydration, vitamins. Fresh "super greens" salads moved to Produce.'],
   ['🔎', 'Smarter search filters', 'Ready-to-eat, has photo and hide bad data, plus better near-duplicate grouping (one row per product).']];
-function whatsNewCard() { if (store.get('seen11', false)) return ''; return `<div class="card news7"><div class="n7h"><b>✨ New in Lumi ${VERSION}</b><button class="icon" id="n7x" aria-label="Dismiss">✕</button></div><ul>${V7_NEWS.slice(0, 3).map(n => `<li><span>${n[0]}</span><div><b>${esc(n[1])}</b> <span class="d">${esc(n[2])}</span></div></li>`).join('')}</ul><a class="lnk" href="#/whatsnew">Everything new ›</a></div>`; }
-document.addEventListener('click', e => { if (e.target && e.target.id === 'n7x') { store.set('seen11', true); const c = document.querySelector('.news7'); if (c) c.remove(); } });
-function viewWhatsNew() { document.title = 'New in Lumi'; store.set('seen11', true);
+function whatsNewCard() { if (store.get('seen111', false)) return ''; return `<div class="card news7"><div class="n7h"><b>✨ New in Lumi ${VERSION}</b><button class="icon" id="n7x" aria-label="Dismiss">✕</button></div><ul>${V7_NEWS.slice(0, 3).map(n => `<li><span>${n[0]}</span><div><b>${esc(n[1])}</b> <span class="d">${esc(n[2])}</span></div></li>`).join('')}</ul><a class="lnk" href="#/whatsnew">Everything new ›</a></div>`; }
+document.addEventListener('click', e => { if (e.target && e.target.id === 'n7x') { store.set('seen111', true); const c = document.querySelector('.news7'); if (c) c.remove(); } });
+function viewWhatsNew() { document.title = 'New in Lumi'; store.set('seen111', true);
   app.innerHTML = `<h1>New in Lumi ${VERSION}</h1><div class="card news7 full"><ul>${V7_NEWS.map(n => `<li><span>${n[0]}</span><div><b>${esc(n[1])}</b> ${esc(n[2])}</div></li>`).join('')}</ul></div><p class="foot">Informational only, not medical advice. Dose from the physical label.</p>`; }
 /* ready-to-eat: index docs use the aisle + staple rules; outside items (USDA/OFF live) use the name rules only */
 function readyToEat(i) { if (i.src === 'whole' || i.src === 'rest' || i.src === 'chain') return true; const d = { name: i.name || '', ai: i.ai == null ? -1 : i.ai }; return !isStaple(d) && !RAW.has(d.ai); }

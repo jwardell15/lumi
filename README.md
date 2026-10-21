@@ -96,6 +96,11 @@ Local dev: `python3 serve.py 8765`.
 - **Fixes**: restaurant rows hidden from the All view unless they're relevant; Open Food Facts searched one mirror at a time with a 10-minute quiet back-off; 0 g net carbs with ≥3 g sugar is flagged "check label" and kept out of picks and swaps; more non-English words filtered; data-driven big-brand signal alongside the hand list; top picks skip hidden-sugar items.
 
 
+## v11.1
+- **Stores**: `js/stores.js` now lists 15 grocery and 8 convenience stores (flag `c`). The `sm` field is arithmetic (own brand = 2^i, sold at = 2^(26+i)) because a 32-bit bitmask held only 15 stores; use `STORES.has(sm, bit)`. Browse shows "Shop by store" and "Convenience stores".
+- **Chains** (official PDFs only, robots.txt respected): Donatos, Jollibee, Gold Star Chili, Huddle House, QuikTrip. Skipped: LaRosa's (misaligned PDF table), Cook Out and Circle K (blank-cell layouts), Skyline (2019 guide only), Penn Station (ingredient-level only), Kwik Trip (Nutritionix portal only), 7-Eleven (Canada page only).
+- **Foods**: USDA Foundation re-checked against FDC (394 foods; new ones without published carbs/energy are not added). GI tags stay limited to Atkinson 2008 Table 1.
+
 ## v11.0
 - **Glucose after meals** (`js/v11.js`): import a Dexcom Clarity CSV export; each logged meal can chart the user's own readings from 15 min before to 3 h after (peak, 2 h, 3 h). Low/High values are skipped, never estimated. Optional direct Dexcom API via a user-deployed backend (`tools/dexcom-worker.js`): Dexcom's OAuth needs `client_secret` server-side and `api.dexcom.com` returns no CORS headers (checked: preflight from github.io gets 403), and US data is delayed 1 h (3 h outside US). Sandbox data is labeled "sandbox (simulated data)".
 - **Apple Health** via iOS Shortcuts: `shortcuts://run-shortcut?name=Lumi%20to%20Health&input=text&text={json}` with carbs, protein, fat, kcal, name, date. Build guide at `#/applehealth`.
