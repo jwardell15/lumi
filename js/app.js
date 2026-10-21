@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '11.1';
+const VERSION = '11.1.1';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -514,7 +514,7 @@ function swapsFor(doc, cur, limit = 6) {
     if (soda && d.ai !== SODA) continue; // a soda's swaps are sodas; sparkling water is offered separately
     const gain = d.score - cur.score, red = (cur.net ?? d.net) - d.net;
     if (gain < 5 || red < -2 || (cur.net >= 10 && d.net < cur.net * 0.35)) continue;
-    out.push({ d, gain, red, sug: cur.sugar != null && d.sugar != null ? cur.sugar - d.sugar : 0, rank: gain + 0.6 * red - d.rank / engine.docs.length * 5 });
+    out.push({ d, gain, red, sug: cur.sugar != null && d.sugar != null ? cur.sugar - d.sugar : 0, rank: gain + 0.6 * red - Math.min(d.rank, engine.docs.length) / engine.docs.length * 5 });
   }
   out.sort((a, b) => Math.abs(a.d.score - b.d.score) <= 5 ? (a.d.net - b.d.net) || b.rank - a.rank : b.rank - a.rank); // within ~5 points, lower net carbs wins
   return LumiSearch.dedupe(out, x => x.d, limit)

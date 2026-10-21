@@ -32,10 +32,12 @@ function viewHome() {
   $('#heroScan').onclick = startScan; $('#typeBc').onclick = () => typeBarcode('');
   if ($('#pill74x')) $('#pill74x').onclick = () => { store.set('seenV', VERSION); $('#pill74').remove(); };
   if ($('#clrRec')) $('#clrRec').onclick = () => { store.set('recent', []); viewHome(); };
-  const draw = () => { const el = $('#picks'); if (!el) return; let p = []; try { p = homePicks(); } catch (e) { console.warn(e); }
-    el.innerHTML = p.length ? `<div class="list">${p.map(d => rowHTML(itemFromDoc(d))).join('')}</div>` : skel(3);
+  const draw = err => { const el = $('#picks'); if (!el) return; let p = []; try { p = homePicks(); } catch (e) { console.warn(e); }
+    if (p.length) el.innerHTML = `<div class="list">${p.map(d => rowHTML(itemFromDoc(d))).join('')}</div>`;
+    else { el.innerHTML = `<div class="card" role="status"><p class="small">${err ? "Top picks couldn't load. Check your connection." : 'No top picks to show right now.'} <a class="lnk" href="#/browse">Browse all</a></p>${err ? '<button class="btn" id="picksRetry" type="button">Try again</button>' : ''}</div>`;
+      const r = $('#picksRetry'); if (r) r.onclick = () => { el.innerHTML = skel(3); loadIndex().then(() => draw()).catch(() => draw(true)); }; }
     const rl = $('#restList'); if (rl) rl.innerHTML = restPicks74().map(d => rowHTML(itemFromDoc(d))).join(''); };
-  loadIndex().then(draw).catch(draw); // v9: home needs only tier 0 (≈0.65 MB gz); the larger tiers load when you search
+  loadIndex().then(() => draw()).catch(() => draw(true)); // v9: home needs only tier 0 (≈0.65 MB gz); the larger tiers load when you search
 }
 function viewBrowseHub() {
   document.title = 'Browse — Lumi';

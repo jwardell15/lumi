@@ -96,6 +96,9 @@ Local dev: `python3 serve.py 8765`.
 - **Fixes**: restaurant rows hidden from the All view unless they're relevant; Open Food Facts searched one mirror at a time with a 10-minute quiet back-off; 0 g net carbs with ≥3 g sugar is flagged "check label" and kept out of picks and swaps; more non-English words filtered; data-driven big-brand signal alongside the hand list; top picks skip hidden-sugar items.
 
 
+## v11.1.1
+- Fix: Home "Top picks" could stay on skeletons forever. Doc `rank` was the load position, so when `index-g` (45k generic/restaurant docs) arrived before `index-0`, every packaged product ranked >40000 and failed the `rank < 40000` filter. Rank is now per-layer (local 0..n, generic 1e6+). Top picks shows a message (and Try again on load errors) instead of endless skeletons.
+
 ## v11.1
 - **Stores**: `js/stores.js` now lists 15 grocery and 8 convenience stores (flag `c`). The `sm` field is arithmetic (own brand = 2^i, sold at = 2^(26+i)) because a 32-bit bitmask held only 15 stores; use `STORES.has(sm, bit)`. Browse shows "Shop by store" and "Convenience stores".
 - **Chains** (official PDFs only, robots.txt respected): Donatos, Jollibee, Gold Star Chili, Huddle House, QuikTrip. Skipped: LaRosa's (misaligned PDF table), Cook Out and Circle K (blank-cell layouts), Skyline (2019 guide only), Penn Station (ingredient-level only), Kwik Trip (Nutritionix portal only), 7-Eleven (Canada page only).
