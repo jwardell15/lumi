@@ -7,7 +7,8 @@ const setSettings = o => store.set('settings', Object.assign(settings(), o));
 const LOG = { all: () => store.get('log', []), save: l => store.set('log', l) };
 const MEALS = ['breakfast', 'lunch', 'dinner', 'snack'];
 const MEAL_L = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snack: 'Snacks' };
-const mealFor = d => { const h = d.getHours(); return h < 10.5 ? 'breakfast' : h < 15 ? 'lunch' : h < 21 ? 'dinner' : 'snack'; };
+/* v12: breakfast 5:00–10:59, lunch 11:00–14:59, dinner 17:00–20:59; mid-afternoon, late evening and overnight default to snack (always changeable) */
+const mealFor = d => { const h = d.getHours() + d.getMinutes() / 60; return h >= 5 && h < 11 ? 'breakfast' : h >= 11 && h < 15 ? 'lunch' : h >= 17 && h < 21 ? 'dinner' : 'snack'; };
 const dayKey = d => { const x = new Date(d); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); };
 const fmtN = (k, v) => v == null ? '—' : k === 'kcal' ? Math.round(v) : r1(v) + (k === 'kcal' ? '' : 'g');
 

@@ -135,7 +135,7 @@ function viewGlucose11(arg) {
   <div class="card"><h2>Connect Dexcom directly</h2><p class="small">Dexcom's official API needs a <b>client secret</b> that must stay on a server, and it does not allow calls from a browser (no CORS). So a direct connection needs a tiny backend you control. US data arrives with a 1-hour delay (3 hours outside the US).</p>
    <label class="fl11"><span>Your Lumi Dexcom backend URL (optional)</span><input id="dxb" class="in11" type="url" placeholder="https://lumi-dexcom.yourname.workers.dev" value="${esc(st.dxBackend || '')}"></label>
    <div class="actions"><button class="btn" id="dxsave">Save</button>${st.dxBackend ? `<button class="btn pri" id="dxgo">Connect Dexcom</button><button class="btn" id="dxsync">Sync last 3 days</button>` : ''}</div>
-   <p class="small">Setup guide and reference backend code: <a class="lnk" href="https://github.com/jwardell15/lumi/blob/main/tools/dexcom-worker.js" target="_blank" rel="noopener">tools/dexcom-worker.js</a>. If the backend is set to Dexcom's sandbox, readings are labeled "sandbox (simulated data)" everywhere.</p></div>
+   <p class="small">Setup guide and reference backend code: <a class="lnk" href="https://github.com/jwardell15/lumi/blob/main/tools/dexcom" target="_blank" rel="noopener">tools/dexcom</a> (or <a class="lnk" href="#/dexcom">the step-by-step guide</a>). If the backend is set to Dexcom's sandbox, readings are labeled "sandbox (simulated data)" everywhere.</p></div>
   <p class="foot">Dexcom data is informational only. Make treatment decisions from your Dexcom app and your care team.</p></section>`;
   $('#cgmf').onchange = e => { const f = e.target.files[0]; if (!f) return; f.text().then(t => { try { const { pts, lowhi } = parseClarity11(t); const n = mergeCGM11(pts, 'clarity'); $('#cgmmsg').textContent = `Imported ${pts.length.toLocaleString()} readings (${n.toLocaleString()} stored).${lowhi ? ` ${lowhi} Low/High readings skipped.` : ''}`; setTimeout(() => viewGlucose11(), 1200); } catch (err) { $('#cgmmsg').textContent = err.message; } }); };
   const d = $('#cgmdel'); if (d) d.onclick = () => { if (confirm('Remove all glucose readings from this device?')) { store.set('cgm', null); viewGlucose11(); } };
@@ -147,7 +147,7 @@ function viewGlucose11(arg) {
 async function syncDexcom11(base) {
   try {
     const end = new Date(), start = new Date(end - 3 * 864e5); const iso = d => d.toISOString().slice(0, 19);
-    const r = await fetch(`${base}/egvs?startDate=${iso(start)}&endDate=${iso(end)}`, { credentials: 'include' }); if (!r.ok) throw new Error('Backend said ' + r.status);
+    const r = await fetch(`${base}/egvs?startDate=${iso(start)}&endDate=${iso(end)}`, { headers: settings().dxSid ? { Authorization: 'Bearer ' + settings().dxSid } : {} }); if (r.status === 401) throw new Error('not connected yet. Tap Connect Dexcom'); if (!r.ok) throw new Error('Backend said ' + r.status);
     const j = await r.json(); const env = r.headers.get('x-dexcom-env') || j.env || 'production';
     const pts = (j.records || []).filter(x => x.value != null).map(x => [Date.parse(x.systemTime.endsWith('Z') || /[+-]\d\d:?\d\d$/.test(x.systemTime) ? x.systemTime : x.systemTime + 'Z'), x.value]).filter(p => p[0]);
     const n = mergeCGM11(pts, env === 'sandbox' ? 'api-sandbox' : 'api'); toast(`Synced ${pts.length} readings${env === 'sandbox' ? ' (sandbox)' : ''}`); if (/glucose/.test(location.hash)) viewGlucose11();
@@ -166,11 +166,11 @@ async function pack11(obj) {
 async function unpack11(code) {
   code = String(code || '').trim().replace(/^.*#\/share\//, ''); const k = code[0], body = unb64u(code.slice(1));
   let txt; if (k === 'z') txt = await new Response(new Blob([body]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text(); else if (k === 'j') txt = new TextDecoder().decode(body); else throw new Error('Unknown code');
-  const o = JSON.parse(txt); if (!o || o.app !== 'lumi' || !['list', 'meal'].includes(o.t)) throw new Error('Not a Lumi share code'); return o;
+  const o = JSON.parse(txt); if (!o || o.app !== 'lumi' || !['list', 'meal', 'recipe'].includes(o.t)) throw new Error('Not a Lumi share code'); return o;
 }
 const slimItem = it => { const o = {}; ['pid', 'id', 'name', 'brand', 'grams', 'label', 'n', 'score', 'cs', 'h', 'done', 'img'].forEach(k => { if (it[k] != null) o[k] = it[k]; }); return o; };
 async function share11(kind, obj) {
-  const payload = { app: 'lumi', v: 1, t: kind, name: obj.name, items: (obj.items || []).map(slimItem) };
+  const payload = { app: 'lumi', v: 1, t: kind, name: obj.name, items: (obj.items || []).map(slimItem) }; if (kind === 'recipe') payload.s = obj.servings;
   const code = await pack11(payload); const url = location.origin + location.pathname + '#/share/' + code;
   sheet(`<div class="sh11"><h2>Share “${esc(obj.name)}”</h2><p class="small">Anyone who opens this link (or pastes the code in Lumi › Settings › Import a shared code) gets a copy. It's a one-time copy: later changes don't sync either way. The data is inside the link itself, so share it only with people you trust.</p>
    <label class="fl11"><span>Link</span><textarea class="in11" rows="3" readonly id="shu">${esc(url)}</textarea></label>
@@ -185,13 +185,14 @@ async function viewShare11(arg) {
   if (!arg) { app.innerHTML = `<section class="pg11">${head}<div class="card"><label class="fl11"><span>Share code or link</span><textarea id="shin" class="in11" rows="4" placeholder="Paste here"></textarea></label><div class="actions"><button class="btn pri" id="shgo">Preview</button></div><p class="small" id="shm" role="status"></p></div></section>`;
     $('#shgo').onclick = () => { const v = $('#shin').value.trim(); if (!v) return; location.hash = '#/share/' + v.replace(/^.*#\/share\//, ''); }; return; }
   let o; try { o = await unpack11(arg); } catch (e) { app.innerHTML = `<section class="pg11">${head}<div class="card"><p><b>That code couldn't be read.</b></p><p class="small">${esc(e.message)}. Ask for a new link.</p><a class="btn" href="#/share">Paste a code</a></div></section>`; return; }
-  const tot = o.t === 'meal' ? totals(o.items) : null;
-  app.innerHTML = `<section class="pg11">${head}<div class="card"><p class="small">${o.t === 'list' ? 'Shopping list' : 'Saved meal'}</p><h2>${esc(o.name || 'Shared')}</h2>
+  const tot = o.t !== 'list' ? totals(o.items) : null;
+  app.innerHTML = `<section class="pg11">${head}<div class="card"><p class="small">${o.t === 'list' ? 'Shopping list' : o.t === 'recipe' ? `Recipe · ${o.s || 1} servings` : 'Saved meal'}</p><h2>${esc(o.name || 'Shared')}</h2>
    <ul class="grp11 flat">${o.items.slice(0, 50).map(i => `<li class="hr11"><span class="ht11"><b>${esc(i.name || '')}</b><small>${esc([i.brand, i.label].filter(Boolean).join(' · '))}</small></span></li>`).join('')}</ul>
    ${tot ? `<p class="small">${Math.round(tot.carbs)} g carbs · ${Math.round(tot.kcal)} Cal total, from the original foods' label data.</p>` : ''}
-   <div class="actions"><button class="btn pri" id="shimp">Import ${o.t === 'list' ? 'list' : 'meal'}</button><a class="btn" href="#/">Cancel</a></div></div></section>`;
+   <div class="actions"><button class="btn pri" id="shimp">Import ${o.t}</button><a class="btn" href="#/">Cancel</a></div></div></section>`;
   $('#shimp').onclick = () => {
     if (o.t === 'list') { const L = lists(); const id = 'l' + Date.now().toString(36); L.unshift({ id, name: (o.name || 'Shared list') + ' (shared)', items: o.items.map(i => Object.assign({ done: false, t: Date.now() }, i)), t: Date.now() }); setLists(L); toast('List imported'); location.hash = '#/list/' + id; }
+    else if (o.t === 'recipe') { const id = 'r' + Date.now().toString(36); const L = store.get('recipes', []); L.unshift({ id, name: (o.name || 'Shared recipe') + ' (shared)', servings: o.s || 1, items: o.items, t: Date.now() }); store.set('recipes', L); toast('Recipe imported'); location.hash = '#/recipe/' + id; }
     else { const ms = savedMeals(); ms.unshift({ id: 'm' + Date.now().toString(36), name: (o.name || 'Shared meal') + ' (shared)', items: o.items }); store.set('meals', ms); toast('Meal imported'); location.hash = '#/meals'; }
   };
 }

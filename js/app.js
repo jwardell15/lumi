@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '11.1.1';
+const VERSION = '12.0';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -348,7 +348,10 @@ function runQuery(q, typing) {
   // remote sources: wait until typing pauses
   clearTimeout(runQuery.t); runQuery.t = setTimeout(() => { if (rs !== my) return;
     usdaSearch(q).then(ps => done('usda', ps.map(p => itemFromProduct(p, textRel(q, p.name, p.brand) - 6 + LumiSearch.relAdj(q, p) - (/^usda\b/i.test(p.brand || '') && /\b(soda|yogurt|cereal|bread|chips|cheese|milk|crackers?|cookies?|bars?)\b/.test(q) ? 20 : 0))))).catch(e => done('usda', null, e));
-    offSearch(q).then(ps => done('off', ps.map(p => itemFromProduct(p, textRel(q, p.name, p.brand) - 3 + LumiSearch.relAdj(q, p))))).catch(e => done('off', null, e)); }, typing ? 700 : 0);
+    // v12: skip the live Open Food Facts search when the local index already answers well (many hits, or a restaurant chain query): fewer blocked/rate-limited requests and less console noise
+    loadIndex().catch(() => {}).then(() => { if (rs !== my) return; const nq12 = ' ' + LumiSearch.norm(q) + ' ', chainQ = (engine.chainN || []).some(c => nq12.includes(' ' + c.n + ' '));
+      if (chainQ || (my.counts.local || 0) >= 60) { done('off', []); return; }
+      offSearch(q).then(ps => done('off', ps.map(p => itemFromProduct(p, textRel(q, p.name, p.brand) - 3 + LumiSearch.relAdj(q, p))))).catch(e => done('off', null, e)); }); }, typing ? 700 : 0);
   renderResults();
 }
 let browseWait = false;
@@ -614,6 +617,7 @@ function route() {
   if (typeof closeSheet === 'function' && !document.querySelector('.onb')) closeSheet(); app.classList.remove('enter', 'prodv'); void app.offsetWidth; app.classList.add('enter'); setTimeout(drawCmpTray, 0);
   const h = location.hash.replace(/^#\/?/, ''); const i = h.indexOf('/'); const view = i < 0 ? h : h.slice(0, i); const arg = i < 0 ? '' : decodeURIComponent(h.slice(i + 1));
   document.querySelectorAll('.tabbar a').forEach(a => a.classList.toggle('on', a.dataset.v === (['browse', 'store', 'aisle', 'meal', 'cosmetics', 'cos', 'overview', 'additives', 'additive', 'ingredient'].includes(view) ? 'browse' : ['search', 'product', ''].includes(view) ? 'home' : view === 'favorites' ? 'saved' : ['about', 'custom'].includes(view) ? 'settings' : ['compare', 'meal', 'cosmetics', 'cos', 'additive', 'additives', 'ingredient'].includes(view) ? 'home' : ['overview', 'lists', 'list'].includes(view) ? 'saved' : view)));
+  if (view === 'product' && /^recipe(:|%3A)/i.test(arg || '')) return viewRecipe12(decodeURIComponent(arg).slice(7));
   if (view === 'product' && arg) return viewProduct(/^\d+$/.test(arg.replace(/\s/g, '')) ? arg.replace(/\s/g, '') : arg);
   if (view === 'search' && arg) return viewSearch(arg);
   if (view === 'browse' && arg) return viewBrowse(arg);
@@ -645,6 +649,9 @@ function route() {
   if (view === 'glucose') return viewGlucose11(arg);
   if (view === 'share') return viewShare11(h.slice(i + 1 || h.length));
   if (view === 'report') return viewReport(arg);
+  if (view === 'recipes') return viewRecipes12();
+  if (view === 'recipe' && arg) return viewRecipe12(arg);
+  if (view === 'dexcom') return viewDexcomSetup12();
   viewHome();
 }
 window.addEventListener('hashchange', route);

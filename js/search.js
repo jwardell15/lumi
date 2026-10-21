@@ -47,6 +47,27 @@ const KNOWNB = /^(chobani|fage|oikos|siggi'?s|two good|ratio|yoplait|dannon|dano
 const LEADSTOP = new Set('cereal cereals protein original organic the a and with of whole grain grains multigrain multi chocolate cinnamon vanilla strawberry peanut butter almond blueberry apple maple fruity fruit berry berries dark toast toasted honey crunchy crispy crisp low sugar free gluten family size big mini kids breakfast simple plain natural classic oat oats wheat rice corn brown light keto high fiber mixed nut nuts granola instant sweetened kelloggs kellogg crunch quick flavored fashioned nature natures pumpkin cranberry coconut banana pecan steel golden rolled flax lightly apples clusters overnight marshmallow general mills ancient sprouted superfood strawberries strawberry almonds flavor chocolatey super cherry cookie caramel chip french hazelnut food morning post quaker kashi great value signature select kroger simple truth market pantry spice flakes'.split(' '));
 const leadWord = n => { for (const w of norm(n).split(' ')) if (w.length >= 4 && !LEADSTOP.has(w) && !/\d/.test(w)) return w; return ''; };
 const leadPair = n => { const t = norm(n).split(' '); for (let i = 0; i < t.length; i++) if (t[i].length >= 4 && !LEADSTOP.has(t[i]) && !/\d/.test(t[i])) { const nx = t[i + 1]; return nx && !/\d/.test(nx) && !/^(cereal|cereals|breakfast|original|with|and|the)$/.test(nx) ? t[i] + ' ' + nx : ''; } return ''; };
+/* v12 restaurant item role: within chain results, mains (pizza, sandwiches, entrees…) beat condiments, drizzles, toppings and
+   zero-carb add-ons. Uses the part of the name before the first comma ("Balsamic Drizzle, 7\" Pizza" is a drizzle, not a pizza),
+   and never applies when the query itself asks for the add-on (e.g. "ranch", "sauce"). */
+const R_ADD = /\b(sauces?|drizzle|dressing|dip|dipping|packet|condiment|ketchup|mustard|mayo|mayonnaise|relish|salsa|syrup|glaze|seasoning|croutons?|creamer|sweetener|gravy|aioli|vinaigrette|topping|toppings|whipped cream|cold foam)$|^(sugar packet|creamer|sweetener)\b/;
+const R_WEAK = /^(lemon|lime|butter|jelly|jam|honey|ranch|extra|add|add on|substitute|side of|shot|pump)\b|\b(packet|cup)$/;
+const R_TOP = /^(fresh |roasted |diced |sliced |grilled |banana |hot |sweet |spicy |extra )?(mushrooms?|spinach|onions?|peppers?|olives?|tomato(es)?|jalape(n|ñ)os?|pineapple|bacon|ham|sausage|pepperoni|anchovies|cheese|provolone|mozzarella|cheddar|parmesan|basil|garlic|pickles?|lettuce|avocado|egg|chicken|beef|steak|broccoli|artichoke|feta|herbs?)$/;
+const R_MAIN = /\b(pizza|calzone|calzato|sub|sandwich|burger|cheeseburger|wrap|bowl|entree|entrée|platter|plate|meal|combo|dinner|taco|burrito|quesadilla|nachos|enchilada|spaghetti|pasta|lasagna|mac|ravioli|alfredo|chili|coney|way|omelet|omelette|skillet|biscuit|pancakes?|waffles?|french toast|breakfast|salad|soup|wings|tenders|strips|nuggets|fried chicken|chickenjoy|chicken|steak|ribs|fish|shrimp|hot dog|pretzel|stromboli|melt|panini|hoagie|gyro|bbq|pot pie|casserole|kids)\b/;
+const R_DRINK = /\b(water|soda|pepsi|coke|coca-cola|sprite|diet|tea|coffee|cold brew|lemonade|juice|milk|latte|cappuccino|espresso|americano|refresher|energy drink|bottled)\b/;
+function restRole(d, nq) {
+  const nn = norm(d.name), head = norm(String(d.name).split(',')[0]);
+  if (R_ADD.test(nq) || R_WEAK.test(nq) || R_DRINK.test(nq) || R_TOP.test(nq)) return 0;
+  let r = 0;
+  if (R_ADD.test(head)) r -= 38;
+  else if (R_MAIN.test(head)) r += 16;
+  else if (R_WEAK.test(head) || R_TOP.test(head)) r -= 30;
+  else if (R_DRINK.test(head)) r -= 20;
+  else if (R_MAIN.test(nn)) r += 6;
+  if (d.net != null && d.net <= 1) r -= 12;
+  return r;
+}
+const T0 = 15000; // docs in data/index-0.json (tier 0)
 const CATQ = { cereal: 'cereal', cereals: 'cereal', 'breakfast cereal': 'cereal', granola: 'cereal-granola', oatmeal: 'cereal-hot', chips: 'snacks-chips', crisps: 'snacks-chips', crackers: 'snacks-crackers', popcorn: 'snacks-popcorn', soda: 'drinks-soda', sodas: 'drinks-soda', pop: 'drinks-soda', juice: 'drinks-juice', yogurt: 'yogurt', yoghurt: 'yogurt', 'greek yogurt': 'yogurt-greek', bread: 'bread', tortillas: 'bread-tortilla', bagels: 'bread-bagel', cheese: 'dairy-cheese', milk: 'dairy-milk', cookies: 'sweets-cookies', chocolate: 'sweets-choc', candy: 'sweets-candy', 'ice cream': 'sweets-ice', 'protein bar': 'bars-protein', 'protein bars': 'bars-protein', 'granola bar': 'bars-granola', bars: 'bars', 'peanut butter': 'nuts-butter', nuts: 'nuts-nuts', 'pasta sauce': 'sauces-pasta', dressing: 'sauces-dressing', 'salad dressing': 'sauces-dressing', 'hot sauce': 'sauces-hot' };
 const NONUSB = /\b(sojade|yeo valley|olympic|alpro|onken|m[uü]ller|pr[eé]sident|lactalis|carrefour|auchan|leclerc|monoprix|tesco|sainsbury'?s|asda|waitrose|morrisons|marks (&|and) spencer|lidl|milbona|libert[eé]|iogo|astro|natrel|qu[eé]bon|sealtest|neilson|president'?s choice|no name|compliments|arla|la laiti[eè]re|st hubert|bonduelle|gerbl[eé]|bjorg|les 2 vaches|malo|candia|lactel|bridel|paysan breton|soignon|andros|ehrmann|zott|emmi|mlekovita|valio|dux|pozuelo|rovira)\b/i;
 /* query word → patterns meaning "a different product that merely contains the word" */
@@ -98,7 +119,7 @@ class Engine {
     if (data.chains) { this.chainN = (this.chainN || []).concat(data.chains.map(([k, l]) => ({ k, n: norm(l).replace(/^the /, '').replace(/ (scratch kitchen|restaurant|restaurants)$/, '') })).filter(c => c.n.length >= 3)); } // v9.1.1: chain names from data, apostrophes normalized
     for (const d of data.docs) {
       const i = this.docs.length;
-      const doc = { code: d[0], name: fixName(d[1]), brand: fixBrand(d[2], d[1]), score: d[3] < 0 ? null : d[3], net: d[4] < 0 ? null : d[4], cat: cats[d[5]] || '', img: imgURL(d[0], d[6]), keys: d[7] ? d[7].split('.').map(k => /^\d+$/.test(k) ? +k : (KC ? KC.KEYS.indexOf(k) : -1)).filter(k => k >= 0) : [], sugar: d[8] == null || d[8] < 0 ? null : d[8], zc: d[4] === 0 && d[8] >= 3 && !/\b(keto|sugar[- ]?free|zero|no sugar)\b/i.test(d[1] || ''), h: d[9] == null || d[9] < 0 ? null : d[9], hn: !!(d[10] & 1), al: d[11] || 0, df: d[12] == null ? null : d[12], src: data.generic ? (d[7] && d[7].startsWith('rest') ? 'rest' : 'whole') : 'local', rank: data.generic ? 1e6 + (this.gN = (this.gN || 0) + 1) : (this.lN = (this.lN || 0) + 1) - 1 /* 11.1.1: load-order independent (index-g can arrive before index-0) */, sm: d[13] || 0, ai: d[14] == null ? -1 : d[14], wf: d[15] || 0, bad: !!(d[10] & 8), fl: !!(d[10] & 4) || (water().includes(d[14]) && d[4] >= 0 && d[4] <= 0.5) };
+      const doc = { code: d[0], name: fixName(d[1]), brand: fixBrand(d[2], d[1]), score: d[3] < 0 ? null : d[3], net: d[4] < 0 ? null : d[4], cat: cats[d[5]] || '', img: imgURL(d[0], d[6]), keys: d[7] ? d[7].split('.').map(k => /^\d+$/.test(k) ? +k : (KC ? KC.KEYS.indexOf(k) : -1)).filter(k => k >= 0) : [], sugar: d[8] == null || d[8] < 0 ? null : d[8], zc: d[4] === 0 && d[8] >= 3 && !/\b(keto|sugar[- ]?free|zero|no sugar)\b/i.test(d[1] || ''), h: d[9] == null || d[9] < 0 ? null : d[9], hn: !!(d[10] & 1), al: d[11] || 0, df: d[12] == null ? null : d[12], src: data.generic ? (d[7] && d[7].startsWith('rest') ? 'rest' : 'whole') : 'local', rank: data.generic ? T0 + (this.gN = (this.gN || 0) + 1) - 1 : ((this.lN = (this.lN || 0) + 1) - 1 < T0 ? this.lN - 1 : this.lN - 1 + (this.gN || 0)) /* 12.0: load-order independent, same order as index-0 → index-g → later tiers (11.1.1 put generic docs at 1e6+, which broke the rank boost for restaurants/whole foods) */, sm: d[13] || 0, ai: d[14] == null ? -1 : d[14], wf: d[15] || 0, bad: !!(d[10] & 8), fl: !!(d[10] & 4) || (water().includes(d[14]) && d[4] >= 0 && d[4] <= 0.5) };
       doc.nn = norm(doc.name + ' ' + doc.brand);
       this.docs.push(doc);
       const seen = new Map();
@@ -147,12 +168,16 @@ class Engine {
         leadMap = L.lead; } }
     let qcKi = -1; { const KC = root.LumiCats, nq0 = ' ' + norm(query) + ' '; let best = null; for (const c of this.chainN || []) if (nq0.includes(' ' + c.n + ' ') && (!best || c.n.length > best.n.length)) best = c; // v9.1.1: query names a chain
       if (best && KC) { qcKi = KC.KEYS.indexOf(best.k); if (qcKi >= 0) this.docs.forEach((d, i) => { if (d.keys.includes(qcKi) && !acc.has(i)) acc.set(i, [0.78 * qt.length, qt.length]); }); } }
+    const chainRest = qcKi >= 0 ? (' ' + norm(query) + ' ').replace(' ' + (this.chainN || []).find(c => root.LumiCats && root.LumiCats.KEYS.indexOf(c.k) === qcKi).n + ' ', ' ').trim() : null;
     const need = qt.length <= 2 ? qt.length : qt.length - 1;
     const nq = norm(query); const N = this.docs.length || 1; const res = [];
     for (const [i, [s, c]] of acc) {
       if (c < need) continue; const d = this.docs[i]; if (filter && !filter(d)) continue;
       let r = (s / qt.length) * 100 * (c / qt.length);
-      if (d.nn.includes(nq)) r += 25; { const nmn = norm(d.name), at = (' ' + nmn + ' ').indexOf(' ' + nq); if (at >= 0) r += 10 - Math.min(4, nmn.slice(0, at).split(' ').filter(Boolean).length); } // v7.3: query anywhere in the name, small position penalty
+      const chainOnly = qcKi >= 0 && d.src === 'rest' && chainRest === ''; // v12: query is just the chain name: its words in item names ("Gold Star Chili" → "Side of Chili") are not relevance
+      if (chainOnly) { if (!this.cmin || this.cmin.n !== this.docs.length) this.cmin = { n: this.docs.length }; let cm = this.cmin[qcKi]; if (!cm) { let lo = Infinity, hi = -Infinity; for (const x of this.docs) if (x.keys.includes(qcKi)) { lo = Math.min(lo, x.rank); hi = Math.max(hi, x.rank); } cm = this.cmin[qcKi] = [lo, Math.max(1, hi - lo)]; }
+        r = 135 + 12 * (1 - (d.rank - cm[0]) / cm[1]) + (d.net != null ? Math.min(6, d.net / 8) : 0); } // menu order (chains list signature items first) + real meals over garnishes
+      else if (d.nn.includes(nq)) r += 25; if (!chainOnly) { const nmn = norm(d.name), at = (' ' + nmn + ' ').indexOf(' ' + nq); if (at >= 0) r += 10 - Math.min(4, nmn.slice(0, at).split(' ').filter(Boolean).length); } // v7.3: query anywhere in the name, small position penalty
       r += 26 * (1 - d.rank / N);
       // v6.3.3: common cuts first, offal last (unless asked for), and blend in the rating
       if (!OFFAL.test(nq) && OFFAL.test(d.nn)) r -= 30;
@@ -171,7 +196,8 @@ class Engine {
       if (d.src !== 'whole' && d.src !== 'rest') { if (!/^[\x20-\x7e]+$/.test(d.name + d.brand) || NONEN.test(d.name.toLowerCase()) || !(d.code.length === 12 || (d.code.length === 13 && /^[01]/.test(d.code)))) r -= 22; if (d.bad) r -= 15; if (!d.img) r -= 3; if (d.name.split(' ').length <= 1 && d.brand && nq.split(' ').length === 1) r -= 6; }
       if (!ALCQ.test(nq) && ALCN.test(d.nn)) r -= 28;
       if (d.src === 'whole' && PACKQ.test(nq)) r -= 30;
-      if (d.src === 'rest') r += qcKi >= 0 ? (d.keys.includes(qcKi) ? 60 : -10) : CHAINQ.test(nq) ? 6 : catKi >= 0 ? -60 : -30;
+      if (d.src === 'rest') r += qcKi >= 0 ? (d.keys.includes(qcKi) ? 60 : chainRest === '' ? -90 : -10) : CHAINQ.test(nq) ? 6 : catKi >= 0 ? -60 : -30;
+      if (d.src === 'rest') r += restRole(d, nq); // v12: mains above sauces/drizzles/toppings/zero-carb add-ons
       if (d.src === 'whole') { const nn = norm(d.name), w = nn.split(' '); if (nn.startsWith(qt[0])) r += 14; if (/\braw\b/.test(nn)) r += 6; r -= Math.min(10, Math.max(0, w.length - qt.length - 1) * 1.5); }
       res.push([r, d]);
     }

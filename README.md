@@ -96,6 +96,14 @@ Local dev: `python3 serve.py 8765`.
 - **Fixes**: restaurant rows hidden from the All view unless they're relevant; Open Food Facts searched one mirror at a time with a 10-minute quiet back-off; 0 g net carbs with ≥3 g sugar is flagged "check label" and kept out of picks and swaps; more non-English words filtered; data-driven big-brand signal alongside the hand list; top picks skip hidden-sugar items.
 
 
+## v12.0
+- **Week and Report redesigned** (`js/v12.js`, `css/v12.css`). Both use the same KPI tiles and a stacked carbs-per-day chart by meal, with a target line; each column is a link to that day. Week also has average-by-meal bars, a day list and previous/next week (`#/log/week-N`). Report (7/14/30/90 days) adds carbs by hour, ranked top carb sources and the daily table, and prints cleanly.
+- **Meals:** default by time. Breakfast is 5:00–10:59, lunch 11:00–14:59, dinner 17:00–20:59, and everything else is a snack. Every Day-view entry has **Edit** (meal, time, amount). A one-time migration (`mig12`) fills a missing or unknown `meal` from the entry time; it backs up the log to `lumi.log.bak12` first and never deletes entries.
+- **Recipe builder** (`#/recipes`, `#/recipe/<id>`): Lumi foods and USDA staples by grams, plus a servings count. Shows total and per-serving carbs, net carbs, fiber, protein, fat and kcal, and lists any ingredient with missing data instead of guessing. You can save, log N servings (with a meal picker), or share a link (share type `recipe`). Logged recipe entries link back to the recipe.
+- **Restaurant ranking:** in a chain search, mains rank above sauces, drizzles, toppings, drinks and zero-carb add-ons (`restRole`). A query that is just the chain name ignores the chain's own words in item names and follows the chain's menu order. Fixed the 11.1.1 regression where generic and restaurant docs lost their rank boost (rank is now load-order independent with the 11.1 ordering).
+- **Dexcom:** `tools/dexcom/` has the worker, `wrangler.toml` and a README. The session uses a bearer session id returned in the URL fragment (no third-party cookies, so it works in iOS Safari). The worker has `/status` and `/logout`, an origin allow-list, single-use state, a 30-day range limit, and refresh-and-retry on 401. The in-app guide is at `#/dexcom`. Worker logic is unit-tested against a mocked Dexcom (`node` test, not shipped); no glucose values are ever generated in the app.
+- **OFF noise:** the live Open Food Facts search is skipped for chain queries and when the local index already has 60 or more hits.
+
 ## v11.1.1
 - Fix: Home "Top picks" could stay on skeletons forever. Doc `rank` was the load position, so when `index-g` (45k generic/restaurant docs) arrived before `index-0`, every packaged product ranked >40000 and failed the `rank < 40000` filter. Rank is now per-layer (local 0..n, generic 1e6+). Top picks shows a message (and Try again on load errors) instead of endless skeletons.
 

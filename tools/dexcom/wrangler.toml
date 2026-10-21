@@ -1,0 +1,18 @@
+# Lumi Dexcom backend: deploy with `npx wrangler deploy` from this folder (see README.md).
+name = "lumi-dexcom"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+# "sandbox" (Dexcom's simulated users, for testing) or "production" (your real Dexcom account)
+DEXCOM_ENV = "sandbox"
+# Where Lumi runs. Only these origins may receive the login redirect and read data.
+APP_ORIGIN = "https://jwardell15.github.io"
+
+[[kv_namespaces]]
+binding = "TOKENS"
+id = "PASTE_THE_ID_FROM_wrangler_kv_namespace_create_TOKENS"
+
+# Secrets (never put them in this file):
+#   npx wrangler secret put DEXCOM_CLIENT_ID
+#   npx wrangler secret put DEXCOM_CLIENT_SECRET
