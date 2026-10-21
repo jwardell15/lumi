@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '12.0';
+const VERSION = '12.1';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -55,16 +55,22 @@ function loadIndexX() { // USDA Branded extras (tiers 3+), only fetched when the
   if (!tierX) tierX = Promise.all([loadIndexAll(), loadMeta()]).then(async ([, m]) => { for (let i = 3; i < ((m && m.tiers) || 3); i++) { engine.add(await getData(`data/index-${i}.json`)); notifyTier(); } });
   return tierX;
 }
+let tierW = null; // v12.1: international OFF layer (index-w-*), loaded only on demand (setting, few US hits, or "include international")
+const wantWorld = () => { try { return localStorage.getItem('lumi_world') === '1'; } catch { return false; } };
+function loadIndexW() { if (!tierW) tierW = Promise.all([loadIndexX(), loadMeta()]).then(async ([, m]) => { for (let i = 0; i < ((m && m.world && m.world.tiers) || 0); i++) { engine.add(await getData(`data/index-w-${i}.json`)); notifyTier(); } }); return tierW; }
 const ghash = id => { let h = 0; for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h % 40; };
 const gshardCache = new Map();
 async function genericProduct(id) { const k = ghash(id); if (!gshardCache.has(k)) gshardCache.set(k, getData(`data/g/${k}.json`).catch(() => ({}))); const sh = await gshardCache.get(k); return sh[id] ? S.fromCompact(sh[id]) : null; }
 function notifyTier() { tierWaiters.forEach(f => f()); }
 const shardCache = new Map();
+const wshardCache = new Map();
+function wshard(code) { const k = code.slice(-3); if (!wshardCache.has(k)) wshardCache.set(k, fetch(`data/w/${k}.json`).then(r => r.ok ? r.json() : {}).catch(() => ({}))); return wshardCache.get(k); }
 function shard(code) { const k = code.slice(-3); if (!shardCache.has(k)) shardCache.set(k, fetch(`data/d/${k}.json`).then(r => r.ok ? r.json() : {}).catch(() => ({}))); return shardCache.get(k); }
 const codeVariants = c => { c = String(c).replace(/\D/g, ''); const s = c.replace(/^0+/, ''); return [...new Set([c, s, s.padStart(12, '0'), s.padStart(13, '0'), s.padStart(8, '0')])].filter(x => x.length >= 8); };
 const gtinKey = c => c ? String(c).replace(/\D/g, '').replace(/^0+/, '') : '';
 async function localProduct(code) {
   for (const v of codeVariants(code)) { const sh = await shard(v); if (sh[v]) return S.fromCompact(sh[v]); }
+  for (const v of codeVariants(code)) { const sh = await wshard(v); if (sh[v]) return S.fromCompact(sh[v]); } // v12.1: international layer
   return null;
 }
 
@@ -129,7 +135,7 @@ function thumb(img, name, keys, cat, big, brand) {
   return `<div class="thumb${big ? ' big' : ''}">${bg}${src ? `<img src="${esc(src)}" alt="" ${big ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async" onload="LumiImg.ok(this)" onerror="LumiImg.err(this)">` : ''}</div>`;
 }
 const SRC = { local: '', off: '<span class="tag">OFF</span>', usda: '<span class="tag">USDA</span>', whole: '<span class="tag t-whole">Whole food</span>', rest: '<span class="tag t-rest">Restaurant</span>', chain: '<span class="tag t-rest">Restaurant</span>', custom: '<span class="tag">My food</span>' };
-function rowHTML(it) { return `<a class="row" href="#/product/${esc(it.id)}">${thumb(it.img, it.name, it.keys, it.cat, false, it.brand)}<div class="t"><div class="n">${alertIcon(it)}${esc(it.name)}</div><div class="b">${/^usda\b/i.test(it.brand || '') && it.src === 'usda' ? '' : SRC[it.src] || ''}${it.src === 'whole' ? esc(/^usda/i.test(it.brand || '') ? 'USDA' : /^cnf|canad/i.test(it.brand || '') ? 'CNF' : String(it.brand || '').split(' ')[0]) : esc(LumiSearch.fixBrand ? LumiSearch.fixBrand(it.brand, it.name) : it.brand || '')}${it.sizes > 1 ? ` · ${it.sizes} sizes` : ''}${it.wa ? ` · <span class="wa8" title="Watchlist: ${esc(it.wa)}">⚠ ${esc(it.wa)}</span>` : ''}${it.zc && !it.bad ? ' · <span class="c-pr badchip" title="The label lists sugar but 0 g net carbs, which cannot both be right">⚠ 0 g net carbs listed with sugar, check label</span>' : it.bad ? ' · <span class="c-bd badchip" title="Calories don\'t add up from carbs, protein and fat (4/4/9), so this label data is probably wrong">⚠ data looks wrong</span>' : it.score == null ? ' · <span class="c-pr">data incomplete</span>' : it.net != null ? ` · ${r1(it.net)}g net carbs/100` : ''}</div></div>${mini(it)}</a>`; }
+function rowHTML(it) { return `<a class="row" href="#/product/${esc(it.id)}">${thumb(it.img, it.name, it.keys, it.cat, false, it.brand)}<div class="t"><div class="n">${alertIcon(it)}${esc(it.name)}${it.src === 'world' ? '<span class="wbadge" title="International product (Open Food Facts)">🌍 Intl</span>' : ''}</div><div class="b">${/^usda\b/i.test(it.brand || '') && it.src === 'usda' ? '' : SRC[it.src] || ''}${it.src === 'whole' ? esc(/^usda/i.test(it.brand || '') ? 'USDA' : /^cnf|canad/i.test(it.brand || '') ? 'CNF' : String(it.brand || '').split(' ')[0]) : esc(LumiSearch.fixBrand ? LumiSearch.fixBrand(it.brand, it.name) : it.brand || '')}${it.sizes > 1 ? ` · ${it.sizes} sizes` : ''}${it.wa ? ` · <span class="wa8" title="Watchlist: ${esc(it.wa)}">⚠ ${esc(it.wa)}</span>` : ''}${it.zc && !it.bad ? ' · <span class="c-pr badchip" title="The label lists sugar but 0 g net carbs, which cannot both be right">⚠ 0 g net carbs listed with sugar, check label</span>' : it.bad ? ' · <span class="c-bd badchip" title="Calories don\'t add up from carbs, protein and fat (4/4/9), so this label data is probably wrong">⚠ data looks wrong</span>' : it.score == null ? ' · <span class="c-pr">data incomplete</span>' : it.net != null ? ` · ${r1(it.net)}g net carbs/100` : ''}</div></div>${mini(it)}</a>`; }
 const skel = n => `<div class="list">${Array.from({ length: n }, () => `<div class="row skel"><div class="thumb sk"></div><div class="t"><div class="sk skl" style="width:80%"></div><div class="sk skl" style="width:45%"></div></div><div class="sk" style="width:44px;height:44px;border-radius:50%"></div></div>`).join('')}</div>`;
 function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 2200); }
 const go = h => { if (location.hash !== h) location.hash = h; else route(); };
@@ -342,8 +348,8 @@ function runQuery(q, typing) {
   const done = (k, list, err) => { if (rs !== my) return; my.src[k] = err ? 'err' : 'ok'; if (list) { my.counts[k] = list.length; mergeItems(list); } renderResults(); };
   const runLocal = () => { if (rs !== my) return; const seen = new Set(), r = [];
     for (const d of engine.search(q, { limit: 160 }).concat(engine.search(q, { limit: 30, filter: d => d.src === 'rest' }), engine.search(q, { limit: 30, filter: d => d.src === 'whole' }))) if (!seen.has(d.code)) { seen.add(d.code); r.push(itemFromDoc(d)); } for (const it of r) my.items.delete(it.id); my.keyIdx = null; done('local', r);
-    const d = $('#dym'); if (d) { const sug = didYouMean(q); d.innerHTML = sug ? `<div class="dym">Did you mean <a href="#/search/${encodeURIComponent(sug)}">${esc(sug)}</a>?</div>` : ''; } };
-  loadIndex().then(() => { runLocal(); return loadIndexFull(); }).then(() => { runLocal(); return loadIndexAll(); }).then(() => { runLocal(); return loadIndexX(); }).then(() => runLocal()).catch(e => { if (!engine.docs.length) done('local', null, e); else runLocal(); });
+    const d = $('#dym'); if (d) { const sug = didYouMean(q); d.innerHTML = (sug ? `<div class="dym">Did you mean <a href="#/search/${encodeURIComponent(sug)}">${esc(sug)}</a>?</div>` : '') + (my.worldOn ? `<div class="dym">🌍 Including international products (Open Food Facts, country shown).</div>` : `<div class="dym"><button class="linkbtn" id="worldBtn">🌍 Also search 330,000+ international products</button></div>`); const wb = $('#worldBtn'); if (wb) wb.onclick = () => { my.worldOn = true; wb.textContent = 'Loading international products…'; loadIndexW().then(runLocal).catch(runLocal); }; } };
+  loadIndex().then(() => { runLocal(); return loadIndexFull(); }).then(() => { runLocal(); return loadIndexAll(); }).then(() => { runLocal(); return loadIndexX(); }).then(() => { runLocal(); if (rs === my && (wantWorld() || my.worldOn || (my.counts.local || 0) < 12)) { my.worldOn = true; return loadIndexW().then(() => runLocal()); } }).catch(e => { if (!engine.docs.length) done('local', null, e); else runLocal(); });
   const cf = customFoods().filter(c => textRel(q, c.name, c.brand) >= 50).map(c => itemFromProduct(c, textRel(q, c.name, c.brand) + 30)); if (cf.length) mergeItems(cf);
   // remote sources: wait until typing pauses
   clearTimeout(runQuery.t); runQuery.t = setTimeout(() => { if (rs !== my) return;
@@ -465,7 +471,7 @@ async function viewProduct(id) {
   app.innerHTML = `
   <div class="card">
     <div class="ph">${thumb(p.img, p.name, keys, p.cat, true, p.brand)}
-      <div class="ph-t"><h1>${esc(p.name)}</h1><div class="b">${esc(p.brand)}${p.qty ? ' · ' + esc(p.qty) : ''}</div>${p.hx && p.hx.s ? '' : p.meta ? `<div class="srcline">Source: ${esc(p.meta.src)}${p.meta.date ? ', ' + esc(p.meta.date) : ''}</div>` : ''}
+      <div class="ph-t"><h1>${esc(p.name)}</h1><div class="b">${esc(p.brand)}${p.qty ? ' · ' + esc(p.qty) : ''}</div>${p.hx && p.hx.w ? `<div class="srcline">🌍 International product · listed in ${esc(p.hx.w.join(', ') || 'another country')} on Open Food Facts. The label where you buy it may differ, check the package.</div>` : ''}${p.hx && p.hx.s ? '' : p.meta ? `<div class="srcline">Source: ${esc(p.meta.src)}${p.meta.date ? ', ' + esc(p.meta.date) : ''}</div>` : ''}
         ${ratingLines(s, hr, hp)}</div></div>
     ${sourceLine(p)}
     ${alertBanner(p, s.net)}

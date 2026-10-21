@@ -9,6 +9,8 @@ function typeBarcode(msg) {
 }
 document.addEventListener('click', e => { if (e.target && e.target.id === 'scanType') { if (typeof stopScan === 'function') stopScan(); typeBarcode(''); } });
 const V7_NEWS = [
+  ['🛒', 'Costco and more chains (12.1)', 'Browse › Shop by store now starts with Costco: Kirkland Signature, products tagged as sold at Costco, and the Costco Food Court menu from Costco\'s official nutrition guide. New official restaurant nutrition: Runza, Farmer Boys and Royal Farms (convenience-store hot food).'],
+  ['🌍', 'Over 1 million foods (12.1)', '332,000 more real packaged foods from Open Food Facts outside the US index (UK, Canada, Ireland, Australia, France and more), deduplicated by barcode and checked for consistent nutrition. They are marked 🌍 Intl with the country listed, load only when you ask for them or US results are thin, and barcode scans find them too.'],
   ['📊', 'Week and Report, redesigned (12.0)', 'Week shows carbs per day stacked by meal with your target line, averages by meal and a tap-through day list. Browse past weeks. The Report adds a by-hour chart and ranked top carb sources, and prints cleanly for your care team.'],
   ['🍳', 'Recipe builder (12.0)', 'Settings › Recipes, or Log › Quick add › Recipes: add ingredients by grams, set servings, and see total and per-serving net carbs, fiber, protein and fat. Save, log a serving, or share a link.'],
   ['🕒', 'Meals you can change (12.0)', 'When you log, Lumi suggests Breakfast, Lunch, Dinner or Snack from the time (mid-afternoon and late night count as snacks). Tap Edit on any logged item to move it to another meal, or change its time or amount.'],
@@ -55,9 +57,9 @@ const V7_NEWS = [
   ['☰', 'Shopping lists', 'Make lists (Costco run, school snacks…), check items off, see the carb total and share the list.'],
   ['💊', 'Supplements, sorted', 'Protein & collagen, greens powders, creatine & hydration, vitamins. Fresh "super greens" salads moved to Produce.'],
   ['🔎', 'Smarter search filters', 'Ready-to-eat, has photo and hide bad data, plus better near-duplicate grouping (one row per product).']];
-function whatsNewCard() { if (store.get('seen12', false)) return ''; return `<div class="card news7"><div class="n7h"><b>✨ New in Lumi ${VERSION}</b><button class="icon" id="n7x" aria-label="Dismiss">✕</button></div><ul>${V7_NEWS.slice(0, 3).map(n => `<li><span>${n[0]}</span><div><b>${esc(n[1])}</b> <span class="d">${esc(n[2])}</span></div></li>`).join('')}</ul><a class="lnk" href="#/whatsnew">Everything new ›</a></div>`; }
-document.addEventListener('click', e => { if (e.target && e.target.id === 'n7x') { store.set('seen12', true); const c = document.querySelector('.news7'); if (c) c.remove(); } });
-function viewWhatsNew() { document.title = 'New in Lumi'; store.set('seen12', true);
+function whatsNewCard() { if (store.get('seen121', false)) return ''; return `<div class="card news7"><div class="n7h"><b>✨ New in Lumi ${VERSION}</b><button class="icon" id="n7x" aria-label="Dismiss">✕</button></div><ul>${V7_NEWS.slice(0, 3).map(n => `<li><span>${n[0]}</span><div><b>${esc(n[1])}</b> <span class="d">${esc(n[2])}</span></div></li>`).join('')}</ul><a class="lnk" href="#/whatsnew">Everything new ›</a></div>`; }
+document.addEventListener('click', e => { if (e.target && e.target.id === 'n7x') { store.set('seen121', true); const c = document.querySelector('.news7'); if (c) c.remove(); } });
+function viewWhatsNew() { document.title = 'New in Lumi'; store.set('seen121', true);
   app.innerHTML = `<h1>New in Lumi ${VERSION}</h1><div class="card news7 full"><ul>${V7_NEWS.map(n => `<li><span>${n[0]}</span><div><b>${esc(n[1])}</b> ${esc(n[2])}</div></li>`).join('')}</ul></div><p class="foot">Informational only, not medical advice. Dose from the physical label.</p>`; }
 /* ready-to-eat: index docs use the aisle + staple rules; outside items (USDA/OFF live) use the name rules only */
 function readyToEat(i) { if (i.src === 'whole' || i.src === 'rest' || i.src === 'chain') return true; const d = { name: i.name || '', ai: i.ai == null ? -1 : i.ai }; return !isStaple(d) && !RAW.has(d.ai); }
