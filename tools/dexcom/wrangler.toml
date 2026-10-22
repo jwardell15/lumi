@@ -5,7 +5,7 @@ compatibility_date = "2026-10-01"
 
 [vars]
 # "sandbox" (Dexcom's simulated users, for testing) or "production" (your real Dexcom account)
-DEXCOM_ENV = "sandbox"
+DEXCOM_ENV = "production"
 # Where Lumi runs. Only these origins may receive the login redirect and read data.
 APP_ORIGIN = "https://jwardell15.github.io"
 
