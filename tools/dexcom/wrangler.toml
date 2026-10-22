@@ -11,7 +11,7 @@ APP_ORIGIN = "https://jwardell15.github.io"
 
 [[kv_namespaces]]
 binding = "TOKENS"
-id = "PASTE_THE_ID_FROM_wrangler_kv_namespace_create_TOKENS"
+id = "f4496ff238d5439dbe33dd78cc2e8e79"
 
 # Secrets (never put them in this file):
 #   npx wrangler secret put DEXCOM_CLIENT_ID

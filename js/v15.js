@@ -73,6 +73,7 @@ function viewQuick15() { document.title = 'Quick log — Lumi'; const { Q, html 
     if (Q.length && h) { h.insertAdjacentHTML('beforebegin', html); bindQuick15(app, Q); } } catch (e) { console.warn(e); } setTimeout(prefetch15, 2500); return r; }; }
 
 /* ---------- 3. fresh food quick-add (USDA whole foods, USDA portions only) ---------- */
+const plab15 = (l, g) => { l = String(l || '').trim(); if (/^[\d.½¼¾]/.test(l)) return l; if (/^(oz|ounces?|lb|fl oz)\b/i.test(l) && Math.abs(g - 28.35) > 1.5) return Math.round(g) + ' g'; return '1 ' + l; };
 function viewFresh15(arg) { document.title = 'Add fresh food — Lumi';
   app.innerHTML = `<section class="pg13"><a class="lnk back13" href="#/log">‹ Log</a><h1>Add fresh food</h1><p class="lead74">Produce, eggs, meat, fish and other whole foods from USDA. Portions are USDA's own household measures.</p>
    <label class="field"><span>Food name</span><input id="fr15q" type="search" autocomplete="off" placeholder="e.g. apple, broccoli, salmon" value="${esc(arg || '')}"></label><div id="fr15" aria-live="polite"></div>
@@ -87,8 +88,8 @@ function viewFresh15(arg) { document.title = 'Add fresh food — Lumi';
       box.innerHTML = '<p class="small">Loading portions…</p>'; let p = null; try { p = await genericProduct(b.dataset.fr15); } catch {} box.dataset.ok = 1;
       const P = p && (p.portions || []).filter(x => x && x[1] > 0).slice(0, 6); if (!p || !P.length) { box.innerHTML = `<p class="small">USDA lists no household portions for this food. <a class="lnk" href="#/product/${esc(b.dataset.fr15)}">Open it to log by grams</a>.</p>`; return; }
       const net = S.score(p).net;
-      box.innerHTML = `<div class="chips">${P.map((x, i) => `<button type="button" class="chip" data-po15="${i}">${esc(/^[\d.]/.test(x[0]) ? x[0] : '1 ' + x[0])} <small>${Math.round(x[1])} g · ${net == null ? '?' : Math.round(net * x[1] / 100)} g net</small></button>`).join('')}</div><p class="xs">Tap a portion to log it to ${esc(MEAL_L[mealFor(new Date())])}. Full name: ${esc(p.name)}</p>`;
-      box.querySelectorAll('[data-po15]').forEach(c => c.onclick = () => { const x = P[+c.dataset.po15], lab = /^[\d.]/.test(x[0]) ? x[0] : '1 ' + x[0], meal = mealFor(new Date()); addEntry(p, x[1], lab, meal, Date.now()); const L = LOG.all(), e = L[L.length - 1]; haptic(15);
+      box.innerHTML = `<div class="chips">${P.map((x, i) => `<button type="button" class="chip" data-po15="${i}">${esc(plab15(x[0], x[1]))} <small>${Math.round(x[1])} g · ${net == null ? '?' : Math.round(net * x[1] / 100)} g net</small></button>`).join('')}</div><p class="xs">Tap a portion to log it to ${esc(MEAL_L[mealFor(new Date())])}. Full name: ${esc(p.name)}</p>`;
+      box.querySelectorAll('[data-po15]').forEach(c => c.onclick = () => { const x = P[+c.dataset.po15], lab = plab15(x[0], x[1]), meal = mealFor(new Date()); addEntry(p, x[1], lab, meal, Date.now()); const L = LOG.all(), e = L[L.length - 1]; haptic(15);
         snack9(`Logged ${short15(p.name)} · ${lab} to ${MEAL_L[meal]}`, () => { LOG.save(LOG.all().filter(z => z.id !== e.id)); toast('Removed'); }); }); }); });
   q.oninput = () => { clearTimeout(t); t = setTimeout(run, 180); }; run(); if (!arg) q.focus();
 }
@@ -174,3 +175,8 @@ if (typeof chart11 === 'function') { const _ch = chart11; chart11 = function () 
 /* routes that landed before this file loaded */
 if (/^#\/(quick|fresh|review|prices)\b/.test(location.hash)) route();
 else if (/^#?\/?$/.test(location.hash) && $('#picks') && !$('.qc15')) { const { Q, html } = quickCard15(); const h = $('#picks').previousElementSibling; if (Q.length && h) { h.insertAdjacentHTML('beforebegin', html); bindQuick15(app, Q); } loadP15().then(() => fixServ15()); }
+
+/* Dexcom return: the worker may send ?sid=… without the #/glucose hash. Keep the session id and open the glucose page (which syncs). */
+{ const sp = new URLSearchParams(location.search), sid = sp.get('sid'), er = sp.get('error');
+  if (sid && /^[\w-]{16,}$/.test(sid)) { const s = settings(); s.dxSid = sid; store.set('settings', s); history.replaceState(null, '', location.pathname + '#/glucose/connected'); route(); }
+  else if (er) { history.replaceState(null, '', location.pathname + '#/glucose'); route(); setTimeout(() => toast('Dexcom: ' + er), 300); } }

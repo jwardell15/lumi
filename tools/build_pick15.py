@@ -20,7 +20,9 @@ for c in codes:
   if por and (not q or not c.isdigit()):
     ok=[x for x in por if x[1] and 30<=x[1]<=250 and not re.fullmatch(r'[\d.]+ ?g',str(x[0]))] or por
     lab,q=min(ok,key=lambda x:abs((x[1] or 0)-100))
-  if lab and not re.match(r'^[\d.]',lab): lab='1 '+lab
+  if lab and re.match(r'^(oz|ounces?|lb|fl oz)\b',lab,re.I) and abs(q-28.35)>1.5: lab=f'{round(q)} g'
+  elif lab and (len(lab)>24 or 'yields' in lab) and not re.match(r'^[\d.]',lab): lab=f'{round(q)} g'
+  elif lab and not re.match(r'^[\d.]',lab): lab='1 '+lab
   if q and 5<=q<=500: out[c]=[round(q,1),(lab or '').strip()[:40]]
 json.dump(out,open('data/pick15.json','w'),separators=(',',':'))
 print(len(codes),len(out))

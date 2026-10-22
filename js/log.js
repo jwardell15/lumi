@@ -2,7 +2,8 @@
 /* Lumi v4: settings, portion helper, food log, custom foods, saved meals, onboarding. All data stays in localStorage. */
 const NK = ['carbs', 'net', 'sugars', 'fiber', 'protein', 'fat', 'kcal'];
 const NL = { carbs: 'Carbs', net: 'Net carbs', sugars: 'Sugar', fiber: 'Fiber', protein: 'Protein', fat: 'Fat', kcal: 'Calories' };
-const settings = () => Object.assign({ target: null, icr: null, icrBasis: 'total', onboarded: false }, store.get('settings', {}));
+const DX_DEFAULT = 'https://lumi-dexcom.jwardell15.workers.dev'; // v15: Joe's deployed worker (sandbox)
+const settings = () => { const s = Object.assign({ target: null, icr: null, icrBasis: 'total', onboarded: false }, store.get('settings', {})); if (!('dxBackend' in s)) s.dxBackend = DX_DEFAULT; return s; };
 const setSettings = o => store.set('settings', Object.assign(settings(), o));
 const LOG = { all: () => store.get('log', []), save: l => store.set('log', l) };
 const MEALS = ['breakfast', 'lunch', 'dinner', 'snack'];
