@@ -2,6 +2,9 @@
    Built ONLY from real foods already in Lumi (data/meals13.json: USDA FoodData Central staples, popular packaged rows from the
    index and restaurant items from official/MenuStat nutrition; see tools/build_meals.js). No dosing or correction math. */
 'use strict';
+const IC13 = { ideas: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.2h5c0-.9.4-1.7 1.1-2.2A6 6 0 0 0 12 3z"/>', plan: '<rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4M16 3v4M4 10h16M8 14h3M8 17h6"/>', cart: '<path d="M3 4h2l2.4 11h10.2L20 8H6.2"/><circle cx="9" cy="19" r="1.5"/><circle cx="17" cy="19" r="1.5"/>' };
+const ic13 = (k, s = 26) => `<svg class="i10" viewBox="0 0 24 24" width="${s}" height="${s}" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${IC13[k]}</svg>`;
+const head13 = (k, t, lead) => `<header class="ph11 ph13"><span class="phi11">${ic13(k)}</span><div><h1>${t}</h1><p class="lead">${lead}</p></div></header>`;
 let m13p = null;
 const M13 = () => m13p || (m13p = getData('data/meals13.json').then(d => { d.byId = new Map(d.items.map(x => [x.id, x])); Object.entries(d.rest).forEach(([s, c]) => c.meals.forEach(ml => ml.forEach(it => { it.chain = c.name; d.byId.set(it.id, it); }))); return d; }).catch(e => { m13p = null; throw e; }));
 const DEF13 = { breakfast: 45, lunch: 60, dinner: 60, snack: 20 };
@@ -45,7 +48,7 @@ function tgtNote13(meal) { const T = tgt13(); return T.own ? (T.t[meal] ? `<p cl
 
 /* ---------- 1. Meal ideas ---------- */
 function viewIdeas13(arg) { document.title = 'Meal ideas — Lumi'; const meal = MEALS.includes(arg) ? arg : mealFor(new Date()); let seed = store.get('ideas13', 1);
-  app.innerHTML = `<section class="pg13"><h1>Meal ideas</h1><p class="lead">Lower-carb first, built only from real foods in Lumi: USDA staples and popular packaged items, at typical portions.</p>
+  app.innerHTML = `<section class="pg13">${head13('ideas', 'Meal ideas', 'Lower-carb first, built only from real foods in Lumi: USDA staples and popular packaged items, at typical portions.')}
   <nav class="sg12 sg13" aria-label="Meal">${MEALS.map(m => `<a href="#/ideas/${m}"${m === meal ? ' class="on" aria-current="page"' : ''}>${MEAL_L[m]}</a>`).join('')}</nav>${tgtNote13(meal)}
   <div id="ids13" aria-live="polite">${skel(3)}</div>
   <div class="actions"><button class="btn" id="more13">Show different ideas</button><a class="btn" href="#/plan">Weekly plan</a><a class="btn" href="#/meal">Meal builder</a></div>
@@ -122,9 +125,9 @@ function makePlan13(d, old) { const seed = old ? (old.seed || 1) + 1 : 1 + (Date
   const p = { seed, start: old ? old.start : dayKey(new Date()), days }; store.set('plan13', p); return p; }
 const slot13 = (d, s) => s ? s.ids.map(([id, q]) => [d.byId.get(id), q]).filter(x => x[0]) : [];
 function viewPlan13() { document.title = 'Weekly meal plan — Lumi';
-  app.innerHTML = `<section class="pg13"><h1>Weekly meal plan</h1><p class="lead">Seven days of ideas within your carb targets, from real foods in Lumi. Lock what you like, regenerate the rest.</p><div id="pl13">${skel(3)}</div></section>`;
+  app.innerHTML = `<section class="pg13">${head13('plan', 'Weekly meal plan', 'Seven days of ideas within your carb targets, from real foods in Lumi. Lock what you like, regenerate the rest.')}<div id="pl13">${skel(3)}</div></section>`;
   M13().then(d => { let p = plan13(); if (!p || !p.days || p.days.length !== 7) p = makePlan13(d); const T = tgt13().t, st = new Date(p.start + 'T12:00');
-    $('#pl13').innerHTML = `${tgtNote13('lunch').replace(/lunch target[^<]*<b>[^<]*<\/b>/, 'targets are applied per meal')}<div class="actions"><button class="btn pri" id="rg13">↻ Regenerate unlocked</button><a class="btn" href="#/plan/grocery">🛒 Grocery list</a><button class="btn" id="nw13">Start this week today</button></div>
+    $('#pl13').innerHTML = `${tgtNote13('lunch').replace(/lunch target[^<]*<b>[^<]*<\/b>/, 'targets are applied per meal')}<div class="actions"><button class="btn pri" id="rg13">↻ Regenerate unlocked</button><a class="btn" href="#/plan/grocery">${ic13('cart', 18)} Grocery list</a><button class="btn" id="nw13">Start this week today</button></div>
     ${p.days.map((day, i) => { const dt = new Date(st.getTime() + i * 864e5), all = MEALS.flatMap(m => slot13(d, day[m])), s = sum13(all);
       return `<section class="card day13"><h2>${dt.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })} <small>${g0(val13(s))} ${unit13()} · ${g0(s.p)} g protein · ${g0(s.kcal)} kcal</small></h2><ul class="sl13">${MEALS.map(m => { const ps = slot13(d, day[m]), v = sum13(ps), lk = day[m] && day[m].lock;
         return `<li><div class="sh13"><b>${MEAL_L[m]}</b> <span class="small">${ps.length ? `${g0(val13(v))} ${unit13()}${T[m] ? ' of ' + T[m] : ''}` : 'nothing fits'}</span></div><div class="sn13">${ps.map(([it, q]) => `${esc(it.nm)} <small>${q !== 1 ? r1(q) + ' × ' : ''}${esc(it.pl)}</small>`).join(' + ')}</div>
@@ -141,7 +144,7 @@ function viewPlan13() { document.title = 'Weekly meal plan — Lumi';
 function groc13(d, p) { const m = new Map(); p.days.forEach(day => MEALS.forEach(k => slot13(d, day[k]).forEach(([it, q]) => { const e = m.get(it.id) || { it, q: 0 }; e.q += q; m.set(it.id, e); }))); return [...m.values()].sort((a, b) => a.it.nm.localeCompare(b.it.nm)); }
 const qty13 = e => `${r1(e.q)} × ${e.it.pl}${e.it.g ? ` (≈${g0(e.q * e.it.g)} g)` : ''}`;
 function viewGrocery13() { document.title = 'Grocery list — Lumi'; const STO = LumiStores, AIS = LumiAisles; let mode = store.get('grocMode13', 'aisle');
-  app.innerHTML = `<section class="pg13"><a class="lnk" href="#/plan">‹ Weekly plan</a><h1>Grocery list</h1><p class="lead">Everything in this week's plan, totalled.</p><div id="gr13">${skel(3)}</div></section>`;
+  app.innerHTML = `<section class="pg13"><a class="lnk back13" href="#/plan">‹ Weekly plan</a>${head13('cart', 'Grocery list', "Everything in this week's plan, totalled.")}<div id="gr13">${skel(3)}</div></section>`;
   M13().then(d => { const p = plan13() || makePlan13(d), L = groc13(d, p), ck = store.get('groc13', {});
     const stores = STO.STORES.map((s, i) => ({ s, i, n: L.filter(e => e.it.pk && (STO.has(e.it.sm, i) || STO.has(e.it.sm, STO.SOLD + i))).length })).filter(x => x.n).sort((a, b) => b.n - a.n);
     let sid = store.get('grocStore13', stores[0] ? stores[0].s[0] : null); if (!stores.some(x => x.s[0] === sid)) sid = stores[0] ? stores[0].s[0] : null;
@@ -167,7 +170,7 @@ SC74.splice(1, 0, ['#/ideas', 'Meal ideas'], ['#/plan', 'Meal plan']);
 (function () {
   const vl = viewLog; viewLog = function (arg) { const r = vl.apply(this, arguments); try { logDeco13(arg); } catch (e) { console.warn('v13', e); } return r; };
   function logDeco13(arg) { if (arg && !/^\d{4}-\d{2}-\d{2}$/.test(arg)) return; const day = arg ? new Date(arg + 'T12:00') : new Date(), es = LOG.all().filter(e => dayKey(e.ts) === dayKey(day));
-    const nav = app.querySelector('.sg12'); if (nav && !$('#lk13')) nav.insertAdjacentHTML('afterend', `<p class="lk13" id="lk13"><a class="chip" href="#/ideas">💡 Meal ideas</a><a class="chip" href="#/plan">📅 Weekly plan</a><a class="chip" href="#/meal">🍽 Meal builder</a></p>`);
+    const nav = app.querySelector('.sg12'); if (nav && !$('#lk13')) nav.insertAdjacentHTML('afterend', `<p class="lk13" id="lk13"><a class="chip" href="#/ideas">${ic13('ideas', 16)} Meal ideas</a><a class="chip" href="#/plan">${ic13('plan', 16)} Weekly plan</a><a class="chip" href="#/meal">Meal builder</a></p>`);
     app.querySelectorAll('[data-savemeal]').forEach(b => { const m = b.dataset.savemeal, items = es.filter(e => e.meal === m); if (!items.length || b.parentNode.querySelector('[data-swl13]')) return;
       b.insertAdjacentHTML('afterend', `<button class="chip" data-swl13="${m}">↘ Lower-carb version</button>`);
       b.parentNode.querySelector('[data-swl13]').onclick = () => swapSheet13(items, MEAL_L[m] + ' as logged', [['Save as a meal for next time', x => saveMeal13(`${MEAL_L[m]} (lower-carb)`, x)], ['Open in builder', openPlate13]]); }); }

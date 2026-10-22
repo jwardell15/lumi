@@ -45,3 +45,13 @@
 .gi13 small{display:block;color:var(--mut)}
 .gi13 input:checked+span b{text-decoration:line-through;color:var(--mut)}
 .lk13{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 var(--s3)}
+/* 13.0.1: icons + home shortcut grid that fits 7–8 tiles */
+#app.h10 .sc74{grid-template-columns:repeat(4,1fr);row-gap:var(--s3)}
+@media (min-width:700px){#app.h10 .sc74{grid-template-columns:repeat(auto-fit,minmax(72px,1fr))}}
+#app.h10 .sc74 a span:last-child{text-align:center;line-height:1.2}
+html .tabbar>a.side13{display:none!important}
+@media (min-width:1024px){html .tabbar>a.side13{display:flex!important}}
+.ph13{align-items:center}
+.lk13 .chip,.pg13 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.back13{display:inline-block;margin:0 0 var(--s2)}
+.pg13 .actions{flex-wrap:wrap}

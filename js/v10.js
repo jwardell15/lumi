@@ -8,6 +8,7 @@
     logbook: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/>', rest: '<path d="M7 3v8a2 2 0 0 0 2 2v8M11 3v8M7 7h4M16 3c-1.5 2-2 4-2 7h3v11"/>',
     meal: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/>', type: '<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M7 14h10"/>',
     label: '<path d="M4 4h10l6 6-10 10-6-6z"/><circle cx="9" cy="9" r="1.5"/>', scan: '<path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10 8v8M13 8v8M17 8v8"/>',
+    ideas: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.2h5c0-.9.4-1.7 1.1-2.2A6 6 0 0 0 12 3z"/>', plan: '<rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4M16 3v4M4 10h16M8 14h3M8 17h6"/>',
     home: '<path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/>'
   };
   const svg = (k, s = 22) => `<svg class="i10" viewBox="0 0 24 24" width="${s}" height="${s}" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${I[k]}</svg>`;
@@ -20,7 +21,7 @@
       if (t && EMO.test(t.nodeValue) && t.nodeValue.replace(EMO, '').trim()) t.nodeValue = t.nodeValue.replace(EMO, '');
     });
   }
-  const LBL = { Browse: 'browse', Lists: 'lists', Compare: 'compare', Log: 'logbook', Restaurants: 'rest', Meals: 'meal' };
+  const LBL = { Browse: 'browse', Lists: 'lists', Compare: 'compare', Log: 'logbook', Restaurants: 'rest', Meals: 'meal', 'Meal ideas': 'ideas', 'Meal plan': 'plan' };
   function home(app) {
     const sec = app.querySelector('.home74'); if (!sec || sec.dataset.h10) return; sec.dataset.h10 = 1; app.classList.add('h10');
     const nav = sec.querySelector('.sc74'); if (nav) nav.querySelectorAll('a').forEach(a => { const k = LBL[a.textContent.trim()]; if (k) a.innerHTML = `<span class="t10">${svg(k, 24)}</span><span>${a.textContent.trim()}</span>`; });
@@ -64,6 +65,7 @@
     const tb = document.querySelector('.tabbar'); if (!tb || tb.dataset.t10) return; tb.dataset.t10 = 1;
     const h = tb.querySelector('a[data-v=home]'); if (h) { h.querySelector('svg').outerHTML = svg('home', 24); h.querySelector('span').textContent = 'Home'; }
     const brand = document.createElement('a'); brand.href = '#/'; brand.className = 'side10'; brand.setAttribute('aria-label', 'Lumi home'); brand.innerHTML = '<img src="icons/mascot-128.png" width="36" height="36" alt=""><span>lumi</span>'; tb.prepend(brand);
+    const lg = tb.querySelector('a[data-v=log]'); if (lg) lg.insertAdjacentHTML('afterend', `<a href="#/ideas" data-v="ideas" class="side13">${svg('ideas', 24)}<span>Meal ideas</span></a><a href="#/plan" data-v="plan" class="side13">${svg('plan', 24)}<span>Meal plan</span></a>`); // v13.0.1: desktop sidebar only
   }
   let q = 0; const run = () => { q = 0; const app = document.getElementById('app'); if (!app) return; tabbar(); clean(); home(app); product(app); deEmoji(app); deEmoji(document.querySelector('.tabbar') || app); app.classList.toggle('p10', !!app.querySelector('.hero10')); app.classList.toggle('h10', !!app.querySelector('.home74')); };
   const mo = new MutationObserver(() => { if (!q) q = requestAnimationFrame(run); });
