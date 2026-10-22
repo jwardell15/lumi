@@ -19,7 +19,10 @@ function combos13(d, meal) { if (C13[meal]) return C13[meal];
   const R = r => d.items.filter(x => x.ro.includes(r) && !(r === 'sta' && /taco shell/i.test(x.nm)) && !(r === 'snk' && /cream cheese|neufch|spread/i.test(x.nm))), out = [], add = ps => out.push(ps.filter(Boolean).map(it => [it, 1]));
   if (meal === 'breakfast') { const carbs = [null, ...R('bfc'), ...R('fru')], ex = [null, ...R('ext'), ...R('drk')];
     for (const a of R('bfm')) for (const b of carbs) for (const c of ex) { if ((b && c && b.sg === c.sg) || (c && c.sg === a.sg)) continue; add([a, b, c]); } }
-  else if (meal === 'snack') { const S = R('snk'); S.forEach(a => add([a])); for (let i = 0; i < S.length; i++) for (let j = i + 1; j < S.length; j++) if (S[i].sg !== S[j].sg && S[i].ro.includes('fru') !== S[j].ro.includes('fru')) add([S[i], S[j]]); }
+  else if (meal === 'snack') { const S = R('snk'); // v15: classic 2-item pairings (a carb/crunch item + a protein or fat partner)
+    const PAIR15 = { fruit: /^(nuts|cheese|yogurt|cottage)$/, berries: /^(nuts|yogurt|cottage)$/, veg: /^(dip|cheese)$/, crackers: /^(cheese|dip)$/, chips: /^(dip)$/, popcorn: /^(nuts|cheese)$/, eggs: /^(veg|fruit)$/ };
+    let n = 0; for (let i = 0; i < S.length; i++) for (let j = 0; j < S.length; j++) if (i !== j && PAIR15[S[i].sg] && PAIR15[S[i].sg].test(S[j].sg) && !(S[i].pk && S[j].pk)) { add([S[i], S[j]]); n++; }
+    if (n < 6) S.forEach(a => add([a])); }
   else { const sta = [null, ...R('sta')]; for (const a of R('pro')) for (const b of R('veg')) for (const c of sta) add([a, b, c]); }
   return C13[meal] = out.map(parts => ({ parts, s: sum13(parts) })).filter(x => meal === 'snack' ? x.s.kcal >= 100 && x.s.kcal <= 350 && x.s.p >= 3 : x.s.kcal >= (meal === 'breakfast' ? 220 : 300) && x.s.p >= 12); }
 /* lower-carb first, with variety: a small seeded jitter, each main used once, each side at most twice */
@@ -138,7 +141,8 @@ function viewPlan13() { document.title = 'Weekly meal plan — Lumi';
     $('#nw13').onclick = () => { const q = plan13(); q.start = dayKey(new Date()); store.set('plan13', q); viewPlan13(); };
     app.querySelectorAll('[data-lk13]').forEach(b => b.onclick = () => { const [day, m] = at(b.dataset.lk13); if (!day[m]) return; day[m].lock = !day[m].lock; store.set('plan13', p); viewPlan13(); });
     app.querySelectorAll('[data-nx13]').forEach(b => b.onclick = () => { const [day, m] = at(b.dataset.nx13); const used = new Set(p.days.map(x => x[m] && x[m].ids[0][0]).filter(Boolean)), opts = pick13(d, m, 40, p.seed * 13 + m.length + (Date.now() % 1000), used); if (!opts.length) return toast('No other idea fits this target');
-      day[m] = { ids: opts[0].parts.map(([it, q]) => [it.id, q]), lock: false }; store.set('plan13', p); viewPlan13(); });
+      const put = o => { day[m] = { ids: o.parts.map(([it, q]) => [it.id, q]), lock: false }; store.set('plan13', p); viewPlan13(); };
+      if (typeof otherSheet15 === 'function') otherSheet15(opts, m, put); else put(opts[0]); });
     app.querySelectorAll('[data-lg13]').forEach(b => b.onclick = () => { const [day, m] = at(b.dataset.lg13); log13(slot13(d, day[m]), m, 'planned ' + MEAL_L[m].toLowerCase()); });
   }).catch(() => { const el = $('#pl13'); if (el) el.innerHTML = err13(); }); }
 function groc13(d, p) { const m = new Map(); p.days.forEach(day => MEALS.forEach(k => slot13(d, day[k]).forEach(([it, q]) => { const e = m.get(it.id) || { it, q: 0 }; e.q += q; m.set(it.id, e); }))); return [...m.values()].sort((a, b) => a.it.nm.localeCompare(b.it.nm)); }
@@ -151,10 +155,10 @@ function viewGrocery13() { document.title = 'Grocery list — Lumi'; const STO =
     const row = e => `<li><label class="gi13"><input type="checkbox" data-ck13="${esc(e.it.id)}"${ck[e.it.id] ? ' checked' : ''}><span><b>${esc(e.it.nm)}</b><small>${e.it.pk ? esc(e.it.br) + ' · ' : ''}${esc(qty13(e))}</small></span></label></li>`;
     const groups = () => { if (mode === 'aisle') return AIS.AISLES.map(a => [a[2] + ' ' + a[1], L.filter(e => e.it.ai === a[0])]).filter(g => g[1].length);
       const si = stores.find(x => x.s[0] === sid); if (!si) return [['Any store', L]]; const at = e => e.it.pk && (STO.has(e.it.sm, si.i) || STO.has(e.it.sm, STO.SOLD + si.i));
-      return [['At ' + si.s[1], L.filter(at)], ['Any store (staples and items without store data)', L.filter(e => !at(e))]].filter(g => g[1].length); };
+      return [['At ' + si.s[1] + ' (store brand or store tag on record)', L.filter(at)], ['Fresh staples — sold at most grocery stores', L.filter(e => !e.it.pk)], ['Packaged — no ' + si.s[1] + ' listing on record (check shelf)', L.filter(e => e.it.pk && !at(e))]].filter(g => g[1].length); };
     const draw = () => { const G = groups(), left = L.filter(e => !ck[e.it.id]).length;
       $('#gr13').innerHTML = `<div class="sg12" role="group" aria-label="Group list by"><a href="#" data-md13="aisle"${mode === 'aisle' ? ' class="on" aria-current="true"' : ''}>By aisle</a><a href="#" data-md13="store"${mode === 'store' ? ' class="on" aria-current="true"' : ''}>Shop by store</a></div>
-      ${mode === 'store' ? `<div class="chips" role="group" aria-label="Store">${stores.map(x => `<button class="chip${x.s[0] === sid ? ' on' : ''}" aria-pressed="${x.s[0] === sid}" data-st13="${x.s[0]}">${esc(x.s[1])} <small>${x.n}</small></button>`).join('')}</div><p class="small">Store matches come from store brands and Open Food Facts store tags; fresh staples are available anywhere.</p>` : ''}
+      ${mode === 'store' ? `<div class="chips" role="group" aria-label="Store">${stores.map(x => `<button class="chip${x.s[0] === sid ? ' on' : ''}" aria-pressed="${x.s[0] === sid}" data-st13="${x.s[0]}">${esc(x.s[1])} <small>${x.n}</small></button>`).join('')}</div><p class="small">Store matches come only from store brands and Open Food Facts store tags. “No listing on record” means we have no data either way, not that the store doesn't sell it.</p>` : ''}
       <p class="small" role="status">${left} of ${L.length} items left</p>${G.map(([h, es]) => `<section class="card"><h2>${esc(h)}</h2><ul class="gl13">${es.map(row).join('')}</ul></section>`).join('')}
       <div class="actions"><button class="btn pri" id="gs13">Share list</button><button class="btn" id="gc13">Clear checks</button></div>`;
       app.querySelectorAll('[data-md13]').forEach(a => a.onclick = ev => { ev.preventDefault(); mode = a.dataset.md13; store.set('grocMode13', mode); draw(); });

@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '14.1';
+const VERSION = '15.0';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -664,6 +664,8 @@ function route() {
   if (view === 'recipes') return viewRecipes12();
   if (view === 'recipe' && arg) return viewRecipe12(arg);
   if (view === 'dexcom') return viewDexcomSetup12();
+  const V15 = { quick: 'viewQuick15', fresh: 'viewFresh15', review: 'viewReview15', prices: 'viewPrices15' }; // v15 (js/v15.js loads after this file)
+  if (V15[view]) { if (typeof window[V15[view]] === 'function') return window[V15[view]](arg); app.innerHTML = skel(3); return; }
   viewHome();
 }
 window.addEventListener('hashchange', route);
