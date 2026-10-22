@@ -54,7 +54,7 @@ function viewIdeas13(arg) { document.title = 'Meal ideas — Lumi'; const meal =
   <div class="actions"><button class="btn" id="more13">Show different ideas</button><a class="btn" href="#/plan">Weekly plan</a><a class="btn" href="#/meal">Meal builder</a></div>
   <p class="foot">Ideas, not medical advice. Portions are typical servings; check the label and confirm doses on your pump.</p></section>`;
   const draw = () => M13().then(d => { const el = $('#ids13'); if (!el) return; const T = tgt13().t[meal], L = pick13(d, meal, 6, seed);
-    el.innerHTML = L.length ? `<ul class="ids13">${L.map((x, i) => card13(x, i, meal, T)).join('')}</ul>` : `<div class="card"><p class="small">No combinations fit a ${T} g target. Try raising it in Settings.</p></div>`; bindCards13(el, L, meal); }).catch(() => { const el = $('#ids13'); if (el) el.innerHTML = err13(); });
+    el.innerHTML = L.length ? `<ul class="ids13">${L.map((x, i) => card13(x, i, meal, T)).join('')}</ul>` : `<div class="card"><p class="small">No combinations fit a ${T} g target. Try raising it in Settings.</p></div>`; bindCards13(el, L, meal); if (typeof ideasDual14 === 'function') ideasDual14(el, L, meal); }).catch(() => { const el = $('#ids13'); if (el) el.innerHTML = err13(); });
   $('#more13').onclick = () => { seed++; store.set('ideas13', seed); draw(); }; draw(); }
 
 /* ---------- 4. Swaps ---------- */

@@ -1,0 +1,78 @@
+/* ===== Lumi 14.0 design layer: one system for every screen ===== */
+:root{--bg:#f5f4f1;--chip:#efede8;--line:rgba(40,36,30,.12);--r-m:16px;--r-l:22px;
+ --e1:0 1px 0 rgba(40,36,30,.04),0 1px 3px rgba(40,36,30,.06);--e2:0 6px 24px rgba(40,36,30,.08);--bs14:#0b6bcb;--bs14s:#e8f1fb;--hl14:#17803f;--hl14s:#e7f5ec}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0b0b0d;--card:#17171a;--bg2:#17171a;--chip:#26262b;--line:rgba(255,255,255,.09);--bs14:#7cb8ff;--bs14s:#13233a;--hl14:#5fd08a;--hl14s:#112a1b}}
+:root[data-theme=dark]{--bg:#0b0b0d;--card:#17171a;--bg2:#17171a;--chip:#26262b;--line:rgba(255,255,255,.09);--bs14:#7cb8ff;--bs14s:#13233a;--hl14:#5fd08a;--hl14s:#112a1b}
+html,body{overflow-x:hidden}
+html body #app{min-width:0}
+html body #app *{min-width:0}
+html body #app img,html body #app svg,html body #app video,html body #app canvas{max-width:100%}
+html body #app :is(p,h1,h2,h3,b,small,span,a,li,td){overflow-wrap:break-word}
+html body #app :is(table){max-width:100%}
+/* type rhythm */
+html body #app h1{font-size:clamp(28px,7.6vw,38px);letter-spacing:-.03em;margin:12px 0 6px}
+html body #app h2{font-size:clamp(18px,4.8vw,21px)}
+html body #app .lead,html body #app .lead74{color:var(--mut);font-size:var(--t-sub);line-height:1.45;max-width:62ch}
+/* surfaces */
+html body .card{border:1px solid var(--line);border-radius:var(--r-l);box-shadow:var(--e1);padding:18px}
+:root[data-theme=dark] body .card{box-shadow:none}
+html body .btn{border-radius:14px}
+html body .chip{border-radius:999px}
+html body .row{border-radius:16px}
+/* header + mobile tab bar: frosted */
+html body header.bar{background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:saturate(1.6) blur(14px);-webkit-backdrop-filter:saturate(1.6) blur(14px)}
+@media (max-width:1023px){html body .tabbar{background:color-mix(in srgb,var(--card) 86%,transparent)!important;backdrop-filter:saturate(1.6) blur(16px);-webkit-backdrop-filter:saturate(1.6) blur(16px);border-top:1px solid var(--line)!important}}
+/* tablet: comfortable reading width */
+@media (min-width:600px) and (max-width:1023px){html body main{max-width:760px;padding-left:24px;padding-right:24px}}
+/* desktop: sidebar polish */
+@media (min-width:1024px){
+ html body main{max-width:1120px}
+ html body .tabbar>a:not(.side10){border-radius:12px;min-height:40px}
+ html body .tabbar>a.on{font-weight:600;box-shadow:inset 3px 0 0 var(--acc)}
+}
+/* ===== Builder totals (fix cramped 390 layout) ===== */
+html body .plate-tot{display:grid!important;grid-template-columns:auto minmax(0,1fr);gap:12px 16px;align-items:center}
+html body .plate-tot .pt-big{grid-row:1;grid-column:1}
+html body .plate-tot .pavg{grid-row:1;grid-column:2;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+html body .plate-tot .tot{grid-column:1/-1;display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;width:100%}
+html body .plate-tot .tot>div{border-radius:12px;padding:8px 10px}
+html body .plate-tot>:not(.pt-big):not(.pavg){grid-column:1/-1}
+html body .mt9{width:100%;max-width:100%}
+@media (min-width:700px){html body .plate-tot .tot{grid-template-columns:repeat(6,minmax(0,1fr))}}
+
+/* ===== Dual suggestions ===== */
+.du14{margin:0 0 16px}
+.du14.card{padding:18px}
+.du14h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:10px}.du14h h2{margin:0}
+.du14g{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.du14c{border-radius:18px;padding:12px 10px 8px;background:var(--card);border:1px solid var(--line)}
+.du14.card .du14c{background:var(--bg)}
+.du14c h3{display:flex;align-items:center;gap:6px;margin:0;font:700 15px/1.2 var(--f10)}
+.du14-bs h3{color:var(--bs14)}.du14-hl h3{color:var(--hl14)}
+.du14-bs{border-top:3px solid var(--bs14)}.du14-hl{border-top:3px solid var(--hl14)}
+.du14c>.xs{margin:2px 0 8px;color:var(--mut);font-size:12px;line-height:1.3}
+.ml14{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.m14{display:flex;gap:8px;align-items:flex-start;padding:8px 6px;border-radius:12px;color:var(--ink);text-decoration:none;width:100%;text-align:left;background:none;border:0;font:inherit;cursor:pointer}
+.m14:hover{background:var(--chip)}
+.m14 .thumb{flex:none;width:34px!important;height:34px!important;border-radius:10px;font-size:20px}
+.t14{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.t14 b{font-size:13.5px;line-height:1.25;font-weight:600;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.t14 small{font-size:12px;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cs14{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px;align-items:center}
+.sc14{font:700 11.5px/1 var(--f10);padding:4px 6px;border-radius:999px;color:#fff}
+.sc14.bg-na,.sc14.bg-gd,.sc14.bg-pr{color:#1d1b26}
+.nc14{font-size:11.5px;color:var(--ink2);font-weight:600}
+.vh{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.how14{margin-top:10px}.how14 summary{cursor:pointer;color:var(--accT);font-weight:600;font-size:var(--t-fn);min-height:32px;display:flex;align-items:center}
+.how14 p{margin:6px 0}
+.id13.hl14{outline:3px solid var(--acc);outline-offset:2px}
+@media (min-width:700px){.du14g{gap:16px}.du14c{padding:16px 14px 10px}.m14 .thumb{width:48px!important;height:48px!important}.t14 b{font-size:15px}}
+@media (max-width:360px){.du14g{grid-template-columns:1fr}}
+/* home: picks area is now the two columns */
+#picks .du14{margin-top:4px}
+/* a11y: contrast fixes found by the 14.0 crawl */
+:root[data-theme=dark] .c-ex{color:#3ecf86}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .c-ex{color:#3ecf86}}
+html body .l7i.done .n{opacity:1;color:var(--mut)}
+/* log: ring above the totals on phones so labels never break mid-word */
+@media (max-width:480px){html body #app .today-top{flex-direction:column;align-items:stretch}html body #app .today-top>:first-child{align-self:center}html body #app.log11 .tot{width:100%}}
