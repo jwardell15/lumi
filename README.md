@@ -134,6 +134,15 @@ Local dev: `python3 serve.py 8765`.
 - **Store brands 71,620 → 73,867** products recognized (added Dealworthy, Bakery Fresh Goodness, Big K, Check This Out, Higher Harvest, Midwest Country Fare, Signature Reserve, Value Corner, Purely Meijer).
 - Scripts: `tools/v91/`.
 
+## v13.0
+
+- **Meal ideas** (`#/ideas`): breakfast, lunch, dinner and snack combinations that fit your per-meal carb targets (Settings › Carb target per meal; starter limits are used and labelled when none are set), lowest carbs first with variety. Every food is a real row already in Lumi: 55 USDA FoodData Central staples and 165 popular packaged items from the index (`data/meals13.json`, built by `tools/build_meals.js`). Each idea shows net carbs, carbs, fiber, protein, fat and kcal and logs in one tap (with undo).
+- **Meal builder**: search and add foods on the builder, type exact gram/item amounts with live totals, save as a meal or a recipe, share, or log with the meal picker.
+- **Restaurant meal picks**: on chain pages and in Restaurants, the lowest-carb main + side + drink from that chain's own items. Only MenuStat menu groups (Entrees, Sandwiches, Burgers, Pizza, Salads, Breakfast / Sides, Appetizers & Sides, Fried Potatoes / Beverages, Drinks, Coffee) or clear name keywords are used; 81 chains have picks, 37 chains whose sides or drinks can't be classified reliably are left out.
+- **Lower-carb swaps** for the plate, saved meals and logged meals: similar foods from the same group/aisle category with the net carbs saved.
+- **Weekly meal plan** (`#/plan`) with lock/regenerate and a **grocery list** (`#/plan/grocery`) by aisle or by store, with checkboxes and sharing.
+- **Fixes**: chain pages list main dishes before condiments and sodas; generic dish searches ("pizza", "tacos") rank the dish above sauces, seasonings, shells and shredded blends.
+
 ## v12.1
 - **Costco**: first in Browse › Shop by store, with a feature card for Kirkland Signature + products tagged as sold at Costco, and the **Costco Food Court** menu (40 items from Costco's official food court nutrition guide; the guide gives no fiber/sugar/sat fat; "KS Hot Dog + Soda" skipped because its calories are a range).
 - **New official chains**: Runza (112), Farmer Boys (155), Royal Farms convenience hot food (272), from each chain's own nutrition PDF/page. robots.txt and 403s respected.

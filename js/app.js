@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '12.1';
+const VERSION = '13.0';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -369,10 +369,14 @@ function viewBrowse(key) {
   resultsShell(label, '');
   app.insertAdjacentHTML('afterbegin', `<h1>${C.CATS[top][0]} ${esc(parent ? C.CATS[top][1] + ' · ' + label : label)}</h1><div class="chips subchips"><a class="chip${key === top ? ' on' : ''}" href="#/browse/${top}">All</a>${C.subs(top).map(k => `<a class="chip${k === key ? ' on' : ''}" href="#/browse/${k}">${esc(C.CATS[k][1])}</a>`).join('')}</div>`);
   const my = rs = { q: label, items: new Map(), src: { local: 'load' }, counts: {}, limit: 40 };
-  if (store.get('sort', 'rel') === 'rel') { store.set('sort', 'score'); document.querySelectorAll('#sort button').forEach(b => b.classList.toggle('on', b.dataset.s === 'score')); }
-  const run = () => { if (rs !== my) return; my.items.clear(); const r = engine.browse(ki).map(itemFromDoc); my.src.local = 'ok'; my.counts.local = r.length; mergeItems(r); renderResults(); };
+  const chain13 = /^rest-/.test(key); // v13: chain pages list mains before condiments/sodas (same ranking as a chain-name search)
+  if (chain13 && store.get('sort', 'rel') !== 'rel') { store.set('sort', 'rel'); document.querySelectorAll('#sort button').forEach(b => b.classList.toggle('on', b.dataset.s === 'rel')); }
+  else if (!chain13 && store.get('sort', 'rel') === 'rel') { store.set('sort', 'score'); document.querySelectorAll('#sort button').forEach(b => b.classList.toggle('on', b.dataset.s === 'score')); }
+  const run = () => { if (rs !== my) return; my.items.clear(); const ds = engine.browse(ki); let lo = Infinity, hi = -Infinity; if (chain13) ds.forEach(d => { lo = Math.min(lo, d.rank); hi = Math.max(hi, d.rank); });
+    const r = ds.map(d => { const it = itemFromDoc(d); if (chain13) it.rel = 100 + LumiSearch.restRole(d, '') + 12 * (1 - (d.rank - lo) / Math.max(1, hi - lo)) + (d.net != null ? Math.min(6, d.net / 8) : 0); return it; }); my.src.local = 'ok'; my.counts.local = r.length; mergeItems(r); renderResults(); };
   loadIndex().then(run).then(loadIndexFull).then(run).catch(() => { my.src.local = 'err'; renderResults(); });
   renderResults();
+  if ((key === 'rest' || chain13) && typeof restPicks13 === 'function') restPicks13(key); // v13 restaurant meal picks
 }
 
 /* ---------------- product ---------------- */
@@ -655,6 +659,8 @@ function route() {
   if (view === 'glucose') return viewGlucose11(arg);
   if (view === 'share') return viewShare11(h.slice(i + 1 || h.length));
   if (view === 'report') return viewReport(arg);
+  if (view === 'ideas') return viewIdeas13(arg);
+  if (view === 'plan') return arg === 'grocery' ? viewGrocery13() : viewPlan13();
   if (view === 'recipes') return viewRecipes12();
   if (view === 'recipe' && arg) return viewRecipe12(arg);
   if (view === 'dexcom') return viewDexcomSetup12();

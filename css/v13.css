@@ -1,0 +1,47 @@
+/* ===== Lumi 13.0: meal ideas, builder, restaurant picks, swaps, weekly plan ===== */
+.pg13{max-width:880px;margin:0 auto}
+.sg13{max-width:480px}
+.tg13{margin:0 0 var(--s3)}
+.note13{padding:var(--s3) var(--s4)}
+.ids13{list-style:none;margin:0;padding:0;display:grid;gap:var(--s3)}
+@media (min-width:760px){.pg13 .ids13{grid-template-columns:1fr 1fr}}
+.id13{margin:0}
+.in13{border-top:1px solid var(--line);padding-top:var(--s3)}
+.in13:first-child{border-top:0;padding-top:0}
+.tt13{display:block;font-size:var(--t-sub);color:var(--accT);margin-bottom:4px}
+.pt13{list-style:none;margin:0 0 6px;padding:0}
+.pt13 li{padding:3px 0;line-height:1.35}
+.pt13 small{color:var(--mut)}
+.nt13{display:flex;flex-wrap:wrap;gap:4px 12px;margin:4px 0 6px;font-size:var(--t-fn);color:var(--ink2)}
+.nt13 b{color:var(--ink)}
+.id13 .actions,.rp13 .actions{margin-top:var(--s2)}
+.rp13{margin:var(--s3) 0}
+.rp13 summary{cursor:pointer;padding:4px 0}
+.rp13 .ids13{grid-template-columns:1fr!important}
+.add13 .rres13{list-style:none;margin:6px 0 0;padding:0}
+.g13{display:inline-flex;align-items:center;gap:4px}
+.g13 input{width:72px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font:inherit}
+.g13 span{color:var(--mut);font-size:var(--t-fn)}
+.sw13{list-style:none;margin:var(--s2) 0;padding:0;max-height:52vh;overflow:auto}
+.sw13 li{padding:8px 0;border-bottom:1px solid var(--line)}
+.sw13 label{display:flex;gap:10px;align-items:flex-start;cursor:pointer}
+.sw13 input{margin-top:4px;width:20px;height:20px;flex:none}
+.sw13 small{display:block;color:var(--mut)}
+.sw13 s{color:var(--mut)}
+.sv13{font-size:var(--t-sub);margin:var(--s2) 0}
+.day13 h2{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
+.day13 h2 small{font-size:var(--t-fn);color:var(--mut);font-weight:500}
+.sl13{list-style:none;margin:0;padding:0}
+.sl13>li{padding:8px 0;border-top:1px solid var(--line)}
+.sl13>li:first-child{border-top:0}
+.sh13{display:flex;justify-content:space-between;gap:8px}
+.sn13{margin:2px 0 6px;line-height:1.4}
+.sn13 small{color:var(--mut)}
+.sb13{display:flex;flex-wrap:wrap;gap:6px}
+.gl13{list-style:none;margin:0;padding:0}
+.gl13 li{border-top:1px solid var(--line)}.gl13 li:first-child{border-top:0}
+.gi13{display:flex;gap:12px;align-items:flex-start;padding:10px 0;cursor:pointer}
+.gi13 input{width:22px;height:22px;flex:none;margin-top:2px}
+.gi13 small{display:block;color:var(--mut)}
+.gi13 input:checked+span b{text-decoration:line-through;color:var(--mut)}
+.lk13{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 var(--s3)}

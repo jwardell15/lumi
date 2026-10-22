@@ -67,6 +67,12 @@ function restRole(d, nq) {
   if (d.net != null && d.net <= 1) r -= 12;
   return r;
 }
+/* v13: generic dish queries ("pizza") — the dish itself beats ingredients named after it ("pizza sauce", "taco seasoning") */
+const DISHW = /^(pizzas?|pasta|tacos?|burritos?|lasagnas?|salads?|chili|soups?|sandwich(es)?|burgers?|enchiladas?|quesadillas?)$/;
+const DISHX = /^(sauces?|seasonings?|dough|crusts?|mix(es)?|kits?|spices?|dressings?|shells|powder|cheese|mozzarella|pepperoni|flavou?r(ed)?|crackers|chips|cutter|stone|pan)$/;
+const DISHANY = /\b(sauces?|seasonings?|tortillas?|taco shells|dough|mix|kit|shredded|blend|spices?|dressings?|croutons|coquilles|assaisonnement)\b/, DISHANY_SAL = /\b(dressings?|croutons|toppings?|spinner)\b/;
+function dishAdj(nn, nq) { if (!DISHW.test(nq)) return 0; const st = nq.replace(/(es|s)$/, ''), w = ' ' + nn + ' ', any = /^salad/.test(nq) ? DISHANY_SAL : DISHANY;
+  const m = w.match(new RegExp(' ' + st + '(e?s)? (\\S+)')); if ((m && DISHX.test(m[2]) && !(st === 'salad' && /^(kits?|blend|mix)$/.test(m[2]))) || w.includes(' for ' + st) || (any.test(nn) && !any.test(nq))) return -45; return 0; }
 const T0 = 15000; // docs in data/index-0.json (tier 0)
 const CATQ = { cereal: 'cereal', cereals: 'cereal', 'breakfast cereal': 'cereal', granola: 'cereal-granola', oatmeal: 'cereal-hot', chips: 'snacks-chips', crisps: 'snacks-chips', crackers: 'snacks-crackers', popcorn: 'snacks-popcorn', soda: 'drinks-soda', sodas: 'drinks-soda', pop: 'drinks-soda', juice: 'drinks-juice', yogurt: 'yogurt', yoghurt: 'yogurt', 'greek yogurt': 'yogurt-greek', bread: 'bread', tortillas: 'bread-tortilla', bagels: 'bread-bagel', cheese: 'dairy-cheese', milk: 'dairy-milk', cookies: 'sweets-cookies', chocolate: 'sweets-choc', candy: 'sweets-candy', 'ice cream': 'sweets-ice', 'protein bar': 'bars-protein', 'protein bars': 'bars-protein', 'granola bar': 'bars-granola', bars: 'bars', 'peanut butter': 'nuts-butter', nuts: 'nuts-nuts', 'pasta sauce': 'sauces-pasta', dressing: 'sauces-dressing', 'salad dressing': 'sauces-dressing', 'hot sauce': 'sauces-hot' };
 const NONUSB = /\b(sojade|yeo valley|olympic|alpro|onken|m[uü]ller|pr[eé]sident|lactalis|carrefour|auchan|leclerc|monoprix|tesco|sainsbury'?s|asda|waitrose|morrisons|marks (&|and) spencer|lidl|milbona|libert[eé]|iogo|astro|natrel|qu[eé]bon|sealtest|neilson|president'?s choice|no name|compliments|arla|la laiti[eè]re|st hubert|bonduelle|gerbl[eé]|bjorg|les 2 vaches|malo|candia|lactel|bridel|paysan breton|soignon|andros|ehrmann|zott|emmi|mlekovita|valio|dux|pozuelo|rovira)\b/i;
@@ -192,6 +198,7 @@ class Engine {
       if (d.src === 'local' && !d.brand) r -= 22;
       if (NONUSB.test(d.brand) || NONEN2.test(d.nn)) r -= 30;
       for (const w of nq.split(" ")) { const o = OFFTOPIC[w] || OFFTOPIC[w + "s"]; if (o && o.test(d.nn) && !o.test(nq)) { r -= 55; break; } }
+      r += dishAdj(d.nn, nq);
       // v7.1: shoppers want US packaged products first: demote non-English/non-US labels, unasked-for alcohol, generic FNDDS rows for packaged-type queries, and bad data
       if (d.src !== 'whole' && d.src !== 'rest') { if (!/^[\x20-\x7e]+$/.test(d.name + d.brand) || NONEN.test(d.name.toLowerCase()) || !(d.code.length === 12 || (d.code.length === 13 && /^[01]/.test(d.code)))) r -= 22; if (d.bad) r -= 15; if (!d.img) r -= 3; if (d.name.split(' ').length <= 1 && d.brand && nq.split(' ').length === 1) r -= 6; }
       if (!ALCQ.test(nq) && ALCN.test(d.nn)) r -= 28;
@@ -251,5 +258,5 @@ function relAdj(query, it) {
   for (const w of nq.split(" ")) { const o = OFFTOPIC[w] || OFFTOPIC[w + "s"]; if (o && o.test(nn) && !o.test(nq)) { r -= 55; break; } }
   return r;
 }
-root.LumiSearch = { KNOWNB, fixBrand, relAdj, Engine, norm, toks, dl, imgURL, groupKey, dedupe, fixName };
+root.LumiSearch = { restRole, dishAdj, KNOWNB, fixBrand, relAdj, Engine, norm, toks, dl, imgURL, groupKey, dedupe, fixName };
 })(typeof self !== "undefined" ? self : globalThis);
