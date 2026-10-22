@@ -56,7 +56,7 @@ html body .mt9{width:100%;max-width:100%}
 .m14:hover{background:var(--chip)}
 .m14 .thumb{flex:none;width:34px!important;height:34px!important;border-radius:10px;font-size:20px}
 .t14{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
-.t14 b{font-size:13.5px;line-height:1.25;font-weight:600;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.t14>b{font-size:13.5px;line-height:1.25;font-weight:600;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .t14 small{font-size:12px;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cs14{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px;align-items:center}
 .sc14{font:700 11.5px/1 var(--f10);padding:4px 6px;border-radius:999px;color:#fff}
@@ -76,3 +76,13 @@ html body .mt9{width:100%;max-width:100%}
 html body .l7i.done .n{opacity:1;color:var(--mut)}
 /* log: ring above the totals on phones so labels never break mid-word */
 @media (max-width:480px){html body #app .today-top{flex-direction:column;align-items:stretch}html body #app .today-top>:first-child{align-self:center}html body #app.log11 .tot{width:100%}}
+/* 14.1 Top picks rows */
+.li141{position:relative}
+.li141 .m14{padding-right:44px}
+.cmp141{position:absolute;top:6px;right:4px;width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink2);display:grid;place-items:center;cursor:pointer}
+.cmp141[aria-pressed=true]{background:var(--accSoft);color:var(--accT);border-color:var(--acc)}
+.nt141{font-size:12px;color:var(--mut);line-height:1.35;margin-top:2px}.nt141 b{color:var(--ink);font-weight:700}
+.tg141{display:inline-block;padding:1px 7px;border-radius:999px;background:var(--chip);color:var(--ink2);font-size:11px}
+.sc14{font-size:11px;padding:4px 7px}
+.sh141 h2 small{display:block;font-weight:500;color:var(--mut);margin-top:2px;font-size:12px;letter-spacing:0}
+@media (max-width:420px){.li141 .m14{padding-right:6px;padding-bottom:44px}.cmp141{top:auto;bottom:6px;left:48px;right:auto;width:32px;height:32px}}
