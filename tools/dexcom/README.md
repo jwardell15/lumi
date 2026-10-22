@@ -1,5 +1,7 @@
 # Lumi Dexcom backend (Cloudflare Worker)
 
+> **Inactive (Lumi 16.0, Oct 2026).** The Dexcom login was removed from the Lumi app. Dexcom only granted sandbox access (production returned `403 sandbox.user_not_authorized`), so Lumi now uses Dexcom Clarity CSV import only. This worker stays deployed but unused, and all session tokens were deleted from its KV namespace. The code is kept here for reference.
+
 Lumi is a static web app. Dexcom's API needs a **client secret** for the OAuth token exchange, Dexcom asks partners to keep tokens on a server, and `api.dexcom.com` doesn't allow browser (CORS) calls. This small worker does the OAuth on your own free Cloudflare account. Lumi only ever holds an opaque session id.
 
 You do every step below yourself, because each one creates an account or key in your name. Nobody else can do them for you, and Lumi never deploys anything.

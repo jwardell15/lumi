@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '15.0';
+const VERSION = '16.0';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -15,6 +15,10 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem('lumi.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem('lumi.' + k, JSON.stringify(v)); } catch {} },
 };
+/* v16 migration: the Dexcom login was removed. Clear any stored Dexcom session id / backend settings and any Dexcom API (sandbox) readings. Clarity CSV and labeled sample data stay. */
+(() => { try { const s = store.get('settings', null); if (s && Object.keys(s).some(k => /^dx/.test(k))) { Object.keys(s).filter(k => /^dx/.test(k)).forEach(k => delete s[k]); store.set('settings', s); }
+  const c = store.get('cgm', null); if (c && /^api/.test(c.src || '')) store.set('cgm', null);
+  const q = new URLSearchParams(location.search); if (q.has('sid') || q.has('error')) history.replaceState(null, '', location.pathname + (location.hash || '')); } catch {} })();
 const saved = () => store.get('saved', []);
 const isSaved = id => saved().some(s => s.p.id === id);
 function toggleSave(p) { let s = saved(); if (isSaved(p.id)) s = s.filter(x => x.p.id !== p.id); else s.unshift({ p, t: Date.now() }); store.set('saved', s.slice(0, 300)); return isSaved(p.id); }
@@ -475,7 +479,7 @@ async function viewProduct(id) {
   app.innerHTML = `
   <div class="card">
     <div class="ph">${thumb(p.img, p.name, keys, p.cat, true, p.brand)}
-      <div class="ph-t"><h1>${esc(p.name)}</h1><div class="b">${esc(p.brand)}${p.qty ? ' · ' + esc(p.qty) : ''}</div>${p.hx && p.hx.w ? `<div class="srcline">🌍 International product · listed in ${esc(p.hx.w.join(', ') || 'another country')} on Open Food Facts. The label where you buy it may differ, check the package.</div>` : ''}${p.hx && p.hx.s ? '' : p.meta ? `<div class="srcline">Source: ${esc(p.meta.src)}${p.meta.date ? ', ' + esc(p.meta.date) : ''}</div>` : ''}
+      <div class="ph-t"><h1>${esc(p.name)}</h1><div class="b">${esc(p.brand)}${p.qty ? ' · ' + esc(p.qty) : ''}</div>${p.hx && Array.isArray(p.hx.w) ? `<div class="srcline">🌍 International product · listed in ${esc(p.hx.w.join(', ') || 'another country')} on Open Food Facts. The label where you buy it may differ, check the package.</div>` : ''}${p.hx && p.hx.s ? '' : p.meta ? `<div class="srcline">Source: ${esc(p.meta.src)}${p.meta.date ? ', ' + esc(p.meta.date) : ''}</div>` : ''}
         ${ratingLines(s, hr, hp)}</div></div>
     ${sourceLine(p)}
     ${alertBanner(p, s.net)}
@@ -663,8 +667,8 @@ function route() {
   if (view === 'plan') return arg === 'grocery' ? viewGrocery13() : viewPlan13();
   if (view === 'recipes') return viewRecipes12();
   if (view === 'recipe' && arg) return viewRecipe12(arg);
-  if (view === 'dexcom') return viewDexcomSetup12();
-  const V15 = { quick: 'viewQuick15', fresh: 'viewFresh15', review: 'viewReview15', prices: 'viewPrices15' }; // v15 (js/v15.js loads after this file)
+  if (view === 'dexcom') { history.replaceState(null, '', '#/glucose'); return viewGlucose11(); } // v16: Dexcom login removed
+  const V15 = { quick: 'viewQuick15', fresh: 'viewFresh15', review: 'viewReview15', prices: 'viewPrices15', today: 'viewToday16', insights: 'viewToday16' }; // v15 (js/v15.js loads after this file)
   if (V15[view]) { if (typeof window[V15[view]] === 'function') return window[V15[view]](arg); app.innerHTML = skel(3); return; }
   viewHome();
 }

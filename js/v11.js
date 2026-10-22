@@ -1,6 +1,6 @@
-/* Lumi 11.0 — scan history, glucose after meals (Dexcom Clarity CSV import + optional Dexcom API backend), Apple Health via Shortcuts,
+/* Lumi 11.0 — scan history, glucose after meals (Dexcom Clarity CSV import), Apple Health via Shortcuts,
    link/code sharing for lists and saved meals, and new layouts for Log, Lists, Compare, Meal builder, saved meals and Settings.
-   Never invents glucose data: charts only draw readings the user imported or fetched from their own Dexcom account. */
+   Never invents glucose data: charts only draw readings the user imported. */
 const I11 = {
   scan: '<path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10 8v8M13 8v8M17 8v8"/>',
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', heart: '<path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/>',
@@ -132,27 +132,9 @@ function viewGlucose11(arg) {
   <div class="card"><h2>Status</h2>${c ? `<p><b>${c.src === 'clarity' ? 'Dexcom Clarity export' : c.src === 'api-sandbox' ? 'Dexcom API sandbox (simulated data)' : 'Dexcom API'}</b><br><span class="small">${esc(span)}. Last update ${new Date(c.imported).toLocaleString()}.</span></p><div class="actions"><a class="btn" href="#/log">See it on your Log</a><button class="btn" id="cgmdel">Remove glucose data</button></div>` : `<p class="small">No glucose data yet. Import a Clarity export below.</p>`}</div>
   <div class="card"><h2>Import a Dexcom Clarity CSV</h2><ol class="steps11"><li>On a computer, open <a class="lnk" href="https://clarity.dexcom.com" target="_blank" rel="noopener">clarity.dexcom.com</a> and sign in.</li><li>Pick a date range, then choose <b>Export</b> (the share/download icon at the top) to download a CSV.</li><li>Open Lumi on that device (or AirDrop the file to your iPhone) and choose the file here.</li></ol>
    <label class="btn pri" for="cgmf">Choose Clarity CSV…</label><input type="file" id="cgmf" accept=".csv,text/csv" hidden><p class="small" id="cgmmsg" role="status"></p></div>
-  <div class="card"><h2>Connect Dexcom directly</h2><p class="small">Dexcom's official API needs a <b>client secret</b> that must stay on a server, and it does not allow calls from a browser (no CORS). So a direct connection needs a tiny backend you control. US data arrives with a 1-hour delay (3 hours outside the US).</p>
-   <label class="fl11"><span>Your Lumi Dexcom backend URL (optional)</span><input id="dxb" class="in11" type="url" placeholder="https://lumi-dexcom.yourname.workers.dev" value="${esc(st.dxBackend || '')}"></label>
-   <div class="actions"><button class="btn" id="dxsave">Save</button>${st.dxBackend ? `<button class="btn pri" id="dxgo">Connect Dexcom</button><button class="btn" id="dxsync">Sync last 3 days</button>` : ''}</div>
-   <p class="small">Setup guide and reference backend code: <a class="lnk" href="https://github.com/jwardell15/lumi/blob/main/tools/dexcom" target="_blank" rel="noopener">tools/dexcom</a> (or <a class="lnk" href="#/dexcom">the step-by-step guide</a>). If the backend is set to Dexcom's sandbox, readings are labeled "sandbox (simulated data)" everywhere.</p></div>
   <p class="foot">Dexcom data is informational only. Make treatment decisions from your Dexcom app and your care team.</p></section>`;
   $('#cgmf').onchange = e => { const f = e.target.files[0]; if (!f) return; f.text().then(t => { try { const { pts, lowhi } = parseClarity11(t); const n = mergeCGM11(pts, 'clarity'); $('#cgmmsg').textContent = `Imported ${pts.length.toLocaleString()} readings (${n.toLocaleString()} stored).${lowhi ? ` ${lowhi} Low/High readings skipped.` : ''}`; setTimeout(() => viewGlucose11(), 1200); } catch (err) { $('#cgmmsg').textContent = err.message; } }); };
   const d = $('#cgmdel'); if (d) d.onclick = () => { if (confirm('Remove all glucose readings from this device?')) { store.set('cgm', null); viewGlucose11(); } };
-  $('#dxsave').onclick = () => { const s = settings(); const v = $('#dxb').value.trim().replace(/\/$/, ''); if (v && !/^https:\/\//.test(v)) return toast('Use an https:// address'); s.dxBackend = v; store.set('settings', s); viewGlucose11(); };
-  const g = $('#dxgo'); if (g) g.onclick = () => { location.href = st.dxBackend + '/login?return=' + encodeURIComponent(location.origin + location.pathname + '#/glucose/connected'); };
-  const sy = $('#dxsync'); if (sy) sy.onclick = () => syncDexcom11(st.dxBackend);
-  if (arg === 'connected' && st.dxBackend) syncDexcom11(st.dxBackend);
-}
-async function syncDexcom11(base) {
-  try {
-    const end = new Date(), start = new Date(end - 3 * 864e5); const iso = d => d.toISOString().slice(0, 19);
-    const r = await fetch(`${base}/egvs?startDate=${iso(start)}&endDate=${iso(end)}`, { headers: settings().dxSid ? { Authorization: 'Bearer ' + settings().dxSid } : {} }); if (r.status === 401) throw new Error('not connected yet. Tap Connect Dexcom'); if (!r.ok) throw new Error('Backend said ' + r.status);
-    const j = await r.json(); const env = r.headers.get('x-dexcom-env') || j.env || 'production';
-    const pts = (j.records || []).filter(x => x.value != null).map(x => [Date.parse(x.systemTime.endsWith('Z') || /[+-]\d\d:?\d\d$/.test(x.systemTime) ? x.systemTime : x.systemTime + 'Z'), x.value]).filter(p => p[0]);
-    const n = mergeCGM11(pts, env === 'sandbox' ? 'api-sandbox' : 'api'); toast(`Synced ${pts.length} readings${env === 'sandbox' ? ' (sandbox)' : ''}`); if (/glucose/.test(location.hash)) viewGlucose11();
-    return n;
-  } catch (e) { toast('Dexcom sync failed: ' + e.message); }
 }
 
 /* ---------------- sharing (no backend) ---------------- */
@@ -236,7 +218,7 @@ function decorateMeals11() {
 }
 function decorateSettings11() {
   app.classList.add('set11'); if (app.querySelector('.hub11')) return;
-  const rows = [['#/applehealth', 'heart', 'Apple Health', 'Send meals via an iOS Shortcut'], ['#/glucose', 'drop', 'Dexcom glucose', cgm11() ? 'Glucose data on this device' : 'Import Clarity CSV or connect'], ['#/history', 'clock', 'Scan history', `${scans11().length} scans saved`], ['#/share', 'share', 'Import a shared code', 'Lists and meals from family'], ['#/meals', 'plate', 'Saved meals', `${savedMeals().length} saved`], ['#/whatsnew', 'info', "What's new", 'Lumi ' + VERSION]];
+  const rows = [['#/applehealth', 'heart', 'Apple Health', 'Send meals via an iOS Shortcut'], ['#/glucose', 'drop', 'Dexcom glucose', cgm11() ? 'Glucose data on this device' : 'Import a Clarity CSV'], ['#/history', 'clock', 'Scan history', `${scans11().length} scans saved`], ['#/share', 'share', 'Import a shared code', 'Lists and meals from family'], ['#/meals', 'plate', 'Saved meals', `${savedMeals().length} saved`], ['#/whatsnew', 'info', "What's new", 'Lumi ' + VERSION]];
   const h = app.querySelector('h1'); if (h) h.insertAdjacentHTML('afterend', `<ul class="hub11 grp11">${rows.map(([u, i, t, s]) => `<li><a class="hr11" href="${u}"><span class="hic11">${ic11(i, 20)}</span><span class="ht11"><b>${t}</b><small>${esc(s)}</small></span>${ic11('chev', 18)}</a></li>`).join('')}</ul><h2 class="gh11">Carbs, targets and estimates</h2>`);
 }
 const AISLE_IC = [[/produce/i, 'produce'], [/meat|seafood/i, 'meat'], [/dairy|egg/i, 'dairy'], [/bakery|bread/i, 'bakery'], [/frozen/i, 'frozen'], [/pantry/i, 'pantry'], [/snack/i, 'snacks'], [/beverage|drink/i, 'bev'], [/breakfast|cereal/i, 'breakfast'], [/condiment|sauce/i, 'sauce'], [/baking/i, 'baking'], [/canned/i, 'canned'], [/deli/i, 'deli'], [/baby/i, 'baby'], [/supplement|powder/i, 'supp']];

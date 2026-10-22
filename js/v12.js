@@ -1,6 +1,6 @@
 'use strict';
-/* Lumi 12.0: redesigned Week + Report, meal assignment/editing (+ safe migration), recipe builder, Dexcom backend setup guide.
-   Loads after v11.js and before app.js. Never invents data: charts only use the user's own log; glucose only from Clarity/Dexcom. */
+/* Lumi 12.0: redesigned Week + Report, meal assignment/editing (+ safe migration), recipe builder.
+   Loads after v11.js and before app.js. Never invents data: charts only use the user's own log; glucose only from a Clarity CSV. */
 const MEAL_C12 = { breakfast: 'm-b', lunch: 'm-l', dinner: 'm-d', snack: 'm-s' };
 const ic12 = (k, s) => ic11(k, s);
 const g0 = v => v == null || isNaN(v) ? '—' : String(Math.round(v));
@@ -166,41 +166,11 @@ function logRecipe12(r) {
     l.push({ id: 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), ts, meal, pid: 'recipe:' + r.id, name: r.name, brand: 'Homemade recipe', grams: sg * q, label: `${r1(q)} serving${q === 1 ? '' : 's'}`, n, score: null, recipe: r.id });
     LOG.save(l); closeSheet(); toast(`Added to ${MEAL_L[meal]}`); };
 }
-/* ---------- Dexcom setup guide ---------- */
-function viewDexcomSetup12() {
-  document.title = 'Connect Dexcom — Lumi'; const st = settings(), steps = [
-    ['Joe', 'Create a Dexcom developer account', 'Go to <a class="lnk" href="https://developer.dexcom.com" target="_blank" rel="noopener">developer.dexcom.com</a> and sign up (free). This is separate from your Dexcom G7/G6 login.'],
-    ['Joe', 'Create a free Cloudflare account', 'Sign up at <a class="lnk" href="https://dash.cloudflare.com/sign-up" target="_blank" rel="noopener">dash.cloudflare.com</a>. The free Workers plan is enough. Pick a workers.dev subdomain when asked (for example <code>joe</code>).'],
-    ['Joe', 'Install Node.js and log in to Wrangler', 'On a computer: install Node.js 18+ from nodejs.org, then run <code>npx wrangler login</code> and approve in the browser.'],
-    ['Joe', 'Download the backend', 'Get <a class="lnk" href="https://github.com/jwardell15/lumi/tree/main/tools/dexcom" target="_blank" rel="noopener">tools/dexcom</a> from the Lumi repo (worker.js + wrangler.toml), or clone the repo and <code>cd tools/dexcom</code>.'],
-    ['Joe', 'Create the token store', 'Run <code>npx wrangler kv namespace create TOKENS</code> and paste the printed <code>id</code> into wrangler.toml.'],
-    ['Joe', 'Deploy once to get your URL', 'Run <code>npx wrangler deploy</code>. It prints your backend address, like <code>https://lumi-dexcom.joe.workers.dev</code>.'],
-    ['Joe', 'Register the Dexcom app', 'In the Dexcom developer portal, create an app. Set the Redirect URI to your backend address + <code>/callback</code> (e.g. <code>https://lumi-dexcom.joe.workers.dev/callback</code>). Copy the Client ID and Client Secret.'],
-    ['Joe', 'Add the secrets', 'Run <code>npx wrangler secret put DEXCOM_CLIENT_ID</code> and <code>npx wrangler secret put DEXCOM_CLIENT_SECRET</code>, pasting each value. They stay on Cloudflare, never in Lumi.'],
-    ['Joe', 'Test with sandbox first', 'Keep <code>DEXCOM_ENV = "sandbox"</code> in wrangler.toml, then paste the backend address below and tap Connect. On Dexcom\'s page choose a sandbox user (e.g. SandboxUser7). Lumi labels this data “sandbox (simulated)”.'],
-    ['Joe', 'Switch to your real data', 'Change to <code>DEXCOM_ENV = "production"</code>, run <code>npx wrangler deploy</code> again, then tap Connect and sign in with your own Dexcom account. US data is delayed about 1 hour (3 hours outside the US) by Dexcom.']];
-  app.innerHTML = `<section class="pg11 dx12"><header class="ph11"><span class="phi11">${ic12('drop', 26)}</span><div><h1>Connect Dexcom</h1><p class="lead">Dexcom's API needs a private key that can't live in a web app, so Lumi talks to Dexcom through a tiny backend you own on Cloudflare (free). About 20 minutes, one time.</p></div></header>
-  <div class="card"><h2>Your backend</h2><label class="fl11"><span>Backend URL</span><input id="dxb12" class="in11" type="url" inputmode="url" placeholder="https://lumi-dexcom.yourname.workers.dev" value="${esc(st.dxBackend || '')}"></label>
-   <div class="actions"><button class="btn" id="dxt12">Save and test</button>${st.dxBackend ? '<button class="btn pri" id="dxc12">Connect Dexcom</button>' : ''}${st.dxSid ? '<button class="btn" id="dxo12">Disconnect</button>' : ''}</div><p class="small" id="dxm12" role="status">${st.dxSid ? 'Connected on this device.' : st.dxBackend ? 'Not connected yet.' : 'Paste the address from step 6.'}</p></div>
-  <h2 class="gh11">Steps (only you can do these: they create accounts and keys in your name)</h2>
-  <ol class="st12">${steps.map(([w, t, d], i) => `<li><span class="sn12" aria-hidden="true">${i + 1}</span><div><b>${t}</b><p>${d}</p></div></li>`).join('')}</ol>
-  <div class="card"><h2>Prefer no backend?</h2><p class="small">Importing a Dexcom Clarity CSV still works and needs no setup. <a class="lnk" href="#/glucose">Glucose after meals</a></p></div>
-  <p class="foot">Lumi never shows made-up glucose numbers: only readings from your Clarity file or your Dexcom account (or Dexcom's sandbox, clearly labeled). Informational only.</p></section>`;
-  const msg = t => { $('#dxm12').textContent = t; };
-  $('#dxt12').onclick = async () => { const v = $('#dxb12').value.trim().replace(/\/+$/, ''); if (!/^https:\/\/[^/]+$/.test(v)) return msg('Use the https:// address only, without a path.');
-    const s = settings(); if (s.dxBackend !== v) delete s.dxSid; s.dxBackend = v; store.set('settings', s); msg('Testing…');
-    try { const r = await fetch(v + '/status', { headers: s.dxSid ? { Authorization: 'Bearer ' + s.dxSid } : {} }); const j = await r.json(); msg(`Backend OK (${j.env === 'production' ? 'production' : 'sandbox'} mode)${j.configured === false ? ', but secrets are missing: do step 8.' : ''}${j.connected ? '. Connected.' : '. Tap Connect Dexcom.'}`); setTimeout(() => viewDexcomSetup12(), 1500); }
-    catch (e) { msg("Couldn't reach the backend. Check the address and that step 6 deployed."); } };
-  const c = $('#dxc12'); if (c) c.onclick = () => { location.href = settings().dxBackend + '/login?return=' + encodeURIComponent(location.origin + location.pathname + '#/glucose/connected'); };
-  const o = $('#dxo12'); if (o) o.onclick = async () => { const s = settings(); try { await fetch(s.dxBackend + '/logout', { method: 'POST', headers: { Authorization: 'Bearer ' + s.dxSid } }); } catch {} delete s.dxSid; store.set('settings', s); viewDexcomSetup12(); };
-}
 /* ---------- wire up ---------- */
 (function () {
   window.viewWeek = () => viewWeek12(0); window.viewReport = a => { migrate12(); return viewReport12(a); };
   addEventListener('DOMContentLoaded', migrate12);
   const vl = viewLog; viewLog = function (arg) { migrate12(); const m = /^week(?:-(\d+))?$/.exec(arg || ''); if (m) return viewWeek12(+m[1] || 0); const r = vl.apply(this, arguments); try { decorateDay12(arg); } catch (e) { console.warn('v12', e); } return r; };
-  const vg = viewGlucose11; viewGlucose11 = function (arg) { const m = /^connected\?sid=([\w-]{16,})/.exec(arg || ''); if (m) { const s = settings(); s.dxSid = m[1]; store.set('settings', s); history.replaceState(null, '', '#/glucose/connected'); arg = 'connected'; }
-    const r = vg.call(this, arg); const box = app.querySelector('#dxb'); if (box) { const card = box.closest('.card'); if (card && !card.querySelector('.dxg12')) card.insertAdjacentHTML('afterbegin', `<a class="card gh11x dxg12" href="#/dexcom">${ic12('drop', 22)}<span><b>Step-by-step setup</b><small>Register a Dexcom app, deploy your free backend, connect.</small></span>${ic12('chev', 18)}</a>`); } return r; };
-  const vs = viewSettings; viewSettings = function () { const r = vs.apply(this, arguments); try { const hub = app.querySelector('.hub11'); if (hub && !hub.querySelector('[href="#/recipes"]')) hub.insertAdjacentHTML('beforeend', `<li><a class="hr11" href="#/recipes"><span class="hic11">${ic12('note', 20)}</span><span class="ht11"><b>Recipes</b><small>${recipes12().length} saved</small></span>${ic12('chev', 18)}</a></li><li><a class="hr11" href="#/dexcom"><span class="hic11">${ic12('drop', 20)}</span><span class="ht11"><b>Connect Dexcom (setup guide)</b><small>${settings().dxSid ? 'Connected' : 'Your own free backend, step by step'}</small></span>${ic12('chev', 18)}</a></li>`); } catch (e) { console.warn(e); } return r; };
+  const vs = viewSettings; viewSettings = function () { const r = vs.apply(this, arguments); try { const hub = app.querySelector('.hub11'); if (hub && !hub.querySelector('[href="#/recipes"]')) hub.insertAdjacentHTML('beforeend', `<li><a class="hr11" href="#/recipes"><span class="hic11">${ic12('note', 20)}</span><span class="ht11"><b>Recipes</b><small>${recipes12().length} saved</small></span>${ic12('chev', 18)}</a></li>`); } catch (e) { console.warn(e); } return r; };
   addEventListener('hashchange', () => { const a = document.getElementById('app'); if (a) a.classList.remove('wk12', 'rp12'); });
 })();

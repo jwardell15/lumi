@@ -129,7 +129,7 @@ function viewReview15() { document.title = 'Glucose after meals — Lumi'; const
   const F = new Map(); M.forEach(m => { const seen = new Set(); m.es.forEach(e => { const k = e.pid || e.name; if (seen.has(k)) return; seen.add(k); const x = F.get(k) || { name: e.name, R: [] }; x.R.push(m.c.rise); F.set(k, x); }); });
   const FR = [...F.values()].map(x => Object.assign(x, { avg: Math.round(x.R.reduce((a, b) => a + b, 0) / x.R.length) })), ok = FR.filter(x => x.R.length >= 2).sort((a, b) => b.avg - a.avg), few = FR.filter(x => x.R.length < 2);
   app.innerHTML = `<section class="pg13"><a class="lnk back13" href="#/glucose">‹ Dexcom glucose</a><h1>Glucose after meals</h1><p class="lead74">How glucose moved in the 3 hours after each logged meal. Descriptive only. Not dosing advice.</p>${srcL}
-  ${!c ? `<div class="card"><p class="small">Not enough data: no glucose readings on this device. <a class="lnk" href="#/glucose">Import a Clarity CSV or connect Dexcom</a>, then log meals.</p></div>`
+  ${!c ? `<div class="card"><p class="small">Not enough data: no glucose readings on this device. <a class="lnk" href="#/glucose">Import a Clarity CSV</a>, then log meals.</p></div>`
     : !M.length ? `<div class="card"><p class="small">Not enough data: none of your logged meals has glucose readings covering the meal time and at least 90 minutes after it.</p></div>`
     : `<section class="card"><h2>Foods by average rise</h2><p class="xs">Rise = peak within 3 h minus the reading at the meal. Meals mix foods, so this shows association, not cause. Foods need 2+ meals with data.</p>
       ${ok.length ? `<ol class="rk15">${ok.slice(0, 15).map(x => `<li><span>${esc(x.name)}</span><span><b>${x.avg >= 0 ? '+' : ''}${x.avg} mg/dL</b> <small>avg of ${x.R.length} meals</small></span></li>`).join('')}</ol>` : '<p class="small">Not enough data yet: no food appears in 2 or more meals with glucose coverage.</p>'}
@@ -167,7 +167,7 @@ new MutationObserver(() => { const v = location.hash.replace(/^#\/?/, '').split(
       if (fp15()) { const dk = (location.hash.split('/')[2] || ''), day = dk ? new Date(dk + 'T12:00') : new Date(), s0 = new Date(day).setHours(0, 0, 0, 0), es = LOG.all().filter(e => e.ts >= s0 && e.ts < s0 + 864e5), by = {};
         es.forEach(e => { const g = e.grams / 100, x = by[e.meal] || (by[e.meal] = { f: 0, p: 0 }); x.f += ((e.n && e.n.fat) || 0) * g; x.p += ((e.n && e.n.protein) || 0) * g; });
         const notes = Object.entries(by).map(([m, x]) => fpNote15(x.f, x.p, MEAL_L[m] || m)).join(''); if (notes) $('#lk15').insertAdjacentHTML('afterend', notes); } } }
-  if (v === 'glucose' && !$('#gr15') && app.querySelector('h1')) app.querySelector('h1').insertAdjacentHTML('afterend', `<p id="gr15"><a class="btn" href="#/review">Glucose after meals: review</a></p>`);
+  if (v === 'glucose' && !$('#gr15') && !$('.g16') && app.querySelector('h1')) app.querySelector('h1').insertAdjacentHTML('afterend', `<p id="gr15"><a class="btn" href="#/review">Glucose after meals: review</a></p>`);
   if (v === 'history' && !$('#hp15') && app.querySelector('h1')) app.querySelector('h1').insertAdjacentHTML('afterend', `<p id="hp15"><a class="lnk" href="#/prices">Price history and cheapest seen ›</a></p>`);
 }).observe(document.getElementById('app'), { childList: true });
 if (typeof chart11 === 'function') { const _ch = chart11; chart11 = function () { let h = _ch.apply(this, arguments); const c = cgm11(); if (h && c && c.src === 'sample') h = h.replace(/Source: [^.]*\./, 'Source: SAMPLE DATA (simulated for testing, not real glucose).'); return h; }; }
@@ -176,7 +176,3 @@ if (typeof chart11 === 'function') { const _ch = chart11; chart11 = function () 
 if (/^#\/(quick|fresh|review|prices)\b/.test(location.hash)) route();
 else if (/^#?\/?$/.test(location.hash) && $('#picks') && !$('.qc15')) { const { Q, html } = quickCard15(); const h = $('#picks').previousElementSibling; if (Q.length && h) { h.insertAdjacentHTML('beforebegin', html); bindQuick15(app, Q); } loadP15().then(() => fixServ15()); }
 
-/* Dexcom return: the worker may send ?sid=… without the #/glucose hash. Keep the session id and open the glucose page (which syncs). */
-{ const sp = new URLSearchParams(location.search), sid = sp.get('sid'), er = sp.get('error');
-  if (sid && /^[\w-]{16,}$/.test(sid)) { const s = settings(); s.dxSid = sid; store.set('settings', s); history.replaceState(null, '', location.pathname + '#/glucose/connected'); route(); }
-  else if (er) { history.replaceState(null, '', location.pathname + '#/glucose'); route(); setTimeout(() => toast('Dexcom: ' + er), 300); } }
