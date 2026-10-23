@@ -5,3 +5,7 @@ __pycache__/
 
 # Screenshot artifacts (17.3.1): keep icons/ and ref/ tracked
 /*.png
+
+# 17.4: food data is hosted on Cloudflare Pages (lumi-data); publish with tools/sync_data.sh
+/data/
+/img/w/
