@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '17.0.1';
+const VERSION = '17.1';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -392,12 +392,12 @@ function viewBrowse(key) {
 /* ---------------- product ---------------- */
 async function resolveProduct(id) { const mem8 = () => store.get('foods', {})[id] || null; if (!navigator.onLine && mem8()) return mem8(); let p; try { p = await resolveProduct0(id); } catch (e) { const m = mem8(); if (m) return m; throw e; } if (!p) p = mem8(); if (p && p.name) p.name = LumiSearch.fixName(p.name); if (p && p.brand && window.LumiStores) { const a = LumiStores.alias(p.brand); if (a) p.brand = a; } return p; }
 async function resolveProduct0(id) {
-  if (/^(fdc-|r-|ms-|cnf-)/.test(id)) { const g = await genericProduct(id); if (g) return g; }
+  if (/^(fdc-|r-|ms-|cnf-|wfm-)/.test(id)) { const g = await genericProduct(id); if (g) return g; }
   if (memo.has(id)) return memo.get(id);
   const sv = saved().find(s => s.p.id === id); if (sv) return sv.p;
   if (/^c-/.test(id)) { const c = customFoods().find(x => x.id === id); if (c) return c; }
   const mem = store.get('foods', {})[id];
-  if (/^(fdc-|r-|ms-|cnf-)/.test(id)) { const g = await genericProduct(id); if (g) return g; if (mem) return mem; if (/^fdc-\d+$/.test(id)) return usdaFood(id.slice(4)); return null; }
+  if (/^(fdc-|r-|ms-|cnf-|wfm-)/.test(id)) { const g = await genericProduct(id); if (g) return g; if (mem) return mem; if (/^fdc-\d+$/.test(id)) return usdaFood(id.slice(4)); return null; }
   if (mem && !/^\d+$/.test(id)) return mem;
   const loc = await localProduct(id);
   if (loc) return loc;

@@ -12,7 +12,8 @@ const have = new Set(); for (const f of fs.readdirSync(path.join(out, 'd'))) for
 const rnd = v => v == null ? null : Math.round(v * 10) / 10;
 const ctyName = c => (c || '').split(',').map(x => x.replace(/^\w\w:/, '').replace(/-/g, ' ').replace(/\b[a-z]/g, m => m.toUpperCase())).filter(Boolean);
 const cats = [], catIdx = new Map(), docs = [], shards = {}, seen = new Set(); const CT = {}; const rej = { dupe: 0, pet: 0, quality: 0, noCarb: 0 };
-for (const l of fs.readFileSync(process.argv[2], 'utf8').split('\n')) { if (!l) continue;
+function* lines17(f) { const fd = fs.openSync(f, 'r'), B = Buffer.alloc(1 << 24), SD = new (require('string_decoder').StringDecoder)('utf8'); let rest = ''; for (;;) { const n = fs.readSync(fd, B, 0, B.length, null); if (!n) break; const parts = (rest + SD.write(B.subarray(0, n))).split('\n'); rest = parts.pop(); yield* parts; } if (rest) yield rest; fs.closeSync(fd); } // v17: stream (input can exceed max string length)
+for (const l of lines17(process.argv[2])) { if (!l) continue;
   const r = JSON.parse(l); const gk = r.code.replace(/^0+/, ''); if (seen.has(gk) || have.has(gk)) { rej.dupe++; continue; } seen.add(gk);
   if (AI.isPet(r.cats) || /\b(dog|cat|pet) (food|treats?)\b/i.test(r.name)) { rej.pet++; continue; }
   const m = r.n; const nut = [m.carbohydrates, m.sugars, m['added-sugars'], m.fiber, m.proteins, m.fat, m['saturated-fat'], m['trans-fat'], m.sodium == null ? null : m.sodium * 1000, m['energy-kcal'], m.polyols].map(rnd);
