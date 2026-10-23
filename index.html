@@ -15,6 +15,7 @@
 <meta property="og:title" content="Lumi — food scanner"><meta property="og:description" content="Carb-first food scores for packaged foods, whole foods and restaurants."><meta property="og:image" content="https://jwardell15.github.io/lumi/icons/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:url" content="https://jwardell15.github.io/lumi/"><meta property="og:type" content="website"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://jwardell15.github.io/lumi/icons/og.png">
 <link rel="stylesheet" href="css/app.css"><link rel="stylesheet" href="css/v10.css"><link rel="stylesheet" href="css/v11.css"><link rel="stylesheet" href="css/v12.css">
 <link rel="stylesheet" href="css/v13.css"><link rel="stylesheet" href="css/v14.css"><link rel="stylesheet" href="css/v15.css"><link rel="stylesheet" href="css/v16.css"><link rel="stylesheet" href="css/v18.css">
+<link rel="stylesheet" href="css/v19.css">
 <script>try{const t=localStorage.getItem('lumi.theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
 <link rel="preconnect" href="https://lumi-data-cky.pages.dev" crossorigin>
 <link rel="preconnect" href="https://images.openfoodfacts.org" crossorigin>
@@ -23,16 +24,19 @@
   <a href="#/" class="logo" aria-label="Lumi home">
     <img class="hdr-mascot" src="icons/mascot-128.png" width="34" height="34" alt="">
     <span class="wordmark">lumi</span></a>
-  <nav><button id="theme" class="icon" aria-label="Toggle theme">◐</button></nav>
+  <nav><a href="#/settings" class="icon set19" aria-label="Settings"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></a><button id="theme" class="icon" aria-label="Toggle theme">◐</button></nav>
 </header>
 <main id="app"></main>
 <nav class="tabbar" aria-label="Main">
-  <a href="#/" data-v="home"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>Search</span></a>
-  <a href="#/browse" data-v="browse"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg><span>Browse</span></a>
-  <a href="#/log" data-v="log"><svg viewBox="0 0 24 24"><path d="M8 3h8l1 3h2v15H5V6h2l1-3zM9 11h6M9 15h4"/></svg><span>Log</span></a>
+  <a href="#/" data-v="home"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/></svg><span>Home</span></a>
+  <a href="#/search" data-v="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>Search</span></a>
+  <a href="#/browse" data-v="browse"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg><span>Browse</span></a>
   <button data-scan class="tab-scan" aria-label="Scan a barcode"><span class="scan-btn"><svg viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10 8v8M13 8v8M17 8v8"/></svg></span><span>Scan</span></button>
-  <a href="#/saved" data-v="saved"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/></svg><span>Saved</span></a>
-  <a href="#/settings" data-v="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Settings</span></a>
+  <a href="#/today" data-v="today"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16M9 14h2v2H9z"/></svg><span>Today</span></a>
+  <a href="#/myfoods" data-v="myfoods"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/></svg><span>My foods</span></a>
+  <a class="side13" href="#/log" data-v="log"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3h8l1 3h2v15H5V6h2l1-3zM9 11h6M9 15h4"/></svg><span>Food log</span></a>
+  <a class="side13" href="#/patterns" data-v="patterns"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l5-6 4 4 8-9"/><path d="M15 6h5v5"/></svg><span>Patterns</span></a>
+  <a class="side13" href="#/settings" data-v="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Settings</span></a>
 </nav>
 <div id="scanner" class="scanner" hidden><div class="scan-top"><span>Point at a barcode</span><button id="scanClose" class="icon light" aria-label="Close">✕</button></div><div id="reader"></div><div class="scan-hint">EAN-13 · UPC-A · EAN-8 · UPC-E · <button type="button" class="lnkbtn" id="scanType">Type the number instead</button></div></div>
 <div id="toast" class="toast" role="status"></div>
@@ -67,4 +71,5 @@
 <script src="js/v17.js"></script>
 <script src="js/v18.js"></script>
 <script src="js/v181.js"></script>
+<script src="js/v19.js"></script>
 </body></html>

@@ -1,0 +1,61 @@
+/* ===== Lumi 19.0 — "Aurora" identity: indigo-violet + lagoon teal, refined type & spacing ===== */
+:root{
+ --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:24px;--s6:32px;--s7:48px;
+ --bg:#f5f4fb;--bg2:#ffffff;--card:#ffffff;--ink:#16142b;--ink2:#36334f;--mut:#5c5878;--line:rgba(40,30,110,.12);--chip:#ecebf6;
+ --acc:#5b3fd9;--acc2:#7b61ff;--accFg:#ffffff;--accT:#4c31c8;--accInk:#fff;--accSoft:#eeeaff;
+ --lag:#0b8a7d;--lagSoft:#e3f6f3;--glow:linear-gradient(135deg,#5b3fd9 0%,#7b4fe0 45%,#0b8a7d 100%);--glowT:linear-gradient(100deg,#4c31c8 0%,#6a3fd0 50%,#0a7468 100%);
+ --shadow:0 1px 2px rgba(30,20,90,.06),0 8px 28px rgba(30,20,90,.07);--r19:18px;
+ --font:"Inter",-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;
+ --round:ui-rounded,"SF Pro Rounded","Nunito","Avenir Next",-apple-system,system-ui,sans-serif;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0c0b19;--bg2:#15132a;--card:#16142b;--ink:#f3f1ff;--ink2:#d2cdea;--mut:#a7a2c6;--line:rgba(190,180,255,.13);--chip:#24213f;
+ --acc:#a99bff;--acc2:#c4b8ff;--accFg:#120c30;--accT:#b9adff;--accInk:#120c30;--accSoft:#231d4a;--lag:#4fd1c0;--lagSoft:#0f2e2c;
+ --glow:linear-gradient(135deg,#4a33c4 0%,#6a3fd0 45%,#0d7f74 100%);--glowT:linear-gradient(100deg,#b9adff 0%,#d0c6ff 50%,#62e0cf 100%);--shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35);color-scheme:dark}}
+:root[data-theme=dark]{--bg:#0c0b19;--bg2:#15132a;--card:#16142b;--ink:#f3f1ff;--ink2:#d2cdea;--mut:#a7a2c6;--line:rgba(190,180,255,.13);--chip:#24213f;
+ --acc:#a99bff;--acc2:#c4b8ff;--accFg:#120c30;--accT:#b9adff;--accInk:#120c30;--accSoft:#231d4a;--lag:#4fd1c0;--lagSoft:#0f2e2c;
+ --glow:linear-gradient(135deg,#4a33c4 0%,#6a3fd0 45%,#0d7f74 100%);--glowT:linear-gradient(100deg,#b9adff 0%,#d0c6ff 50%,#62e0cf 100%);--shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35);color-scheme:dark}
+html body{background:var(--bg);background-image:radial-gradient(1200px 420px at 50% -120px,color-mix(in srgb,var(--acc) 14%,transparent),transparent 70%);background-repeat:no-repeat;color:var(--ink);font-family:var(--font);-webkit-font-smoothing:antialiased}
+#app h1,#app h2,.wordmark,.side10 span{font-family:var(--round);letter-spacing:-.025em}
+#app h1{font-weight:750;font-size:clamp(28px,2.4vw + 14px,42px);line-height:1.1}
+#app h2{font-weight:700}
+.wordmark,.side10 span{background:var(--glowT);-webkit-background-clip:text;background-clip:text;color:transparent!important}
+/* cards & controls */
+#app .card,#app .row,.tools74 a,.st181,.sg181>a{border-radius:var(--r19)}
+#app .card{border:1px solid var(--line);box-shadow:var(--shadow)}
+#app .btn.pri,#app .btn-pri,#app button.pri,.pb10.pri{background:var(--acc);color:var(--accFg)}
+.scan74,.tab-scan .scan-btn{background:var(--glow)!important;color:#fff!important}
+.tab-scan .scan-btn svg{stroke:#fff}
+.hs74 input,#q{border-radius:999px!important}
+.home74 .hs74{box-shadow:0 0 0 1px var(--line),0 10px 30px color-mix(in srgb,var(--acc) 12%,transparent);border-radius:999px}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.set19{display:inline-flex;align-items:center;justify-content:center;color:var(--ink2)}
+.set19 svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+@media (min-width:1024px){.set19{display:none}}
+.tabbar a.on,.tabbar a[aria-current=page]{color:var(--accT)!important}
+@media (min-width:1024px){html .tabbar a.on,html .tabbar a[aria-current=page]{background:var(--accSoft)!important;color:var(--accT)!important}}
+@media (max-width:1023px){html body .tabbar>a,html body .tabbar>button{min-width:0;flex:1 1 0}html body .tabbar>a span,html body .tabbar>button>span:last-child{font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}}
+/* Search landing */
+.srch19{max-width:1120px;margin:0 auto;padding:var(--s5) var(--s4) 120px}
+.srch19 .hs74{margin:var(--s4) 0}
+.srch19 .grp19{margin-top:var(--s5)}
+.srch19 .grp19 h2{font-size:17px;margin:0 0 var(--s3)}
+.chips19{display:flex;flex-wrap:wrap;gap:var(--s2)}
+.chips19 a{display:inline-flex;align-items:center;min-height:40px;padding:0 var(--s4);border-radius:999px;background:var(--card);border:1px solid var(--line);color:var(--ink);text-decoration:none;font-weight:600;font-size:14px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chips19 a:hover{border-color:var(--acc);color:var(--accT)}
+.tile19{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:var(--s3)}
+.tile19 a{display:block;padding:var(--s4);border-radius:var(--r19);background:var(--card);border:1px solid var(--line);text-decoration:none;color:var(--ink)}
+.tile19 a b{display:block;font-size:15px}.tile19 a span{color:var(--mut);font-size:13px}
+.tile19 a:hover{border-color:var(--acc)}
+/* Home hero band */
+.home74>h1{background:var(--glowT);-webkit-background-clip:text;background-clip:text;color:transparent}
+.home74 .lead74{color:var(--ink2)}
+/* Restaurants hub cards */
+.rh19{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:var(--s3)}
+/* per-serving basis */
+.sv19{display:block;font-size:11.5px;color:var(--mut);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.bl19{font-size:13px;color:var(--ink2);margin-top:6px}
+.sv19c{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:12px 0 4px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--bg2)}
+.sv19c .sv19l{font-weight:700;font-size:14px}
+.sv19c button{min-width:44px;min-height:40px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-weight:700;cursor:pointer}
+.sv19c button[aria-pressed=true]{background:var(--acc);color:var(--accFg);border-color:var(--acc)}
+.sv19c input{width:84px;min-height:40px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:0 8px;font:inherit}
+.sv19c .sv19b{font-size:12.5px;color:var(--mut);flex-basis:100%}

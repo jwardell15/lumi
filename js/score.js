@@ -69,80 +69,98 @@ function netCarbs(p) {
   return { net: n.carbs, note: p.naLabel === false ? 'Total carbohydrate as labeled (EU-style labels list carbohydrate without fiber)' : 'Total carbohydrate as labeled' };
 }
 
-/* v16.1 Blood sugar score: SUGAR is the primary driver (added sugar weighs more than natural sugar when the label says which is which),
-   TOTAL carbs the secondary factor. Fiber is a small bonus only and is never subtracted from carbs. */
-function score(p) {
+/* v19.0 serving basis. Scores are computed PER SERVING. Order of preference:
+   1) the labeled serving size in grams/ml (servQ)  2) restaurant items: per item as published
+   3) a documented category default serving (DEFSERV below)  4) per 100 g, flagged "per 100 g (no serving size)". */
+const DEFSERV = [
+  [/\b(soda|cola|pop|soft drink)\b/i, 355, '1 can (355 ml)'], [/\b(energy drink)\b/i, 250, '1 can (250 ml)'],
+  [/\b(milk|juice|nectar|lemonade|tea|coffee|latte|smoothie|kefir|drink|beverage|water|shake)\b/i, 240, '1 cup (240 ml)'],
+  [/\b(yogh?urt|skyr)\b/i, 170, '1 container (170 g)'], [/\bcottage cheese\b/i, 113, '1/2 cup (113 g)'], [/\bcheese\b/i, 28, '1 oz (28 g)'],
+  [/\b(cereal|granola|muesli)\b/i, 40, '1 cup (40 g)'], [/\b(oats|oatmeal)\b/i, 40, '1/2 cup dry (40 g)'],
+  [/\b(chips|crisps|crackers?|pretzels?|popcorn|puffs|cheese curls)\b/i, 28, '1 oz (28 g)'], [/\b(nuts?|almonds|cashews|pistachios|peanuts|trail mix|seeds)\b/i, 28, '1 oz (28 g)'],
+  [/\b(cookies?|biscuits)\b/i, 30, '2 cookies (30 g)'], [/\b(candy|chocolate|gummies|candies)\b/i, 40, '1 bar / piece (40 g)'], [/\b(bar|bars)\b/i, 40, '1 bar (40 g)'],
+  [/\b(ice cream|gelato|frozen dessert)\b/i, 66, '2/3 cup (66 g)'], [/\b(cake|brownie|muffin|donut|doughnut|pastry|croissant|pie)\b/i, 70, '1 piece (70 g)'],
+  [/\b(bread|toast)\b/i, 50, '2 slices (50 g)'], [/\b(bagel)\b/i, 95, '1 bagel (95 g)'], [/\b(tortillas?|wraps?)\b/i, 45, '1 tortilla (45 g)'],
+  [/\b(rice)\b/i, 158, '1 cup cooked (158 g)'], [/\b(pasta|noodles|spaghetti|macaroni)\b/i, 140, '1 cup cooked (140 g)'],
+  [/\b(pizza)\b/i, 125, '1 slice (125 g)'], [/\b(soup|chili|stew)\b/i, 245, '1 cup (245 g)'], [/\b(frozen meal|entree|dinner|bowl)\b/i, 280, '1 meal (280 g)'],
+  [/\b(sauce|dressing|ketchup|salsa|dip|hummus|spread|jam|jelly|syrup|honey)\b/i, 30, '2 tbsp (30 g)'], [/\b(peanut butter|nut butter|almond butter)\b/i, 32, '2 tbsp (32 g)'],
+  [/\b(fruit|apples?|bananas?|berries|grapes|oranges?|melon)\b/i, 150, '1 cup / medium (150 g)'], [/\b(vegetables?|broccoli|spinach|carrots?|salad|greens|beans|lentils)\b/i, 85, '1 cup (85 g)'],
+  [/\b(chicken|beef|pork|turkey|fish|salmon|tuna|shrimp|meat|sausage|bacon|ham)\b/i, 85, '3 oz (85 g)'], [/\b(eggs?)\b/i, 50, '1 egg (50 g)']];
+function servBasis(p, opt) {
+  opt = opt || {};
+  if (opt.grams > 0) return { g: opt.grams, kind: 'custom', label: Math.round(opt.grams) + ((p && p.liquid) ? ' ml' : ' g') };
+  const m = opt.mult > 0 ? opt.mult : 1, u = p.liquid ? 'ml' : 'g';
+  if (p.meta && p.meta.perItem) return { g: 100 * m, kind: 'item', label: m === 1 ? '1 item' : m + ' items', perItem: true };
+  const q = +p.servQ; if (q >= 1 && q <= 1500) return { g: q * m, kind: 'label', label: (m === 1 ? '' : m + ' × ') + Math.round(q) + ' ' + u };
+  const t = (p.name || '') + ' ' + (p.cat || '') + ' ' + (p.cats || '');
+  for (const [re, g, lab] of DEFSERV) if (re.test(t)) { return { g: g * m, kind: 'default', label: (m === 1 ? '' : m + ' × ') + lab }; }
+  return { g: 100 * m, kind: 'per100', label: 'per 100 ' + u + ' (no serving size)' };
+}
+/* v19.0 Blood sugar score, PER SERVING: SUGAR per serving is the primary driver (added sugar weighs more than natural sugar when the
+   label says which is which), then TOTAL carbs per serving, then a refined-starch penalty; fiber per serving is a small bonus only and
+   is never subtracted from carbs. opt: {mult} (0.5/1/2 servings) or {grams}. */
+function score(p, opt) {
   const n = p.n || {}, items = [];
   const { net, note } = netCarbs(p); const fiberDropped = quality(p).dropFiber;
-  const base = { net, carbs: net, netNote: note, perServ: null, servQ: p.servQ || null };
-  if (p.servQ) base.perServ = { net: net == null ? null : net * p.servQ / 100, carbs: net == null ? null : net * p.servQ / 100 };
+  const sb = servBasis(p, opt), G = sb.g, k = G / 100;
+  const base = { net, carbs: net, netNote: note, perServ: null, servQ: p.servQ || null, servG: G, servKind: sb.kind, servLabel: sb.label };
+  base.perServ = { net: net == null ? null : net * k, carbs: net == null ? null : net * k };
   const q = quality(p); base.quality = q;
   if (net == null) return Object.assign(base, { score: null, band: 'na', label: 'Carbs unknown', items, missing: true });
   if (!q.ok) return Object.assign(base, { score: null, band: 'na', label: 'Data looks wrong', items, missing: true, bad: true });
   const ing = (p.ing || '').toLowerCase();
   let hidden = 0;
   const add = (key, label, pts, detail) => { if (Math.abs(pts) >= 0.5) items.push({ key, label, pts: Math.round(pts * 10) / 10, detail }); else hidden += pts; };
-  const nc = net; const liquid = !!p.liquid; const u = liquid ? 'ml' : 'g';
-  const sq = p.servQ || (liquid ? 240 : 50);
+  const liquid = !!p.liquid; const ps = sb.kind === 'per100' ? ' per 100 ' + (liquid ? 'ml' : 'g') : ' per serving';
   const dairy = /yog|milk|kefir|skyr|cheese|dairy|cream|lait/i.test((p.cats || '') + ' ' + (p.cat || '') + ' ' + (p.name || ''));
   const syr = [...new Set((ing.match(SYRUPS) || []))];
   const sugarIng = SUGAR_WORDS.test(ing) || syr.length > 0;
-  // --- 1. sugar (primary)
-  const sg = n.sugars;
+  const sg = n.sugars, sgS = sg == null ? null : sg * k, ncS = net * k;
+  // --- 1. sugar per serving (primary)
   if (sg != null) {
-    if (n.added != null) {
-      const ad = Math.min(n.added, sg > 0 ? Math.max(sg, n.added) : n.added), nat = Math.max(0, sg - ad);
-      if (ad > 0) add('added', 'Added sugar', -Math.min(36, ad * 1.0), r1(ad) + ' g/100' + u); else items.push({ key: 'added', label: 'Added sugar', pts: 0, detail: '0 g/100' + u + ' (declared)' });
-      if (nat > 0) add('sugar', dairy ? 'Natural sugar (lactose)' : 'Natural sugar', -Math.min(22, nat * 0.55), r1(nat) + ' g/100' + u);
-    } else if (sugarIng) add('sugar', 'Sugar (added sugar in ingredients)', -Math.min(34, sg * 0.9), r1(sg) + ' g/100' + u);
-    else add('sugar', 'Total sugar', -Math.min(26, sg * 0.7), r1(sg) + ' g/100' + u);
-    const sServ = sg * sq / 100; add('sugarServ', p.servQ ? 'Sugar per serving' : `Sugar per assumed ${sq}${u} serving`, -Math.min(14, sServ * 0.6), r1(sServ) + ' g');
+    if (n.added != null && !(n.added === 0 && sugarIng && sg > 2)) { // a declared 0 g added sugar that contradicts sugar in the ingredients is ignored
+      const ad = Math.min(n.added, sg > 0 ? Math.max(sg, n.added) : n.added) * k, nat = Math.max(0, sgS - ad);
+      if (ad > 0) add('added', 'Added sugar' + ps, -Math.min(60, ad * 2.0), r1(ad) + ' g'); else items.push({ key: 'added', label: 'Added sugar', pts: 0, detail: '0 g (declared)' });
+      if (nat > 0) add('sugar', (dairy ? 'Natural sugar (lactose)' : 'Natural sugar') + ps, -Math.min(30, nat * 1.0), r1(nat) + ' g');
+    } else if (sugarIng) add('sugar', 'Sugar' + ps + ' (added sugar in ingredients)', -Math.min(58, sgS * 1.9), r1(sgS) + ' g');
+    else add('sugar', 'Total sugar' + ps, -Math.min(50, sgS * 1.3), r1(sgS) + ' g');
   } else if (sugarIng) add('sugar', 'Sugar amount not listed (sugar in ingredients)', -8, 'unknown');
-  if (liquid && (sg || 0) > 2.5) add('liquid', 'Liquid sugar: rapid absorption', -Math.min(30, sg * 3), r1(sg) + ' g/100ml');
-  if (liquid && sg != null && sg * sq / 100 >= 15) add('liquidDose', '15 g or more sugar per drink serving', -10, r1(sg * sq / 100) + ' g');
-  // --- 2. total carbs (secondary)
-  add('carbs100', 'Total carbs per 100' + u, -Math.min(22, nc * 0.4), r1(nc) + ' g');
-  const netServ = nc * sq / 100;
-  add('carbsServ', p.servQ ? 'Total carbs per serving' : `Total carbs per assumed ${sq}${u} serving`, -Math.min(16, netServ * 0.4), r1(netServ) + ' g');
+  if (liquid && (sg || 0) > 2.5 && sgS > 3) add('liquid', 'Liquid sugar: rapid absorption', -Math.min(25, sgS * 0.8), r1(sgS) + ' g' + ps);
+  if (liquid && sgS != null && sgS >= 15) add('liquidDose', '15 g or more sugar per drink', -10, r1(sgS) + ' g');
+  // --- 2. total carbs per serving (secondary)
+  add('carbsServ', 'Total carbs' + ps, -Math.min(35, ncS * 0.7), r1(ncS) + ' g');
   let gi = 0; const hits = [];
   if (syr.length) { gi += Math.min(10, syr.length * 5); hits.push(...syr); }
   const first = ing.split(/[,(.;]/)[0] || '';
   if (SUGAR_WORDS.test(first) || new RegExp(SYRUPS.source, 'i').test(first)) { gi += 4; hits.push('sugar/syrup first'); }
   const st = [...new Set(ing.match(STARCH) || [])];
   if (st.length) { gi += Math.min(8, st.length * 4); hits.push(...st); }
-  if (gi) add('gi', 'Fast carbs (syrups, refined starch)', -Math.min(14, gi), hits.slice(0, 4).join(', '));
-  // --- 2b. v17: refined starch / refined grains (white rice, white bread, pasta, crackers…). Starch = total carbs − sugar − fiber.
-  // Sugar stays the top driver (sugar penalties can reach −80 for drinks); this tops out at −28.
+  if (gi && ncS >= 3) add('gi', 'Fast carbs (syrups, refined starch)', -Math.min(12, gi * Math.min(1, ncS / 15)), hits.slice(0, 4).join(', '));
+  // --- 3. refined-starch penalty (white rice, white bread, pasta, crackers…). Starch = total carbs − sugar − fiber, per serving.
   const nm = (p.name || '') + ' ' + (p.cat || '');
   const refName = REFINED.test(nm) && !WHOLEG.test(p.name || '');
   const refIng = st.length > 0 && !WHOLEG.test(p.name || '') && !/^\s*(whole|brown rice|oat|100% whole)/i.test(ing);
-  const starch = Math.max(0, nc - (sg || 0) - (n.fiber || 0));
-  if ((refName || refIng) && starch >= 10) {
-    add('starch', 'Refined starch', -Math.min(20, starch * 0.4), r1(starch) + ' g/100' + u + (refName ? ' (refined grain)' : ' (refined starch in ingredients)'));
-    const sS = starch * sq / 100; add('starchServ', p.servQ ? 'Refined starch per serving' : `Refined starch per assumed ${sq}${u} serving`, -Math.min(8, sS * 0.2), r1(sS) + ' g');
-  }
-  // --- buffers
-  if (n.fiber != null && !fiberDropped) {
-    add('fiber', 'Fiber (small bonus)', Math.min(4, n.fiber * 0.4), r1(n.fiber) + ' g/100');
-  }
-  // v6.3: protein only buffers carbs, so its bonus is capped at half the carb penalty and can't outweigh a lower-carb/lower-sugar profile
-  if (n.protein != null) { const carbPen = Math.abs(items.filter(i => /^(sugar|added|sugarServ|carbs100|carbsServ|starch|starchServ)$/.test(i.key)).reduce((a, i) => a + i.pts, 0)); const cap = Math.min(5, carbPen / 3); const raw = Math.min(6, n.protein * 0.3); add('protein', raw > cap ? 'Protein (capped)' : 'Protein', Math.min(raw, cap), r1(n.protein) + ' g/100'); }
-  // --- secondary
-  if (n.sat != null) add('sat', 'Saturated fat', -Math.min(8, n.sat * 0.8), r1(n.sat) + ' g/100');
-  if ((n.trans || 0) > 0.05) add('trans', 'Trans fat', -Math.min(8, n.trans * 8), r1(n.trans) + ' g/100');
+  const starchS = Math.max(0, net - (sg || 0) - (n.fiber || 0)) * k;
+  if ((refName || refIng) && starchS >= 5) add('starch', 'Refined starch' + ps, -Math.min(25, starchS * 0.9), r1(starchS) + ' g' + (refName ? ' (refined grain)' : ' (refined starch in ingredients)'));
+  // --- buffers: fiber (small bonus), protein (capped)
+  if (n.fiber != null && !fiberDropped) add('fiber', 'Fiber' + ps + ' (small bonus)', Math.min(6, n.fiber * k * 1.0), r1(n.fiber * k) + ' g');
+  if (n.protein != null) { const carbPen = Math.abs(items.filter(i => /^(sugar|added|carbsServ|starch)$/.test(i.key)).reduce((a, i) => a + i.pts, 0)); const cap = Math.min(5, carbPen / 3); const raw = Math.min(6, n.protein * k * 0.3); add('protein', raw > cap ? 'Protein (capped)' : 'Protein', Math.min(raw, cap), r1(n.protein * k) + ' g'); }
+  // --- secondary (per serving)
+  if (n.sat != null) add('sat', 'Saturated fat', -Math.min(8, n.sat * k * 1.0), r1(n.sat * k) + ' g');
+  if ((n.trans || 0) > 0.05) add('trans', 'Trans fat', -Math.min(8, n.trans * k * 8), r1(n.trans * k) + ' g');
   else if (HYDRO.test(ing) && !/fully hydrogenated/.test(ing)) add('trans', 'Partially hydrogenated oil', -6, 'trans-fat source');
-  if (n.sodiumMg != null) add('sodium', 'Sodium', -Math.min(8, n.sodiumMg / 100), Math.round(n.sodiumMg) + ' mg/100');
+  if (n.sodiumMg != null) add('sodium', 'Sodium', -Math.min(8, n.sodiumMg * k / 150), Math.round(n.sodiumMg * k) + ' mg');
   if (p.nova === 4) add('nova', 'Ultra-processed (NOVA 4)', -4, 'processing is weighed fully in the Health rating'); else if (p.nova === 3) add('nova', 'Processed (NOVA 3)', -2, '');
   const adds = (p.additives || []).filter((t, i, s) => ADDITIVES[t] && s.indexOf(t) === i);
   if (adds.length) add('additives', 'Additives of concern', -Math.min(8, adds.length * 2), adds.map(t => t.toUpperCase() + ' ' + ADDITIVES[t]).join(', '));
-  // v7.1: US labels round under 0.5 g (and "less than 1 g") per serving down to 0, so "0 g" on a small serving can hide real carbs. Penalize the possible hidden amount.
-  if (n.carbs != null && n.carbs < 0.5 && p.naLabel && p.servQ && p.servQ < 100 && !(p.meta && p.meta.perItem)) { const unc = 0.99 * 100 / p.servQ; if (unc >= 1.5) add('round0', 'Label rounding: "0 g" per serving can hide up to 0.99 g', -Math.min(8, unc * 0.6), 'up to ' + r1(unc) + ' g/100 possible'); }
+  // v7.1: US labels round under 0.5 g per serving down to 0, so "0 g" can hide up to 0.99 g per serving.
+  if (n.carbs != null && n.carbs < 0.5 && p.naLabel && p.servQ && p.servQ < 100 && !(p.meta && p.meta.perItem)) { const unc = 0.99 * G / p.servQ; if (unc >= 0.5) add('round0', 'Label rounding: "0 g" per serving can hide up to 0.99 g', -Math.min(6, unc * 3), 'up to ' + r1(unc) + ' g'); }
   if (Math.abs(hidden) >= 0.05) items.push({ key: 'small', label: 'Small amounts (sodium, sat fat, sugar…) combined', pts: Math.round(hidden * 10) / 10, detail: 'each under 0.5' });
   const raw = 100 + items.reduce((s, i) => s + i.pts, 0);
   const sc = Math.max(0, Math.min(100, Math.round(raw)));
   items.sort((a, b) => a.pts - b.pts);
   const missing = [['fiber', 'fiber'], ['sugars', 'sugars'], ['sat', 'sat fat'], ['sodiumMg', 'sodium'], ['protein', 'protein']].filter(([k]) => n[k] == null).map(x => x[1]);
-  return Object.assign(base, { score: sc, band: band(sc), label: label(sc), items, missingFields: missing, assumedServing: !p.servQ, netServ, carbsServ: netServ });
+  return Object.assign(base, { score: sc, band: band(sc), label: label(sc), items, missingFields: missing, assumedServing: sb.kind === 'default' || sb.kind === 'per100', netServ: ncS, carbsServ: ncS, sugarServ: sgS });
 }
 /* v6.3 "filler": basics with ~no calories or carbs (water, plain tea/coffee, salt, spices, extracts, zero-cal sweeteners, gum).
    They still get a score, but they're kept out of "best of" rankings (home, stores, aisles, swaps, better options). */
@@ -202,5 +220,5 @@ function fromCompact(a) {
   return { id: code, code: /^\d+$/.test(code) ? code : '', src: meta ? (meta.src.includes('official') ? 'chain' : 'usda') : 'local', fdcId: /^fdc-/.test(code) ? code.slice(4) : undefined, name, brand, qty, img: img ? (img.startsWith('w:') ? (typeof dataURL === 'function' ? dataURL : String)('img/w/' + img.slice(2) + '-200.webp') : img.startsWith('http') ? img : 'https://images.openfoodfacts.org/images/products/' + img) : '', servQ, serv, nova, additives: adds ? adds.split(',') : [], ing, cat, cats: cat, naLabel: !!(fl & 1), liquid: notSolid(name, !!(fl & 2)), carby: fl & 16 ? !!(fl & 4) : undefined, dry: fl & 16 ? !!(fl & 8) : undefined, portions: portions || null, meta: meta || null, hx: a[15] || null, n };
 }
 const imgSize = (u, n) => u ? u.replace(/\.(100|200|400|full)\.jpg$/, '.' + n + '.jpg').replace(/-(200|400)\.webp$/, '-' + n + '.webp') : '';
-return { implausible, isFiller, DRY, CARBY, imgSize, score, quality, fromOFF, fromUSDA, fromCompact, band, label, netCarbs, addTags, isNA, isLiquid, DK, ADDITIVES };
+return { servBasis, DEFSERV, implausible, isFiller, DRY, CARBY, imgSize, score, quality, fromOFF, fromUSDA, fromCompact, band, label, netCarbs, addTags, isNA, isLiquid, DK, ADDITIVES };
 });

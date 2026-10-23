@@ -161,18 +161,18 @@ function pickKinds141(pool, key, n, avoid = new Set()) {
   return out.sort((a, b) => b[key] - a[key]);
 }
 function homeCols141() {
-  const pool = engine.docs.filter(d => (d.src === 'local' && d.brand && d.rank < 40000 && usEnglish(d) && !isStaple(d) && !isSugaryDrink(d) && !/\bwater\b/i.test(d.name) || d.src === 'whole') && ok141(d, { min: 60, cap: 20, img: true, ready: true }) && d.net >= 2 && d.sugar != null && d.sugar <= 5 && (nameQ141(d).name.match(/[A-Za-z]+/g) || []).length >= 2);
+  const pool = engine.docs.filter(d => (d.src === 'local' && d.brand && d.rank < 40000 && usEnglish(d) && !isStaple(d) && !isSugaryDrink(d) && !/\bwater\b/i.test(d.name) || d.src === 'whole') && ok141(d, { min: 60, cap: 1e9, img: true, ready: true }) && pickServ19(d) && (nameQ141(d).name.match(/[A-Za-z]+/g) || []).length >= 2);
   const NOAI = /sweet|candy|powder|supplement|creatine|vitamin|broth|soup base|spice|season|baking|condiment|sauce|oil|vinegar/i;
   const P2 = pool.filter(d => !NOAI.test(catLabel141(d)) && !NOAI.test(d.ai >= 0 && LumiAisles.SUB[d.ai] ? LumiAisles.SUB[d.ai][2] : ''));
   const capW = L => { let w = 0; return L.filter(d => d.src !== 'whole' || ++w <= 1); };
-  const A = capW(pickKinds141(P2, 'score', 30)).slice(0, 6); const B = capW(pickKinds141(P2, 'h', 30, new Set(A.map(d => d.code)))).slice(0, 6);
+  const A = capW(pickKinds141(P2, 'score', 30)).slice(0, 6); const nA = new Set(A.map(d => nameQ141(d).name.toLowerCase())); const B = capW(pickKinds141(P2.filter(d => !nA.has(nameQ141(d).name.toLowerCase())), 'h', 30, new Set(A.map(d => d.code)))).slice(0, 6);
   return [A, B];
 }
 /* richer mini row: labelled chips, carbs, category tag, compare button */
 function mini141(d, key) {
   const q = nameQ141(d), cat = catLabel141(d), intl = d.src === 'world' ? '<span class="wbadge" title="International product (Open Food Facts)">🌍 Intl</span>' : '';
   const c = `<span class="sc14 bg-${BAND(d.score)}">Carb ${d.score}</span>`, h = `<span class="sc14 bg-${HB(d.h)}">Health ${d.h}</span>`;
-  return `<li class="li141"><a class="m14" href="#/product/${esc(d.code || d.id)}">${thumb(d.img, q.name, d.keys, d.cat, false, d.brand)}<span class="t14"><b>${esc(q.name)}</b><small>${esc(d.src === 'whole' ? 'USDA whole food' : d.brand ? tc141(d.brand) : '')}${intl}</small><span class="cs14">${h + c}</span><span class="nt141"><b>${Math.round(d.net)} g</b> carbs per 100 ${d.liquid ? 'ml' : 'g'}${cat ? ` · <span class="tg141">${esc(cat)}</span>` : ''}</span></span></a><button type="button" class="cmp141" data-cmp141="${esc(d.code || d.id)}" aria-label="Compare ${esc(q.name)}" aria-pressed="${cmpIds().includes(d.code || d.id)}">${ic10cmp141()}</button></li>`;
+  return `<li class="li141"><a class="m14" href="#/product/${esc(d.code || d.id)}">${thumb(d.img, q.name, d.keys, d.cat, false, d.brand)}<span class="t14"><b>${esc(q.name)}</b><small>${esc(d.src === 'whole' ? 'USDA whole food' : d.brand ? tc141(d.brand) : '')}${intl}</small><span class="cs14">${h + c}</span><span class="nt141">${d.sg && d.sb >= 0 && (d.sb & 3) !== 3 ? `<b>${Math.round(d.net * d.sg / 100)} g</b> carbs ${(d.sb & 3) === 1 ? 'per item' : `per serving (${d.sg} ${d.sb & 4 ? 'ml' : 'g'})`}` : `<b>${Math.round(d.net)} g</b> carbs per 100 ${d.liquid ? 'ml' : 'g'}`}${cat ? ` · <span class="tg141">${esc(cat)}</span>` : ''}</span></span></a><button type="button" class="cmp141" data-cmp141="${esc(d.code || d.id)}" aria-label="Compare ${esc(q.name)}" aria-pressed="${cmpIds().includes(d.code || d.id)}">${ic10cmp141()}</button></li>`;
 }
 const ic10cmp141 = () => `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M7 4v16M17 4v16M3 8h8M13 16h8"/></svg>`;
 function bindCmp141(root) { (root || document).querySelectorAll('[data-cmp141]').forEach(b => b.onclick = e => { e.preventDefault(); const d = engine.byCode(b.dataset.cmp141); if (!d) return; const on = toggleCompare(itemFromDoc(d)); b.setAttribute('aria-pressed', on); if (typeof toast === 'function') toast(on ? 'Added to compare' : 'Removed from compare'); }); }
@@ -183,7 +183,7 @@ home14 = function () {
   const el = $('#picks'); if (!el) return;
   loadIndex().then(() => { let A = [], B = []; try { [A, B] = homeCols141(); } catch (e) { console.warn(e); } if (!A.length && !B.length) return;
     const html = dual14(A, B, { label: 'Top picks', subA: 'Gentlest on glucose · ready to eat', subB: 'Best overall nutrition · still diabetes-friendly' });
-    const put = () => { const el = $('#picks'); if (el && !el.querySelector('.du14')) { el.innerHTML = html; bindCmp141(el); const h = el.previousElementSibling; if (h && h.classList.contains('sec-h')) { h.classList.add('sh141'); h.querySelector('h2').innerHTML = `Top picks <small class="xs">Updated daily · both scores 60+ · 2–20 g carbs and ≤5 g sugar per 100 g</small>`; } } };
+    const put = () => { const el = $('#picks'); if (el && !el.querySelector('.du14')) { el.innerHTML = html; bindCmp141(el); const h = el.previousElementSibling; if (h && h.classList.contains('sec-h')) { h.classList.add('sh141'); h.querySelector('h2').innerHTML = `Top picks <small class="xs">Updated daily · both scores 60+ (per serving) · 5–25 g carbs and ≤6 g sugar per serving</small>`; } } };
     put(); setTimeout(put, 50); setTimeout(put, 600); const mo = new MutationObserver(put); mo.observe(el, { childList: true }); setTimeout(() => mo.disconnect(), 15000);
   }).catch(() => {});
 };

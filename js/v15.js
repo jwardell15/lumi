@@ -7,7 +7,7 @@ let P15 = null, p15p = null;
 const loadP15 = () => p15p || (p15p = fetch('data/pick15.json').then(r => r.ok ? r.json() : {}).catch(() => ({})).then(j => (P15 = j)));
 const serv15 = d => P15 && P15[d.code || d.id];
 function fixServ15(root) { if (!P15) return; (root || app).querySelectorAll('.li141:not([data-s15])').forEach(li => { li.dataset.s15 = 1; const a = li.querySelector('a.m14'), nt = li.querySelector('.nt141 > b'); if (!a || !nt) return;
-    const code = decodeURIComponent((a.getAttribute('href') || '').split('/').pop()), s = P15[code], d = engine.byCode && engine.byCode(code); if (!s || !d || d.net == null) return;
+    const code = decodeURIComponent((a.getAttribute('href') || '').split('/').pop()), s = P15[code], d = engine.byCode && engine.byCode(code); if (!s || !d || d.net == null || (d.sg && d.sb >= 0 && (d.sb & 3) < 2)) return; /* 19.0: keep the serving the scores use */
     const g = s[0], lab = s[1], n = d.net * g / 100, lbl = /\(\s*[\d.]+\s*(g|ml)\s*\)|^[\d.]+ ?(g|ml)$/i.test(lab) ? lab : `${lab} (${Math.round(g)} g)`;
     nt.textContent = (n < 1 ? '<1' : Math.round(n)) + ' g'; const t = nt.nextSibling; if (t && t.nodeType === 3) t.textContent = ` carbs per ${lbl}` + (/·\s*$/.test(t.textContent) ? ' · ' : ''); li.querySelector('.nt141').title = `${Math.round(d.net)} g carbs per 100 g`; }); }
 new MutationObserver(() => { if (P15 && app.querySelector('.li141:not([data-s15])')) fixServ15(); }).observe(document.getElementById('app'), { childList: true, subtree: true });

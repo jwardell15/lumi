@@ -45,13 +45,21 @@ function rate(p, opt = {}) {
   let n = p.n || {}; const est0 = [];
   if (p.meta && p.meta.perItem) { // restaurant values are per item with no weight: estimate weight from macro mass (solids ~50% of food, ~20% of drinks)
     const m = (n.carbs || 0) + (n.protein || 0) + (n.fat || 0) + (n.fiber || 0) * 0; const g = Math.max(m / (p.liquid ? 0.2 : 0.5), (n.kcal || 0) / (p.liquid ? 1.2 : 4), 20);
-    if (m > 0 || n.kcal) { const f = 100 / g; n = Object.fromEntries(Object.entries(n).map(([k, v]) => [k, v == null ? v : v * f])); est0.push('item weight'); }
+    if (m > 0 || n.kcal) { const f = 100 / g; n = Object.fromEntries(Object.entries(n).map(([k, v]) => [k, v == null ? v : v * f])); n._itemG = g; est0.push('item weight'); }
   }
   const out = { score: null, band: 'unknown', basis: 'full', est: est0, neg: [], pos: [], adds: [] };
+  const inval0 = (n.kcal != null && n.kcal > 950) || [n.carbs, n.sugars, n.fat, n.sat, n.protein, n.fiber].some(v => v != null && (v < 0 || v > 100));
   { const LS = typeof self !== 'undefined' && self.LumiScore ? self.LumiScore : (typeof require === 'function' ? require('./score.js') : null); const bad = LS && LS.implausible && !(p.meta && p.meta.perItem) ? LS.implausible(p) : null; if (bad) { out.reason = 'Nutrition data looks wrong (4/4/9 check)'; out.detail = bad; out.bad = true; return out; } } // v7
+  /* v19.0: PER SERVING. Nutri-Score-style points are applied to the amounts in one serving, measured against a reference portion
+     (100 g for foods, 250 ml for drinks); the serving/reference factor is clamped to 0.5–2.5 so tiny or huge servings can't flip a food's class. */
+  const LS0 = typeof self !== 'undefined' && self.LumiScore ? self.LumiScore : (typeof require === 'function' ? require('./score.js') : null);
+  const bevLike = !!p.liquid;
+  { const sb = opt.serv || (LS0 && LS0.servBasis ? LS0.servBasis(p, opt) : { g: 100, kind: 'per100' }); out.servG = sb.g; out.servKind = sb.kind; out.servLabel = sb.label;
+    if (!inval0) { const gServ = sb.perItem ? (n._itemG || 100) * sb.g / 100 : sb.g; out.servGEff = Math.round(gServ); const f = Math.max(0.5, Math.min(2.5, gServ / (bevLike ? 250 : 100))); out.servF = Math.round(f * 100) / 100;
+      if (f !== 1) n = Object.fromEntries(Object.entries(n).map(([k, v]) => [k, v == null || k === '_itemG' ? v : v * f])); } }
   let kcal = n.kcal; const mac = [n.carbs, n.protein, n.fat];
   if (kcal == null && mac.some(v => v != null)) { kcal = (n.carbs || 0) * 4 + (n.protein || 0) * 4 + (n.fat || 0) * 9; out.est.push('energy'); }
-  if (kcal == null || kcal > 950 || [n.carbs, n.sugars, n.fat, n.sat, n.protein, n.fiber].some(v => v != null && (v < 0 || v > 100))) { out.reason = kcal == null ? 'Calories and macros not reported' : kcal > 950 ? 'Over 950 kcal per 100 g, which is impossible, so the label data is wrong' : 'A nutrient is listed above 100 g per 100 g, so the label data is wrong'; return out; }
+  if (kcal == null || inval0) { out.reason = kcal == null ? 'Calories and macros not reported' : (n.kcal != null && n.kcal / (out.servF || 1) > 950) ? 'Over 950 kcal per 100 g, which is impossible, so the label data is wrong' : 'A nutrient is listed above 100 g per 100 g, so the label data is wrong'; return out; }
   let su = n.sugars; if (n.carbs != null && su != null && su > n.carbs + 1) { su = n.carbs; out.est.push('sugars capped at carbs'); } if (su == null) {  su = n.carbs == null ? 0 : Math.min(n.carbs, Math.max(0, n.carbs * 0.25)); out.est.push('sugars'); }
   let sat = n.sat; if (sat == null) { sat = n.fat == null ? 0 : n.fat * 0.35; out.est.push('sat fat'); }
   let salt = n.sodiumMg == null ? null : n.sodiumMg * 2.5 / 1000; if (salt == null) { salt = 0; out.est.push('salt'); }
@@ -94,15 +102,16 @@ function rate(p, opt = {}) {
     let sc = Math.round(nut * 0.6 + asc * 0.3 + (organic ? 10 : 0)); if (high) sc = Math.min(sc, 49); if (cls === 'E') sc = Math.min(sc, 24); else if (cls === 'D') sc = Math.min(sc, 49); out.score = sc;
   }
   out.band = out.score >= 75 ? 'excellent' : out.score >= 50 ? 'good' : out.score >= 25 ? 'poor' : 'bad';
-  // negatives / positives (per 100 g/ml), Yuka-style
+  // negatives / positives (levels judged on the serving-scaled amounts; values shown per serving), Yuka-style
   const lvl = (x, a, b, c) => x <= a ? 0 : x <= b ? 1 : x <= c ? 2 : 3;
+  const DS = x => x / (out.servF || 1) * (out.servGEff || 100) / 100; // display: true amount per serving
   const row = (k, title, val, l, desc) => (l >= 2 ? out.neg : out.pos).push({ k, title, val, l, desc });
-  if (!isWater) row('kcal', 'Calories', Math.round(kcal) + ' kcal', bev ? lvl(kcal, 1, 14, 35) : lvl(kcal, 160, 360, 560), bev ? ['Low calorie', 'Low calorie', 'A bit caloric', 'Too caloric'] [lvl(kcal, 1, 14, 35)] : ['Low calorie', 'Low impact', 'A bit too caloric', 'Too caloric'][lvl(kcal, 160, 360, 560)]);
-  const sl = bev ? lvl(su, 0.5, 2, 5) : lvl(su, 4.5, 9, 18); row('sug', 'Sugar', (Math.round(su * 10) / 10) + 'g', sl, ['Low sugar', 'Low impact', 'A bit too sweet', 'Too sweet'][sl]);
-  const tl = lvl(sat, 1, 2, 4); row('sat', 'Saturated fat', (Math.round(sat * 10) / 10) + 'g', tl, ['Low sat. fat', 'Low impact', 'A bit too fatty', 'Too fatty'][tl]);
-  const al = lvl(salt, 0.46, 0.92, 1.62); row('salt', 'Salt', (Math.round(salt * 100) / 100) + 'g', al, ['Low salt', 'Low impact', 'A bit too salty', 'Too salty'][al]);
-  if (fi >= 3) row('fib', 'Fiber', (Math.round(fi * 10) / 10) + 'g', fi >= 4.7 ? 0 : 1, fi >= 4.7 ? 'Excellent amount of fiber' : 'Some fiber');
-  if (pr >= 4.8) row('pro', 'Protein', (Math.round(pr * 10) / 10) + 'g', pr >= 9.6 ? 0 : 1, pr >= 9.6 ? 'Excellent amount of protein' : 'Some protein');
+  if (!isWater) row('kcal', 'Calories', Math.round(DS(kcal)) + ' kcal', bev ? lvl(kcal, 1, 14, 35) : lvl(kcal, 160, 360, 560), bev ? ['Low calorie', 'Low calorie', 'A bit caloric', 'Too caloric'] [lvl(kcal, 1, 14, 35)] : ['Low calorie', 'Low impact', 'A bit too caloric', 'Too caloric'][lvl(kcal, 160, 360, 560)]);
+  const sl = bev ? lvl(su, 0.5, 2, 5) : lvl(su, 4.5, 9, 18); row('sug', 'Sugar', (Math.round(DS(su) * 10) / 10) + 'g', sl, ['Low sugar', 'Low impact', 'A bit too sweet', 'Too sweet'][sl]);
+  const tl = lvl(sat, 1, 2, 4); row('sat', 'Saturated fat', (Math.round(DS(sat) * 10) / 10) + 'g', tl, ['Low sat. fat', 'Low impact', 'A bit too fatty', 'Too fatty'][tl]);
+  const al = lvl(salt, 0.46, 0.92, 1.62); row('salt', 'Salt', (Math.round(DS(salt) * 100) / 100) + 'g', al, ['Low salt', 'Low impact', 'A bit too salty', 'Too salty'][al]);
+  if (fi >= 3) row('fib', 'Fiber', (Math.round(DS(fi) * 10) / 10) + 'g', fi >= 4.7 ? 0 : 1, fi >= 4.7 ? 'Excellent amount of fiber' : 'Some fiber');
+  if (pr >= 4.8) row('pro', 'Protein', (Math.round(DS(pr) * 10) / 10) + 'g', pr >= 9.6 ? 0 : 1, pr >= 9.6 ? 'Excellent amount of protein' : 'Some protein');
   if (fvl > 40) row('fvl', 'Fruits, vegetables, legumes', Math.round(fvl) + '%', fvl > 80 ? 0 : 1, fvl > 80 ? 'Excellent quantity' : 'Some');
   if (out.basis === 'full') {
     const risky = adds.filter(a => a.tier >= 1);

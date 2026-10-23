@@ -16,7 +16,7 @@ for (const r of R) {
   const gr = r.grams || null, f = gr ? 100 / gr : 1, v = x => x == null ? null : Math.round(x * f * 10) / 10;
   const nut = [v(r.carbs), v(r.sugar), null, v(r.fiber), v(r.protein), v(r.fat), v(r.sat), null, r.sodium == null ? null : Math.round(r.sodium * f), r.kcal == null ? null : Math.round(r.kcal * f), null];
   const serv = r.serving || (gr ? `1 item (${gr} g)` : '1 item');
-  const comp = [id, r.item, r.chain, '', '', gr || 100, serv, null, nut, '', '', '', 17, [[serv, gr || 100]], { src: r.chain + ' official nutrition', url: r.source, date: r.date, perItem: !gr }];
+  const comp = [id, r.item, r.chain, '', '', gr || 100, serv, null, nut, '', '', '', 17, [[serv, gr || 100]], { src: r.srcLabel || (r.chain + ' official nutrition'), url: r.source, date: r.date, perItem: !gr }];
   const dm = D.analyze({ name: r.item, ing: '' }); comp.push({ w: 0, g: '', o: 0, s: { n: 'g' }, am: dm.am, tm: dm.tm, df: dm.df });
   if (DR.test(r.item) && !gr) comp[14].liquid = true;
   const p = S.fromCompact(comp), sc = S.score(p), hr = H.rate(p, { whole: false, group: '' });

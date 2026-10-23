@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '18.1';
+const VERSION = '19.0';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -117,8 +117,8 @@ async function usdaFood(fdcId) { const f = await cached('fdc:' + fdcId, 7 * 864e
 async function usdaByGtin(code) { const r = await usdaSearch(gtinKey(code)); return r.find(p => gtinKey(p.code) === gtinKey(code)) || null; }
 
 /* ---------------- result items ---------------- */
-function itemFromProduct(p, rel) { const s = S.score(p); memo.set(p.id, p); const hr = HR(p); const wh = typeof watchHits === 'function' ? watchHits(p) : null; return { wa: wh && wh.length ? wh.map(h => h.label).join(', ') : '', m: p.src === 'cos' ? null : dietM(p), h: hr.score, hn: hr.basis === 'nutrition', id: p.id, code: p.code, name: p.name, brand: LumiSearch.fixBrand(p.brand, p.name), score: s.score, net: s.score == null ? null : s.net, img: p.img, src: p.src, cat: p.cat, rel }; }
-function itemFromDoc(d) { return { zc: d.zc, wa: d.wf && typeof watchFlags === 'function' ? watchFlags(d.wf) : '', ai: d.ai, bad: d.bad, sizes: d.sizes, fl: d.fl, al: d.al, df: d.df, h: d.h, hn: d.hn, id: d.code, code: d.code, name: d.name, brand: d.brand, score: d.score, net: d.score == null ? null : d.net, img: d.img, src: d.src || 'local', cat: d.cat, keys: d.keys, rel: d.rel }; }
+function itemFromProduct(p, rel) { const s = S.score(p); memo.set(p.id, p); const hr = HR(p); const wh = typeof watchHits === 'function' ? watchHits(p) : null; return { wa: wh && wh.length ? wh.map(h => h.label).join(', ') : '', m: p.src === 'cos' ? null : dietM(p), h: hr.score, hn: hr.basis === 'nutrition', id: p.id, code: p.code, name: p.name, brand: LumiSearch.fixBrand(p.brand, p.name), score: s.score, net: s.score == null ? null : s.net, img: p.img, src: p.src, cat: p.cat, rel, sg: Math.round(s.servG || 0), sb: ({ label: 0, custom: 0, item: 1, default: 2, per100: 3 }[s.servKind] ?? -1) | (p.liquid ? 4 : 0) }; }
+function itemFromDoc(d) { return { sg: d.sg, sb: d.sb, zc: d.zc, wa: d.wf && typeof watchFlags === 'function' ? watchFlags(d.wf) : '', ai: d.ai, bad: d.bad, sizes: d.sizes, fl: d.fl, al: d.al, df: d.df, h: d.h, hn: d.hn, id: d.code, code: d.code, name: d.name, brand: d.brand, score: d.score, net: d.score == null ? null : d.net, img: d.img, src: d.src || 'local', cat: d.cat, keys: d.keys, rel: d.rel }; }
 function textRel(q, name, brand) {
   const qt = LumiSearch.toks(q), nt = new Set(LumiSearch.toks(name + ' ' + brand)); if (!qt.length) return 0;
   let hit = 0; for (const t of qt) if (nt.has(t) || [...nt].some(x => x.startsWith(t) || (t.length > 4 && LumiSearch.dl(t, x, 1) <= 1))) hit++;
@@ -129,8 +129,8 @@ function textRel(q, name, brand) {
 const BAND = s => S.band(s);
 function mini(x) {
   const it = typeof x === 'object' && x ? x : { score: x, h: undefined }; const ph = PRIM() === 'health';
-  const A = ph ? { v: it.h, b: HB(it.h) } : { v: it.score, b: BAND(it.score) }, B = ph ? { v: it.score, b: BAND(it.score), n: 'Carb' } : { v: it.h, b: HB(it.h), n: 'Health' };
-  return `<div class="rtg"><div class="rt1"><i class="sdot sm bg-${A.b}"></i><b>${A.v ?? '?'}</b><small>/100</small></div><div class="rt-l c-${A.b}">${A.v == null ? 'No data' : HL(A.v)}</div>${B.v === undefined ? '' : `<span class="b2" title="${B.n === 'Carb' ? 'Carb score' : 'Health rating'}"><i class="bg-${B.b}"></i>${B.n} ${B.v ?? '?'}</span>`}</div>`;
+  const sv = typeof servTxt19 === 'function' ? servTxt19(it) : ''; const A = ph ? { v: it.h, b: HB(it.h) } : { v: it.score, b: BAND(it.score) }, B = ph ? { v: it.score, b: BAND(it.score), n: 'Carb' } : { v: it.h, b: HB(it.h), n: 'Health' };
+  return `<div class="rtg"><div class="rt1"><i class="sdot sm bg-${A.b}"></i><b>${A.v ?? '?'}</b><small>/100</small></div><div class="rt-l c-${A.b}">${A.v == null ? 'No data' : HL(A.v)}</div>${B.v === undefined ? '' : `<span class="b2" title="${B.n === 'Carb' ? 'Carb score' : 'Health rating'}"><i class="bg-${B.b}"></i>${B.n} ${B.v ?? '?'}</span>`}${sv ? `<small class="sv19">${sv}</small>` : ''}</div>`;
 }
 function pills(d) { return alertIcon(d) + pills0(d); }
 function pills0(d) { const ph = PRIM() === 'health'; const a = ph ? d.h : d.score, b = ph ? d.score : d.h;
@@ -643,7 +643,7 @@ function route() {
   rs = null; window.scrollTo(0, 0); document.title = 'Lumi — food scanner';
   if (typeof closeSheet === 'function' && !document.querySelector('.onb')) closeSheet(); app.classList.remove('enter', 'prodv'); void app.offsetWidth; app.classList.add('enter'); setTimeout(drawCmpTray, 0);
   const h = location.hash.replace(/^#\/?/, ''); const i = h.indexOf('/'); const view = i < 0 ? h : h.slice(0, i); const arg = i < 0 ? '' : decodeURIComponent(h.slice(i + 1));
-  document.querySelectorAll('.tabbar a').forEach(a => a.classList.toggle('on', a.dataset.v === (['browse', 'store', 'aisle', 'meal', 'cosmetics', 'cos', 'overview', 'additives', 'additive', 'ingredient'].includes(view) ? 'browse' : ['search', 'product', ''].includes(view) ? 'home' : view === 'favorites' ? 'saved' : ['about', 'custom'].includes(view) ? 'settings' : ['compare', 'meal', 'cosmetics', 'cos', 'additive', 'additives', 'ingredient'].includes(view) ? 'home' : ['overview', 'lists', 'list'].includes(view) ? 'saved' : view)));
+  { const tv = (typeof tab19 === 'function') ? tab19(view, arg) : view; document.querySelectorAll('.tabbar a').forEach(a => { const on = a.dataset.v === tv; a.classList.toggle('on', on); if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); }); }
   if (view === 'product' && /^recipe(:|%3A)/i.test(arg || '')) return viewRecipe12(decodeURIComponent(arg).slice(7));
   if (view === 'product' && arg) return viewProduct(/^\d+$/.test(arg.replace(/\s/g, '')) ? arg.replace(/\s/g, '') : arg);
   if (view === 'search' && arg) return viewSearch(arg);
@@ -681,7 +681,7 @@ function route() {
   if (view === 'recipes') return viewRecipes12();
   if (view === 'recipe' && arg) return viewRecipe12(arg);
   if (view === 'dexcom') { history.replaceState(null, '', '#/glucose'); return viewGlucose11(); } // v16: Dexcom login removed
-  const V15 = { quick: 'viewQuick15', fresh: 'viewFresh15', review: 'viewReview15', prices: 'viewPrices15', today: 'viewToday16', insights: 'viewToday16', myfoods: 'viewMyFoods17', patterns: 'viewPatterns18' }; // v15 (js/v15.js loads after this file)
+  const V15 = { quick: 'viewQuick15', fresh: 'viewFresh15', review: 'viewReview15', prices: 'viewPrices15', today: 'viewToday16', insights: 'viewToday16', myfoods: 'viewMyFoods17', patterns: 'viewPatterns18', search: 'viewSearch19' }; // v15 (js/v15.js loads after this file)
   if (V15[view]) { if (typeof window[V15[view]] === 'function') return window[V15[view]](arg); app.innerHTML = skel(3); return; }
   viewHome();
 }
