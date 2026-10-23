@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '17.0';
+const VERSION = '17.0.1';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -649,7 +649,7 @@ function route() {
   if (view === 'aisle' && arg) return viewAisle(arg);
   if (view === 'log') return viewLog(arg);
   if (view === 'settings') return viewSettings();
-  if (view === 'custom') return viewCustom();
+  if (view === 'custom') return viewCustom(arg ? decodeURIComponent(arg) : null);
   if (view === 'compare') return viewCompare();
   if (view === 'meal') return viewMeal();
   if (view === 'additive' && arg) return viewAdditive(arg);

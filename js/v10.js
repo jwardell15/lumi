@@ -4,7 +4,7 @@
     log: '<path d="M12 5v14M5 12h14"/>', save: '<path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/>',
     list: '<path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/>', share: '<path d="M12 3v12M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/>',
     browse: '<rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/>',
-    lists: '<path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/>', compare: '<path d="M7 4v16M17 4v16M3 8h8M13 16h8"/>',
+    lists: '<path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/>', myfoods: '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>', compare: '<path d="M7 4v16M17 4v16M3 8h8M13 16h8"/>',
     logbook: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/>', rest: '<path d="M7 3v8a2 2 0 0 0 2 2v8M11 3v8M7 7h4M16 3c-1.5 2-2 4-2 7h3v11"/>',
     meal: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/>', type: '<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M7 14h10"/>',
     label: '<path d="M4 4h10l6 6-10 10-6-6z"/><circle cx="9" cy="9" r="1.5"/>', scan: '<path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10 8v8M13 8v8M17 8v8"/>',
@@ -21,7 +21,7 @@
       if (t && EMO.test(t.nodeValue) && t.nodeValue.replace(EMO, '').trim()) t.nodeValue = t.nodeValue.replace(EMO, '');
     });
   }
-  const LBL = { Browse: 'browse', Lists: 'lists', Compare: 'compare', Log: 'logbook', Restaurants: 'rest', Meals: 'meal', 'Meal ideas': 'ideas', 'Meal plan': 'plan' };
+  const LBL = { Browse: 'browse', Lists: 'lists', Compare: 'compare', Log: 'logbook', Restaurants: 'rest', Meals: 'meal', 'Meal ideas': 'ideas', 'Meal plan': 'plan', 'My foods': 'myfoods' };
   function home(app) {
     const sec = app.querySelector('.home74'); if (!sec || sec.dataset.h10) return; sec.dataset.h10 = 1; app.classList.add('h10');
     const nav = sec.querySelector('.sc74'); if (nav) nav.querySelectorAll('a').forEach(a => { const k = LBL[a.textContent.trim()]; if (k) a.innerHTML = `<span class="t10">${svg(k, 24)}</span><span>${a.textContent.trim()}</span>`; });

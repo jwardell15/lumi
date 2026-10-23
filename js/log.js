@@ -145,14 +145,15 @@ function importFile(file, done) {
   rd.readAsText(file);
 }
 /* ---------- custom foods ---------- */
-function viewCustom() {
-  document.title = 'Custom food — Lumi';
+function viewCustom(editId) {
+  document.title = 'Custom food — Lumi'; const E = editId ? customFoods().find(c => c.id === editId) : null; // v17.0.1: edit existing
   const F = [['name', 'Name', 'text', 'e.g. Mom’s lasagna'], ['serv', 'Serving description', 'text', 'e.g. 1 slice'], ['grams', 'Serving weight (g, optional)', 'number', ''], ['carbs', 'Total carbs (g)', 'number', ''], ['fiber', 'Fiber (g)', 'number', ''], ['sugars', 'Sugar (g)', 'number', ''], ['protein', 'Protein (g)', 'number', ''], ['fat', 'Fat (g)', 'number', ''], ['sat', 'Saturated fat (g)', 'number', ''], ['sodiumMg', 'Sodium (mg)', 'number', ''], ['kcal', 'Calories', 'number', '']];
-  app.innerHTML = `<h1>Custom food</h1><p class="lead">Values per serving, from your label or recipe. Stored on this device.</p><form class="card" id="cf">${F.map(([k, l, t, ph]) => `<label class="field"><span>${l}</span><input name="${k}" type="${t}" ${t === 'number' ? 'inputmode="decimal" step="any" min="0"' : ''} placeholder="${esc(ph)}" ${k === 'name' || k === 'carbs' ? 'required' : ''}></label>`).join('')}<div class="actions"><button class="btn pri">Save food</button></div></form>`;
+  app.innerHTML = `<h1>${E ? 'Edit custom food' : 'Custom food'}</h1><p class="lead">Values per serving, from your label or recipe. Stored on this device.</p><form class="card" id="cf">${F.map(([k, l, t, ph]) => `<label class="field"><span>${l}</span><input name="${k}" type="${t}" ${t === 'number' ? 'inputmode="decimal" step="any" min="0"' : ''} placeholder="${esc(ph)}" ${k === 'name' || k === 'carbs' ? 'required' : ''}></label>`).join('')}<div class="actions"><button class="btn pri">${E ? 'Save changes' : 'Save food'}</button></div></form>`;
+  if (E) { const g = E.meta && E.meta.perItem ? null : E.servQ, m = g ? g / 100 : 1, f = $('#cf'), r = x => x == null ? '' : Math.round(x * 10) / 10; f.name.value = E.name || ''; f.serv.value = E.serv || ''; f.grams.value = g || ''; ['carbs', 'fiber', 'sugars', 'protein', 'fat', 'sat', 'sodiumMg', 'kcal'].forEach(k => { f[k].value = r(E.n && E.n[k] != null ? E.n[k] * m : null); }); }
   $('#cf').onsubmit = e => { e.preventDefault(); const fd = new FormData(e.target), v = k => fd.get(k) === '' ? null : +fd.get(k); const g = v('grams'); const f = g ? 100 / g : 1;
     const n = {}; ['carbs', 'fiber', 'sugars', 'protein', 'fat', 'sat', 'sodiumMg', 'kcal'].forEach(k => n[k] = v(k) == null ? null : v(k) * f);
-    const p = { id: 'c-' + Date.now().toString(36), code: '', src: 'custom', name: String(fd.get('name')).trim(), brand: 'My food', qty: '', img: '', servQ: g || 100, serv: String(fd.get('serv') || ''), nova: null, additives: [], ing: '', cat: 'Custom', cats: '', naLabel: true, liquid: false, portions: [[fd.get('serv') || '1 serving', g || 100]], meta: { src: 'Custom food', perItem: !g }, n };
-    store.set('custom', [p, ...customFoods()]); toast('Saved'); location.hash = '#/product/' + p.id; };
+    const p = { id: E ? E.id : 'c-' + Date.now().toString(36), code: '', src: 'custom', name: String(fd.get('name')).trim(), brand: 'My food', qty: '', img: '', servQ: g || 100, serv: String(fd.get('serv') || ''), nova: null, additives: [], ing: '', cat: 'Custom', cats: '', naLabel: true, liquid: false, portions: [[fd.get('serv') || '1 serving', g || 100]], meta: { src: 'Custom food', perItem: !g }, n };
+    store.set('custom', E ? customFoods().map(c => c.id === E.id ? p : c) : [p, ...customFoods()]); toast(E ? 'Changes saved' : 'Saved'); location.hash = '#/product/' + p.id; };
 }
 /* ---------- settings + onboarding ---------- */
 function viewSettings() {

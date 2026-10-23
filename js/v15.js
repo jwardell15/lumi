@@ -152,7 +152,9 @@ const _rp15 = id => resolveProduct(id);
 
 /* ---------- product page additions: star, fat/protein note, price history ---------- */
 { const _vp = viewProduct; viewProduct = function (id) { const r = _vp.apply(this, arguments); prodExtra15(id); return r; }; }
-function prodExtra15(id) { let n = 0; const tick = async () => { if (!location.hash.includes(encodeURIComponent(id)) && !location.hash.includes(id)) return; const h1 = app.querySelector('h1'); if (!h1 || app.querySelector('.skel')) { if (n++ < 50) setTimeout(tick, 120); return; }
+// v17.0.1: the first route renders before this file loads, so a product opened directly by link also needs its Favorite button
+setTimeout(() => { const m = location.hash.match(/^#\/product\/([^/?]+)/); if (m && !/^recipe/i.test(m[1])) { const a = decodeURIComponent(m[1]); prodExtra15(/^\d+$/.test(a.replace(/\s/g, '')) ? a.replace(/\s/g, '') : a); } }, 0);
+function prodExtra15(id) { let n = 0; const tick = async () => { if (!location.hash.includes(encodeURIComponent(id)) && !location.hash.includes(id)) return; const h1 = app.querySelector('h1'); if (!h1 || app.querySelector('.skel')) { if (n++ < 250) setTimeout(tick, 120); return; }
     if (app.querySelector('#px15')) return; let p = null; try { p = await resolveProduct(id); } catch {} if (!p || app.querySelector('#px15')) return;
     const sq = +p.servQ > 0 ? +p.servQ : 100, f = p.n && p.n.fat != null ? p.n.fat * sq / 100 : 0, pr = p.n && p.n.protein != null ? p.n.protein * sq / 100 : 0;
     const pz = prices15().find(x => gtinKey(x.code) === gtinKey(p.code || id));
