@@ -2,3 +2,6 @@
 __pycache__/
 *.jsonl
 *.csv.gz
+
+# Screenshot artifacts (17.3.1): keep icons/ and ref/ tracked
+/*.png
