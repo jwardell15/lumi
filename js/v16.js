@@ -12,7 +12,7 @@ function tir16(P) { const n = P.length; if (!n) return null; let lo = 0, hi = 0;
 function mealWin16(ts) { const c = cgm11(); if (!c || !c.pts) return null; const P = c.pts.filter(p => p[0] >= ts && p[0] <= ts + 3 * 36e5); return P.length >= 18 ? P : null; } // ≥90 min of 5-min readings
 function srcNote16(c) { return !c ? '' : c.src === 'sample' ? '<div class="note smp15" role="note"><b>SAMPLE DATA</b> · Simulated readings for testing. Not real glucose. Remove it on the Glucose page.</div>' : ''; }
 function tirBar16(t, label) { return `<div class="tb16" role="img" aria-label="${esc(label)}: ${t.in}% in range 70 to 180, ${t.lo}% below 70, ${t.hi}% above 180"><span class="lo" style="flex-grow:${t.lo}"></span><span class="in" style="flex-grow:${t.in}"></span><span class="hi" style="flex-grow:${t.hi}"></span></div>
-  <p class="tbl16"><span><i class="k lo"></i>Below 70: <b>${t.lo}%</b></span><span><i class="k in"></i>70–180: <b>${t.in}%</b></span><span><i class="k hi"></i>Above 180: <b>${t.hi}%</b></span></p>`; }
+  <p class="tbl16"><span><i class="k16 lo"></i>Below 70: <b>${t.lo}%</b></span><span><i class="k16 in"></i>70–180: <b>${t.in}%</b></span><span><i class="k16 hi"></i>Above 180: <b>${t.hi}%</b></span></p>`; }
 function postStats16(days) { const since = Date.now() - days * DAY16; const M = meals15().filter(m => m.ts >= since).map(m => Object.assign(m, { P: mealWin16(m.ts), c: curve15(m.ts) })).filter(m => m.P);
   const all = [].concat(...M.map(m => m.P)), by = {}; M.forEach(m => { const b = by[m.meal] = by[m.meal] || { P: [], R: [], n: 0 }; b.n++; b.P.push(...m.P); if (m.c) b.R.push(m.c.rise); });
   return { M, t: tir16(all), by }; }
