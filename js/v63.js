@@ -2,7 +2,7 @@
 const STO = window.LumiStores, AIS = window.LumiAisles;
 function storeChips() { const ch = L => L.map(s => `<a class="chip" href="#/store/${s[0]}" data-store="${s[0]}">${esc(s[1])}</a>`).join(''); const g = STO.STORES.filter(s => s[5] !== 'c'); g.sort((a, b) => (b[0] === 'costco') - (a[0] === 'costco')); /* v12.1: Costco first + feature card */ return `<div class="sec-h"><h2>Shop by store</h2></div><div class="card costco121"><a href="#/store/costco"><b>🛒 Costco</b><span>Kirkland Signature + products tagged as sold at Costco</span></a><a href="#/browse/rest-costco-food-court"><b>🍕 Costco Food Court</b><span>Official nutrition: pizza, hot dogs, Chicken Bake, treats</span></a></div><div class="chips storechips">${ch(g)}</div><div class="sec-h"><h2>Convenience stores</h2></div><div class="chips storechips">${ch(STO.STORES.filter(s => s[5] === 'c'))}</div>`; }
 function aisleTiles() { return `<div class="sec-h"><h2>Grocery aisles</h2></div><div class="aisles">${AIS.AISLES.map(a => `<a class="aisle" href="#/aisle/${a[0]}"><span>${a[2]}</span><b>${esc(a[1])}</b></a>`).join('')}</div>`; }
-const SORTS = [['score', 'Carb score'], ['health', 'Health'], ['carb', 'Lowest net carbs']];
+const SORTS = [['score', 'Carb score'], ['health', 'Health'], ['carb', 'Lowest carbs']];
 /* v6.3.4 packaged picks: blend carb score, health, popularity (index order follows Open Food Facts scan counts) and photo/data completeness */
 function blendVal(d, N) { const pop = 1 - Math.min(1, Math.log10(d.rank + 10) / Math.log10(N + 10)); return 0.45 * (d.score ?? 0) + 0.3 * (d.h ?? 40) + 30 * pop + (d.img ? 6 : 0) + (d.h != null && !d.hn ? 3 : 0) - (d.src === 'local' && !usEnglish(d) ? 15 : 0); }
 const NUTS = new Set(['sn-nuts', 'pt-nutbutter'].map(k => AIS.BYID[k]));
@@ -20,7 +20,7 @@ function packagedOrder(L) { const N = engine.docs.length; L.forEach(d => d._b = 
 function sortDocs(L, how) {
   const k = how === 'health' ? d => d.h : d => d.score;
   if (how === 'carb') return L.sort((a, b) => (a.net ?? 999) - (b.net ?? 999) || (b.score ?? -1) - (a.score ?? -1));
-  // ties: the other rating, then fewer net carbs, then has a photo, then popularity
+  // ties: the other rating, then fewer carbs, then has a photo, then popularity
   const o = how === 'health' ? d => d.score : d => d.h;
   const full = d => (d.img ? 2 : 0) + (d.h != null && d.hn === false ? 1 : 0) + (d.h != null ? 1 : 0); // photo + complete data first
   return L.sort((a, b) => ((k(b) ?? -1) - (k(a) ?? -1)) || full(b) - full(a) || ((o(b) ?? -1) - (o(a) ?? -1)) || ((a.net ?? 999) - (b.net ?? 999)) || (b.img ? 1 : 0) - (a.img ? 1 : 0) || a.rank - b.rank);

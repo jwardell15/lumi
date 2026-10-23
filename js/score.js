@@ -60,60 +60,61 @@ function quality(p) {
   if (dry && k == null && c != null && c < 20 && !/keto|protein|grain.?free|nut granola|low.?carb/i.test(p.name || '')) issues.push('carbs implausibly low for a dry food');
   return { ok: issues.length === 0, issues, dropFiber };
 }
+/* v16.1: Lumi no longer uses "carbs". Carbs are always the TOTAL carbohydrate from the label (EU-style labels already exclude
+   fiber, which is what they print). The legacy field name `net` is kept internally for compatibility and always equals total carbs. */
 function netCarbs(p) {
   const n = p.n; if (n.carbs == null) return { net: null, note: '' };
-  if (quality(p).dropFiber) { return { net: n.carbs, note: 'Fiber value implausible (> 60% of carbs) — ignored; net = total carbs', fiberDropped: true }; }
-  let net = n.carbs, note;
-  if (p.naLabel && n.fiber != null) { net = Math.max(0, n.carbs - n.fiber); note = 'US label: net = total carbs − fiber'; }
-  else if (p.naLabel) note = 'US label, fiber unknown: net = total carbs';
-  else note = 'EU-style label: carbohydrate already excludes fiber';
-  if (n.polyols > 0) { net = Math.max(0, net - n.polyols * (/maltitol|e965/i.test(p.ing || '') ? 0.5 : 1)); note += /maltitol|e965/i.test(p.ing || '') ? '; − ½ polyols (maltitol)' : '; − polyols'; }
-  return { net, note };
+  return { net: n.carbs, note: p.naLabel === false ? 'Total carbohydrate as labeled (EU-style labels list carbohydrate without fiber)' : 'Total carbohydrate as labeled' };
 }
 
+/* v16.1 Blood sugar score: SUGAR is the primary driver (added sugar weighs more than natural sugar when the label says which is which),
+   TOTAL carbs the secondary factor. Fiber is a small bonus only and is never subtracted from carbs. */
 function score(p) {
   const n = p.n || {}, items = [];
-  const { net, note, fiberDropped } = netCarbs(p);
-  const base = { net, netNote: note, perServ: null, servQ: p.servQ || null };
-  if (p.servQ) base.perServ = { net: net == null ? null : net * p.servQ / 100 };
+  const { net, note } = netCarbs(p); const fiberDropped = quality(p).dropFiber;
+  const base = { net, carbs: net, netNote: note, perServ: null, servQ: p.servQ || null };
+  if (p.servQ) base.perServ = { net: net == null ? null : net * p.servQ / 100, carbs: net == null ? null : net * p.servQ / 100 };
   const q = quality(p); base.quality = q;
   if (net == null) return Object.assign(base, { score: null, band: 'na', label: 'Carbs unknown', items, missing: true });
   if (!q.ok) return Object.assign(base, { score: null, band: 'na', label: 'Data looks wrong', items, missing: true, bad: true });
   const ing = (p.ing || '').toLowerCase();
-  let hidden = 0; // v6.3: small terms still count toward the total (so near-identical items don't all tie at 100); they're just not listed
+  let hidden = 0;
   const add = (key, label, pts, detail) => { if (Math.abs(pts) >= 0.5) items.push({ key, label, pts: Math.round(pts * 10) / 10, detail }); else hidden += pts; };
-  const nc = net != null ? net : n.sugars;
-  const liquid = !!p.liquid;
-  // --- glycemic core
-  add('net100', 'Net carbs per 100' + (liquid ? 'ml' : 'g'), -Math.min(30, nc * 0.6), r1(nc) + ' g');
+  const nc = net; const liquid = !!p.liquid; const u = liquid ? 'ml' : 'g';
   const sq = p.servQ || (liquid ? 240 : 50);
-  const netServ = nc * sq / 100;
-  add('netServ', p.servQ ? 'Net carbs per serving' : `Net carbs per assumed ${sq}${liquid ? 'ml' : 'g'} serving`, -Math.min(liquid ? 30 : 25, netServ * (liquid ? 0.9 : 0.6)), r1(netServ) + ' g');
   const dairy = /yog|milk|kefir|skyr|cheese|dairy|cream|lait/i.test((p.cats || '') + ' ' + (p.cat || '') + ' ' + (p.name || ''));
-  const natural = n.added === 0 && n.sugars > 0;
-  if (n.sugars != null) add('sugar', natural ? (dairy ? 'Total sugars (natural sugar, lactose)' : 'Total sugars (natural, none added)') : 'Total sugars', -Math.min(15, n.sugars * 0.4), r1(n.sugars) + ' g/100');
   const syr = [...new Set((ing.match(SYRUPS) || []))];
   const sugarIng = SUGAR_WORDS.test(ing) || syr.length > 0;
-  if (n.added != null) { if (n.added === 0) items.push({ key: 'added', label: 'Added sugars', pts: 0, detail: '0 g/100 (declared)' }); else add('added', 'Added sugars', -Math.min(12, n.added * 0.5), r1(n.added) + ' g/100'); }
-  else if (sugarIng && n.sugars) add('added', 'Added sugar (in ingredients; qty undeclared)', -Math.min(8, n.sugars * 0.4), 'estimated');
-  if (liquid && (n.sugars || 0) > 2.5) add('liquid', 'Liquid sugar — rapid absorption', -Math.min(30, n.sugars * 3), r1(n.sugars) + ' g/100ml');
-  if (liquid && n.sugars != null && n.sugars * sq / 100 >= 15) add('liquidDose', '≥15 g sugar per drink serving', -10, r1(n.sugars * sq / 100) + ' g');
-  // sugar share of carbs: high fraction = faster spike
-  if (!liquid && nc > 10 && n.sugars != null && n.sugars / nc > 0.5) add('sugarShare', 'Mostly sugar (>50% of net carbs)', -5, Math.round(n.sugars / nc * 100) + '%');
+  // --- 1. sugar (primary)
+  const sg = n.sugars;
+  if (sg != null) {
+    if (n.added != null) {
+      const ad = Math.min(n.added, sg > 0 ? Math.max(sg, n.added) : n.added), nat = Math.max(0, sg - ad);
+      if (ad > 0) add('added', 'Added sugar', -Math.min(36, ad * 1.0), r1(ad) + ' g/100' + u); else items.push({ key: 'added', label: 'Added sugar', pts: 0, detail: '0 g/100' + u + ' (declared)' });
+      if (nat > 0) add('sugar', dairy ? 'Natural sugar (lactose)' : 'Natural sugar', -Math.min(22, nat * 0.55), r1(nat) + ' g/100' + u);
+    } else if (sugarIng) add('sugar', 'Sugar (added sugar in ingredients)', -Math.min(34, sg * 0.9), r1(sg) + ' g/100' + u);
+    else add('sugar', 'Total sugar', -Math.min(26, sg * 0.7), r1(sg) + ' g/100' + u);
+    const sServ = sg * sq / 100; add('sugarServ', p.servQ ? 'Sugar per serving' : `Sugar per assumed ${sq}${u} serving`, -Math.min(14, sServ * 0.6), r1(sServ) + ' g');
+  } else if (sugarIng) add('sugar', 'Sugar amount not listed (sugar in ingredients)', -8, 'unknown');
+  if (liquid && (sg || 0) > 2.5) add('liquid', 'Liquid sugar: rapid absorption', -Math.min(30, sg * 3), r1(sg) + ' g/100ml');
+  if (liquid && sg != null && sg * sq / 100 >= 15) add('liquidDose', '15 g or more sugar per drink serving', -10, r1(sg * sq / 100) + ' g');
+  // --- 2. total carbs (secondary)
+  add('carbs100', 'Total carbs per 100' + u, -Math.min(22, nc * 0.4), r1(nc) + ' g');
+  const netServ = nc * sq / 100;
+  add('carbsServ', p.servQ ? 'Total carbs per serving' : `Total carbs per assumed ${sq}${u} serving`, -Math.min(16, netServ * 0.4), r1(netServ) + ' g');
   let gi = 0; const hits = [];
-  if (syr.length) { gi += Math.min(12, syr.length * 6); hits.push(...syr); }
+  if (syr.length) { gi += Math.min(10, syr.length * 5); hits.push(...syr); }
   const first = ing.split(/[,(.;]/)[0] || '';
-  if (SUGAR_WORDS.test(first) || new RegExp(SYRUPS.source, 'i').test(first)) { gi += 5; hits.push('sugar/syrup first'); }
+  if (SUGAR_WORDS.test(first) || new RegExp(SYRUPS.source, 'i').test(first)) { gi += 4; hits.push('sugar/syrup first'); }
   const st = [...new Set(ing.match(STARCH) || [])];
   if (st.length) { gi += Math.min(8, st.length * 4); hits.push(...st); }
-  if (gi) add('gi', 'Glycemic proxies (syrups, refined starch)', -Math.min(18, gi), hits.slice(0, 4).join(', '));
+  if (gi) add('gi', 'Fast carbs (syrups, refined starch)', -Math.min(14, gi), hits.slice(0, 4).join(', '));
   // --- buffers
   if (n.fiber != null && !fiberDropped) {
-    add('fiber', 'Fiber', Math.min(10, n.fiber), r1(n.fiber) + ' g/100');
-    if (nc > 5 && n.fiber / (nc + n.fiber) >= 0.2) add('fiberRatio', 'High fiber relative to carbs', 3, '≥20%');
+    add('fiber', 'Fiber (small bonus)', Math.min(4, n.fiber * 0.4), r1(n.fiber) + ' g/100');
   }
   // v6.3: protein only buffers carbs, so its bonus is capped at half the carb penalty and can't outweigh a lower-carb/lower-sugar profile
-  if (n.protein != null) { const carbPen = Math.abs(items.filter(i => i.key === 'net100' || i.key === 'netServ').reduce((a, i) => a + i.pts, 0)); const cap = Math.min(6, carbPen / 2); const raw = Math.min(6, n.protein * 0.3); add('protein', raw > cap ? 'Protein (capped at half the carb penalty)' : 'Protein', Math.min(raw, cap), r1(n.protein) + ' g/100'); }
+  if (n.protein != null) { const carbPen = Math.abs(items.filter(i => /^(sugar|added|sugarServ|carbs100|carbsServ)$/.test(i.key)).reduce((a, i) => a + i.pts, 0)); const cap = Math.min(5, carbPen / 3); const raw = Math.min(6, n.protein * 0.3); add('protein', raw > cap ? 'Protein (capped)' : 'Protein', Math.min(raw, cap), r1(n.protein) + ' g/100'); }
   // --- secondary
   if (n.sat != null) add('sat', 'Saturated fat', -Math.min(8, n.sat * 0.8), r1(n.sat) + ' g/100');
   if ((n.trans || 0) > 0.05) add('trans', 'Trans fat', -Math.min(8, n.trans * 8), r1(n.trans) + ' g/100');
@@ -129,7 +130,7 @@ function score(p) {
   const sc = Math.max(0, Math.min(100, Math.round(raw)));
   items.sort((a, b) => a.pts - b.pts);
   const missing = [['fiber', 'fiber'], ['sugars', 'sugars'], ['sat', 'sat fat'], ['sodiumMg', 'sodium'], ['protein', 'protein']].filter(([k]) => n[k] == null).map(x => x[1]);
-  return Object.assign(base, { score: sc, band: band(sc), label: label(sc), items, missingFields: missing, assumedServing: !p.servQ, netServ });
+  return Object.assign(base, { score: sc, band: band(sc), label: label(sc), items, missingFields: missing, assumedServing: !p.servQ, netServ, carbsServ: netServ });
 }
 /* v6.3 "filler": basics with ~no calories or carbs (water, plain tea/coffee, salt, spices, extracts, zero-cal sweeteners, gum).
    They still get a score, but they're kept out of "best of" rankings (home, stores, aisles, swaps, better options). */

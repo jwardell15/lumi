@@ -62,9 +62,9 @@ async function viewCompare() {
   <tr><td>Additives</td>${rows.map(r => { const a = r.h.adds.filter(x => x.tier >= 1); return `<td>${r.h.basis !== 'full' ? '<small>unknown</small>' : a.length ? a.map(x => `<span class="adot bg-${['ex', 'gd', 'pr', 'bd'][x.tier]}"></span>`).join('') + ' ' + a.length : '0'}</td>`; }).join('')}</tr>
   <tr class="sub"><td colspan="${rows.length + 1}">${mode === 'label' ? 'Per labeled serving' : `Per ${common} ${cu} portion`}</td></tr>
   <tr><td>Portion</td>${rows.map(r => `<td>${r.g ? esc(isItem(r.p) ? '1 item' : mode === 'label' ? (r.p.serv || r.g + ' g') : r.g + ' ' + (r.p.liquid ? 'ml' : 'g')) : '—'}</td>`).join('')}</tr>
-  ${line('Net carbs', r => r.per && r.per.net, g, 1)}${line('Total carbs', r => r.per && r.per.carbs, g, 1)}${line('Total sugar', r => r.per && r.per.sugars, g, 1)}${line('Added sugar', r => r.per && r.per.added, g, 1)}${line('Fiber', r => r.per && r.per.fiber, g)}${line('Protein', r => r.per && r.per.protein, g)}${line('Calories', r => r.per && r.per.kcal, k, 1)}
+  ${line('Total carbs', r => r.per && r.per.carbs, g, 1)}${line('Total sugar', r => r.per && r.per.sugars, g, 1)}${line('Added sugar', r => r.per && r.per.added, g, 1)}${line('Fiber', r => r.per && r.per.fiber, g)}${line('Protein', r => r.per && r.per.protein, g)}${line('Calories', r => r.per && r.per.kcal, k, 1)}
   <tr class="sub"><td colspan="${rows.length + 1}">Per 100 g / item</td></tr>
-  ${line('Net carbs', r => r.n.net, g, 1)}${line('Total sugar', r => r.n.sugars, g, 1)}${line('Added sugar', r => r.n.added, g, 1)}${line('Fiber', r => r.n.fiber, g)}${line('Protein', r => r.n.protein, g)}${line('Fat', r => r.n.fat, g, 1)}${line('Sat. fat', r => r.n.sat, g, 1)}${line('Sodium', r => r.n.sodiumMg, mg, 1)}${line('Calories', r => r.n.kcal, k, 1)}
+  ${line('Total carbs', r => r.n.carbs, g, 1)}${line('Total sugar', r => r.n.sugars, g, 1)}${line('Added sugar', r => r.n.added, g, 1)}${line('Fiber', r => r.n.fiber, g)}${line('Protein', r => r.n.protein, g)}${line('Fat', r => r.n.fat, g, 1)}${line('Sat. fat', r => r.n.sat, g, 1)}${line('Sodium', r => r.n.sodiumMg, mg, 1)}${line('Calories', r => r.n.kcal, k, 1)}
   </table></div>
   <div class="actions"><a class="btn" href="#/">＋ Add another</a><button class="btn" id="cmpClr">Clear all</button></div>
   <p class="foot">Informational only — not medical advice.</p>`;

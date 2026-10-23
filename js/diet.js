@@ -71,7 +71,7 @@ function check(m, prefs, net) {
   for (const k of prefs.al || []) { const a = AL.find(x => x[0] === k); if (!a) continue; const st = alStatus(m, k);
     items.push({ k, label: a[1], st: st === 'contains' ? 'bad' : st === 'traces' ? 'warn' : st === 'unknown' ? 'unk' : 'ok', text: st === 'contains' ? 'Contains ' + a[1].toLowerCase() : st === 'traces' ? 'May contain ' + a[1].toLowerCase() : st === 'unknown' ? 'Couldn\'t verify ' + a[1].toLowerCase() : 'No ' + a[1].toLowerCase() + ' found in listed data' }); }
   for (const k of prefs.diets || []) { const d = DIETS.find(x => x[0] === k); if (!d) continue; const st = dietStatus(m, k, net);
-    const T = { vegan: ['Not vegan', 'No animal ingredients found'], vegetarian: ['Not vegetarian', 'No meat or fish found'], palm: ['Contains palm oil', 'No palm oil found'], nosugar: ['Has added sugar', 'No added sugar found'], keto: ['Over 5 g net carbs per 100 g', '5 g net carbs or less per 100 g'], organic: ['Not labelled organic', 'Labelled organic'] }[k];
+    const T = { vegan: ['Not vegan', 'No animal ingredients found'], vegetarian: ['Not vegetarian', 'No meat or fish found'], palm: ['Contains palm oil', 'No palm oil found'], nosugar: ['Has added sugar', 'No added sugar found'], keto: ['Over 5 g carbs per 100 g', '5 g carbs or less per 100 g'], organic: ['Not labelled organic', 'Labelled organic'] }[k];
     items.push({ k, label: d[1], st: st === 'conflict' ? 'bad' : st === 'unknown' ? 'unk' : 'ok', text: st === 'conflict' ? T[0] : st === 'unknown' ? 'Couldn\'t verify: ' + d[1].toLowerCase() : T[1] }); }
   const lv = items.some(i => i.st === 'bad') ? 'bad' : items.some(i => i.st === 'warn') ? 'warn' : items.some(i => i.st === 'unk') ? 'unk' : items.length ? 'ok' : null;
   return { level: lv, items };

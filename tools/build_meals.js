@@ -5,7 +5,7 @@ const S = require('../js/score.js'), AI = require('../js/aisles.js'), ST = requi
 const out = path.join(__dirname, '..', 'data'); const G = new Map();
 for (const l of fs.readFileSync(process.argv[2], 'utf8').split('\n')) if (l) { const r = JSON.parse(l); G.set(r.id, r); }
 const r1 = v => v == null ? null : Math.round(v * 10) / 10;
-const per = (n, g) => { const k = x => n[x] == null ? null : r1(n[x] * g / 100); const c = k('carbs'), f = k('fiber'); return { c, f, p: k('protein'), fat: k('fat'), kcal: n.kcal == null ? null : Math.round(n.kcal * g / 100), net: c == null ? null : r1(Math.max(0, c - (f || 0))) }; };
+const per = (n, g) => { const k = x => n[x] == null ? null : r1(n[x] * g / 100); const c = k('carbs'), f = k('fiber'); return { c, f, p: k('protein'), fat: k('fat'), kcal: n.kcal == null ? null : Math.round(n.kcal * g / 100), net: c }; };
 // [fdc id, role(s), grams, portion label, swap group, aisle, short name]
 // roles: pro=protein main, bfm=breakfast main, bfc=breakfast carb, ext=extra, veg, sta=starch side, fru=fruit, snk=snack, drk=drink
 const SP = [

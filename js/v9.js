@@ -3,7 +3,7 @@
 'use strict';
 /* ---------- 1. Per-meal carb targets ---------- */
 const mealT9 = () => Object.assign({ breakfast: null, lunch: null, dinner: null, snack: null }, settings().mealT || {});
-const mealBasis9 = () => settings().mealBasis === 'net' ? 'net' : 'carbs';
+const mealBasis9 = () => 'carbs';
 function cue9(v, t) { // colour + words (never colour alone)
   if (!t) return null; const pct = v / t;
   if (pct <= 0.9) return { c: 'ok', w: v ? 'Within target' : 'Nothing yet', pct };
@@ -11,11 +11,11 @@ function cue9(v, t) { // colour + words (never colour alone)
   return { c: 'over', w: `${Math.round(v - t)} g over`, pct };
 }
 function bar9(v, t, label) { const q = cue9(v, t); if (!q) return ''; const w = Math.min(100, Math.round(q.pct * 100));
-  return `<div class="mt9 ${q.c}" role="img" aria-label="${esc(label || '')} ${Math.round(v)} of ${t} grams, ${q.w}"><div class="b"><i style="width:${w}%"></i></div><span><b>${Math.round(v)}</b> / ${t} g ${mealBasis9() === 'net' ? 'net ' : ''}carbs · ${q.w}</span></div>`; }
+  return `<div class="mt9 ${q.c}" role="img" aria-label="${esc(label || '')} ${Math.round(v)} of ${t} grams, ${q.w}"><div class="b"><i style="width:${w}%"></i></div><span><b>${Math.round(v)}</b> / ${t} g carbs · ${q.w}</span></div>`; }
 function mealTargetsCard9() { const t = mealT9(), b = mealBasis9();
   return `<form class="card" id="mt9f"><h2>Carb target per meal</h2><p class="small">Optional. Each meal on your log gets a bar: green within target, amber near it, red over, always with the number in words. Set what your care team suggested; leave blank to turn a meal off.</p>
   <div class="mt9g">${MEALS.map(m => `<label class="field"><span>${MEAL_L[m]} (g)</span><input name="${m}" type="number" inputmode="numeric" min="0" step="1" value="${t[m] ?? ''}" placeholder="Off"></label>`).join('')}</div>
-  <div class="seg wide" id="mt9b" role="group" aria-label="Count meals by"><button type="button" data-b="carbs" class="${b === 'carbs' ? 'on' : ''}" aria-pressed="${b === 'carbs'}">Total carbs</button><button type="button" data-b="net" class="${b === 'net' ? 'on' : ''}" aria-pressed="${b === 'net'}">Net carbs</button></div>
+  <p class="xs">Meals are counted in total carbs.</p>
   <div class="actions"><button class="btn pri">Save meal targets</button></div></form>`; }
 function bindMealTargets9(after) { let b = mealBasis9();
   document.querySelectorAll('#mt9b button').forEach(x => x.onclick = () => { b = x.dataset.b; document.querySelectorAll('#mt9b button').forEach(y => { y.classList.toggle('on', y === x); y.setAttribute('aria-pressed', y === x); }); });
@@ -52,7 +52,7 @@ function betterCard9(p, s) {
   loadIndex().then(run).then(() => loadIndexFull()).then(run).catch(() => {});
 }
 function zeroCarbWarn9(p, s) { if (!p.n || p.n.sugars == null || p.n.sugars < 3 || s.net == null || s.net > 0 || /\b(keto|sugar[- ]?free|zero|no sugar)\b/i.test(p.name || '')) return '';
-  return `<div class="card warn9" role="note"><b>⚠ Check the label</b><p class="small">The data says 0 g net carbs but ${r1(p.n.sugars)} g sugar per 100 g, which can't both be right. Count carbs from the package before you bolus.</p></div>`; }
+  return `<div class="card warn9" role="note"><b>⚠ Check the label</b><p class="small">The data says 0 g carbs but ${r1(p.n.sugars)} g sugar per 100 g, which can't both be right. Count carbs from the package before you bolus.</p></div>`; }
 function bind9(p, s) {
   betterCard9(p, s);
   const head = app.querySelector('.card'); if (!head) return;
@@ -83,7 +83,7 @@ viewMeal = function () { _vm9(); const l = plate(); if (!l.length) return; const
     const ms = savedMeals(); ms.unshift({ id: 'm' + Date.now().toString(36), name: name.trim(), items }); store.set('meals', ms); toast('Saved. Log it from Home in one tap'); }; } };
 function viewMeals9() { document.title = 'Saved meals — Lumi'; const ms = mealsSorted9();
   app.innerHTML = `<h1>Saved meals</h1><p class="lead">Meals you eat often. Tap <b>Log now</b> to add every item at once (you can undo).</p>
-  ${ms.length ? `<div class="card"><ul class="loglist">${ms.map(m => { const t = totals(m.items); return `<li><div class="t"><b>${esc(m.name)}</b><small>${m.items.length} items · ${Math.round(t.carbs)} g carbs · ${Math.round(t.net)} g net${m.used ? ` · logged ${m.used}×` : ''}</small></div><button class="btn sm pri" data-ml9="${m.id}">Log now</button><button class="icon sm" data-ren9="${m.id}" aria-label="Rename ${esc(m.name)}">✎</button><button class="icon sm" data-del9="${m.id}" aria-label="Delete ${esc(m.name)}">✕</button></li>`; }).join('')}</ul></div>`
+  ${ms.length ? `<div class="card"><ul class="loglist">${ms.map(m => { const t = totals(m.items); return `<li><div class="t"><b>${esc(m.name)}</b><small>${m.items.length} items · ${Math.round(t.carbs)} g carbs · ${Math.round(t.net)} g carbs${m.used ? ` · logged ${m.used}×` : ''}</small></div><button class="btn sm pri" data-ml9="${m.id}">Log now</button><button class="icon sm" data-ren9="${m.id}" aria-label="Rename ${esc(m.name)}">✎</button><button class="icon sm" data-del9="${m.id}" aria-label="Delete ${esc(m.name)}">✕</button></li>`; }).join('')}</ul></div>`
   : `<div class="card empty">${MASCOT(96, 'big')}<b>No saved meals yet</b>Build a plate in the meal builder or use “Save as meal” on your log.<div class="actions" style="justify-content:center"><a class="btn pri" href="#/meal">Meal builder</a><a class="btn" href="#/log">Log</a></div></div>`}`;
   bindMealChips9(app);
   app.querySelectorAll('[data-del9]').forEach(b => b.onclick = () => { if (!confirm('Delete this saved meal?')) return; store.set('meals', savedMeals().filter(x => x.id !== b.dataset.del9)); viewMeals9(); });

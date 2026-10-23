@@ -11,7 +11,7 @@ function bgImpact(p) {
   const k = g / 100, net = Math.max(0, s.net * k), fat = (n.fat || 0) * k, pro = (n.protein || 0) * k, fib = (n.fiber || 0) * k, sug = (n.sugars || 0) * k;
   const ref = giMatch(p);
   let size, speed, why = [], method;
-  if (net < 5) { size = 'Low'; speed = 'minimal'; why.push(`Only ${r1(net)} g net carbs ${basis}.`); method = 'heuristic'; }
+  if (net < 5) { size = 'Low'; speed = 'minimal'; why.push(`Only ${r1(net)} g carbs ${basis}.`); method = 'heuristic'; }
   else if (ref) {
     const gl = ref.gi * net / 100; method = 'gi';
     size = gl <= 10 ? 'Low' : gl < 20 ? 'Medium' : 'High';
@@ -23,7 +23,7 @@ function bgImpact(p) {
     size = net < 15 ? 'Low' : net <= 30 ? 'Medium' : 'High';
     const slowers = fat * 9 + pro * 4, ratio = slowers / (net * 4), fibR = fib / Math.max(1, net + fib), sugR = net ? sug / net : 0;
     if (p.liquid && sugR > 0.5) speed = 'fast'; else if (ratio > 1.2 || fibR > 0.25) speed = 'slow'; else if (ratio < 0.5 && (sugR > 0.4 || net > 30)) speed = 'fast'; else speed = 'moderate';
-    why.push(`${r1(net)} g net carbs ${basis} (low <15, medium 15–30, high >30).`);
+    why.push(`${r1(net)} g carbs ${basis} (low <15, medium 15–30, high >30).`);
     if (sugR > 0.4) why.push(`${Math.round(sugR * 100)}% of the carbs are sugars.`);
     if (p.liquid && sugR > 0.5) why.push('Sugary drinks are absorbed quickly.');
     if (ratio > 1.2) why.push(`Fat and protein (${r1(fat)} g fat, ${r1(pro)} g protein) usually slow and stretch out the rise.`);
@@ -34,7 +34,7 @@ function bgImpact(p) {
 function bgCard(p) {
   const b = bgImpact(p); if (!b) return '';
   const cls = b.size === 'Low' ? 'ex' : b.size === 'Medium' ? 'pr' : 'bd', sp = b.speed === 'minimal' ? 'minimal rise' : b.speed + ' rise';
-  const src = b.method === 'gi' ? `<p class="small">Source: <a class="lnk" href="${esc(GI8.url)}" target="_blank" rel="noopener">${esc(GI8.source)}</a> doi:${esc(GI8.doi)}</p>` : '<p class="small">Heuristic estimate: no published GI value matches this product. It\'s based on net carbs, sugar, fiber, fat and protein.</p>';
+  const src = b.method === 'gi' ? `<p class="small">Source: <a class="lnk" href="${esc(GI8.url)}" target="_blank" rel="noopener">${esc(GI8.source)}</a> doi:${esc(GI8.doi)}</p>` : '<p class="small">Heuristic estimate: no published GI value matches this product. It\'s based on carbs, sugar, fiber, fat and protein.</p>';
   return `<div class="card bg8" id="bg8"><div class="fx-h"><h2>Blood sugar impact</h2><span class="small">${esc(b.basis)}</span></div>
     <div class="bg8-top"><span class="bg8-pill bg-${cls}">${b.size}</span><b>${b.size} impact · ${esc(sp)}</b></div>
     <ul class="bg8-why">${b.why.map(w => `<li>${esc(w)}</li>`).join('')}</ul>${src}
@@ -75,11 +75,11 @@ function wrapText(x, t, X, Y, W, lh, max = 2) { const words = String(t).split(' 
 function scoreDisk(x, cx, cy, v, band, label) { x.beginPath(); x.arc(cx, cy, 78, 0, 7); x.fillStyle = BC8[band] || BC8.unknown; x.fill(); x.fillStyle = '#fff'; x.textAlign = 'center'; x.font = '800 64px system-ui,sans-serif'; x.fillText(v == null ? '?' : v, cx, cy + 20); x.fillStyle = '#2a2433'; x.font = '600 22px system-ui,sans-serif'; x.fillText(label, cx, cy + 112); x.textAlign = 'left'; }
 function productCanvas(p) { const s = S.score(p), hr = HR(p), b = bgImpact(p);
   return canvasCard(x => { x.fillStyle = '#1d1824'; x.font = '800 54px system-ui,sans-serif'; const nl = wrapText(x, p.name, 60, 190, 700, 62, 2); x.fillStyle = '#6b6478'; x.font = '28px system-ui,sans-serif'; x.fillText(String(p.brand || '') + (p.src === 'custom' ? ' · user-entered' : ''), 60, 190 + nl * 62 + 4);
-    x.fillStyle = '#1d1824'; x.font = '600 34px system-ui,sans-serif'; x.fillText(`${r1(s.net ?? 0)} g net carbs / 100${p.liquid ? 'ml' : 'g'}`, 60, 430); if (b) { x.font = '28px system-ui,sans-serif'; x.fillStyle = '#4a4356'; x.fillText(`Blood sugar impact: ${b.size}, ${b.speed}`, 60, 480); }
+    x.fillStyle = '#1d1824'; x.font = '600 34px system-ui,sans-serif'; x.fillText(`${r1(s.net ?? 0)} g carbs / 100${p.liquid ? 'ml' : 'g'}`, 60, 430); if (b) { x.font = '28px system-ui,sans-serif'; x.fillStyle = '#4a4356'; x.fillText(`Blood sugar impact: ${b.size}, ${b.speed}`, 60, 480); }
     scoreDisk(x, 900, 230, s.score, s.band, 'Carb score'); scoreDisk(x, 1080, 230, hr.score, HB(hr.score), 'Health'); }); }
 function swapCanvas(a, b) { const sa = S.score(a), sb = S.score(b);
   return canvasCard(x => { x.fillStyle = '#1d1824'; x.font = '700 40px system-ui,sans-serif'; x.fillText('Better swap', 60, 160);
-    [[a, sa, 60], [b, sb, 640]].forEach(([p, s, X]) => { x.fillStyle = '#1d1824'; x.font = '700 34px system-ui,sans-serif'; wrapText(x, p.name, X, 250, 480, 40, 2); x.fillStyle = '#6b6478'; x.font = '24px system-ui,sans-serif'; x.fillText(String(p.brand || ''), X, 340); x.fillStyle = BC8[s.band] || BC8.unknown; x.font = '800 72px system-ui,sans-serif'; x.fillText(String(s.score ?? '?'), X, 440); x.fillStyle = '#4a4356'; x.font = '26px system-ui,sans-serif'; x.fillText(`/100 · ${r1(s.net ?? 0)} g net carbs`, X + 110, 440); });
+    [[a, sa, 60], [b, sb, 640]].forEach(([p, s, X]) => { x.fillStyle = '#1d1824'; x.font = '700 34px system-ui,sans-serif'; wrapText(x, p.name, X, 250, 480, 40, 2); x.fillStyle = '#6b6478'; x.font = '24px system-ui,sans-serif'; x.fillText(String(p.brand || ''), X, 340); x.fillStyle = BC8[s.band] || BC8.unknown; x.font = '800 72px system-ui,sans-serif'; x.fillText(String(s.score ?? '?'), X, 440); x.fillStyle = '#4a4356'; x.font = '26px system-ui,sans-serif'; x.fillText(`/100 · ${r1(s.net ?? 0)} g carbs`, X + 110, 440); });
     x.fillStyle = '#ff7a2f'; x.font = '800 70px system-ui,sans-serif'; x.fillText('→', 555, 300); }); }
 function listCanvas(name, items) { return canvasCard(x => { x.fillStyle = '#1d1824'; x.font = '800 48px system-ui,sans-serif'; x.fillText(String(name).slice(0, 34), 60, 170); x.font = '28px system-ui,sans-serif';
   items.slice(0, 9).forEach((it, i) => { x.fillStyle = '#2a2433'; x.fillText(`${it.done ? '☑' : '☐'}  ${String(it.name).slice(0, 34)}${it.score != null ? `  · ${it.score}/100` : ''}`, 60 + (i >= 5 ? 560 : 0), 240 + (i % 5) * 58); });
@@ -91,12 +91,12 @@ async function shareCanvas(c, title, text, url, fname) {
   if (url && navigator.clipboard) navigator.clipboard.writeText(url).catch(() => {}); toast(url ? 'Card downloaded · link copied' : 'Card downloaded'); return 'download';
 }
 const prodURL = p => p.src === 'custom' ? '' : location.origin + location.pathname + '#/product/' + encodeURIComponent(p.id);
-function shareProductCard(p) { const s = S.score(p); return shareCanvas(productCanvas(p), 'Lumi: ' + p.name, `${p.name}${p.brand ? ' (' + p.brand + ')' : ''}: Carb score ${s.score ?? '?'}/100, ${r1(s.net ?? 0)} g net carbs/100${p.liquid ? 'ml' : 'g'}${p.src === 'custom' ? ' (user-entered label)' : ''}`, prodURL(p), 'lumi-' + String(p.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40) + '.png'); }
+function shareProductCard(p) { const s = S.score(p); return shareCanvas(productCanvas(p), 'Lumi: ' + p.name, `${p.name}${p.brand ? ' (' + p.brand + ')' : ''}: Carb score ${s.score ?? '?'}/100, ${r1(s.net ?? 0)} g carbs/100${p.liquid ? 'ml' : 'g'}${p.src === 'custom' ? ' (user-entered label)' : ''}`, prodURL(p), 'lumi-' + String(p.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40) + '.png'); }
 /* ---------- 3. Smarter log: week view + printable report ---------- */
 function daysBack(n, end = new Date()) { const out = []; for (let i = n - 1; i >= 0; i--) { const d = new Date(end); d.setDate(d.getDate() - i); out.push(d); } return out; }
 function weekTable(days) { const L = LOG.all(); let tot = 0, nd = 0, totN = 0, totK = 0;
-  const rows = days.map(d => { const es = L.filter(e => dayKey(e.ts) === dayKey(d)); const by = MEALS.map(m => totals(es.filter(e => e.meal === m)).carbs); const t = totals(es); if (es.length) { tot += t.carbs; totN += t.net; totK += t.kcal; nd++; } return `<tr><th><a href="#/log/${dayKey(d)}">${d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' })}</a></th>${by.map(v => `<td>${v ? Math.round(v) : '–'}</td>`).join('')}<td><b>${es.length ? Math.round(t.carbs) : '–'}</b></td><td>${es.length ? Math.round(t.net) : '–'}</td><td>${es.length ? Math.round(t.kcal) : '–'}</td></tr>`; }).join('');
-  return `<table class="wk8"><thead><tr><th>Day</th>${MEALS.map(m => `<th>${({ breakfast: 'Bkfst', lunch: 'Lunch', dinner: 'Dinner', snack: 'Snack' })[m]}</th>`).join('')}<th>Carbs</th><th>Net</th><th>Cal</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><th>Avg (${nd} d)</th><td colspan="4"></td><td><b>${nd ? Math.round(tot / nd) : '–'}</b></td><td>${nd ? Math.round(totN / nd) : '–'}</td><td>${nd ? Math.round(totK / nd) : '–'}</td></tr></tfoot></table>`; }
+  const rows = days.map(d => { const es = L.filter(e => dayKey(e.ts) === dayKey(d)); const by = MEALS.map(m => totals(es.filter(e => e.meal === m)).carbs); const t = totals(es); if (es.length) { tot += t.carbs; totN += t.net; totK += t.kcal; nd++; } return `<tr><th><a href="#/log/${dayKey(d)}">${d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' })}</a></th>${by.map(v => `<td>${v ? Math.round(v) : '–'}</td>`).join('')}<td><b>${es.length ? Math.round(t.carbs) : '–'}</b></td><td>${es.length ? Math.round(t.kcal) : '–'}</td></tr>`; }).join('');
+  return `<table class="wk8"><thead><tr><th>Day</th>${MEALS.map(m => `<th>${({ breakfast: 'Bkfst', lunch: 'Lunch', dinner: 'Dinner', snack: 'Snack' })[m]}</th>`).join('')}<th>Carbs</th><th>Cal</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><th>Avg (${nd} d)</th><td colspan="4"></td><td><b>${nd ? Math.round(tot / nd) : '–'}</b></td><td>${nd ? Math.round(totK / nd) : '–'}</td></tr></tfoot></table>`; }
 function viewWeek() { document.title = 'Week — Lumi'; const st = settings();
   app.innerHTML = `<div class="dayhead"><a class="icon" href="#/log" aria-label="Back to today">‹</a><h1>Last 7 days</h1><span class="icon"></span></div>
   <div class="seg8"><a href="#/log">Day</a><a class="on" href="#/log/week">Week</a><a href="#/report">Report</a></div>
@@ -112,7 +112,7 @@ function viewReport(arg) { const n = Math.min(90, Math.max(3, +arg || 14)); docu
   app.innerHTML = `<div class="report8"><div class="noprint seg8"><a href="#/log">Day</a><a href="#/log/week">Week</a><a class="on" href="#/report">Report</a></div>
     <div class="noprint actions"><a class="btn${n === 7 ? ' pri' : ''}" href="#/report/7">7 days</a><a class="btn${n === 14 ? ' pri' : ''}" href="#/report/14">14 days</a><a class="btn${n === 30 ? ' pri' : ''}" href="#/report/30">30 days</a><button class="btn pri" id="pr8">Print / save PDF</button><button class="btn" id="expCsv">Export CSV</button></div>
     <h1>Carb intake summary</h1><p class="small">${days[0].toLocaleDateString()} – ${days[n - 1].toLocaleDateString()} · ${logged.length} of ${n} days logged · generated ${new Date().toLocaleString()} by Lumi ${VERSION}. Self-logged food entries; values come from product labels and databases and may contain errors.</p>
-    <div class="rp8-kpi"><div><small>Avg carbs/day</small><b>${Math.round(avg('carbs'))} g</b></div><div><small>Avg net carbs/day</small><b>${Math.round(avg('net'))} g</b></div><div><small>Avg calories/day</small><b>${Math.round(avg('kcal'))}</b></div>${st.target ? `<div><small>Target</small><b>${st.target} g</b></div>` : ''}</div>
+    <div class="rp8-kpi"><div><small>Avg carbs/day</small><b>${Math.round(avg('carbs'))} g</b></div><div><small>Avg calories/day</small><b>${Math.round(avg('kcal'))}</b></div>${st.target ? `<div><small>Target</small><b>${st.target} g</b></div>` : ''}</div>
     <h2>Average carbs by meal</h2><table class="wk8"><tr>${mealAvg.map(([m]) => `<th>${MEAL_L[m]}</th>`).join('')}</tr><tr>${mealAvg.map(([, v]) => `<td>${Math.round(v)} g</td>`).join('')}</tr></table>
     <h2>Daily totals</h2>${weekTable(days)}
     <h2>Top carb sources</h2><table class="wk8"><tr><th>Food</th><th>Times</th><th>Total carbs</th></tr>${tops.map(([k, v]) => `<tr><td>${esc(k)}</td><td>${v.n}</td><td>${Math.round(v.c)} g</td></tr>`).join('') || '<tr><td colspan="3">Nothing logged.</td></tr>'}</table>

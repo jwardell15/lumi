@@ -6,7 +6,7 @@ function factRows75(p, s, hr) {
   const sq = basis75() === 'serv' && p.servQ && !(p.meta && p.meta.perItem) ? p.servQ : null, k = sq ? sq / 100 : 1;
   const fmt = (v, d = 1) => d ? (Math.round(v * k * 10) / 10) : Math.round(v * k);
   const row = (key, ic, title, v, cuts, max, good, descs, unit, d = 1) => { const l = good === 'low' ? lvl(v, cuts) : (v >= cuts[1] ? 0 : v >= cuts[0] ? 2.4 : 2.5); out.push({ key, ic, title, l, desc: good === 'low' ? descs[l] : descs[l === 0 ? 0 : l === 2.4 ? 1 : 2], val: `${fmt(v, d)}${unit}`, v, scale: { cuts, max, good, unit, k } }); };
-  if (s.net != null) row('net', 'carbs', 'Net carbs', s.net, liq ? [2, 5, 8] : [5, 15, 30], liq ? 16 : 60, 'low', ['Low net carbs', 'Moderate net carbs', 'High net carbs', 'Very high net carbs'], 'g');
+  if (s.net != null) row('net', 'carbs', 'Carbs', s.net, liq ? [2, 5, 8] : [5, 15, 30], liq ? 16 : 60, 'low', ['Low carbs', 'Moderate carbs', 'High carbs', 'Very high carbs'], 'g');
   if (n.sugars != null) row('sugar', 'sugar', 'Sugar', n.sugars, liq ? [1, 2.5, 6] : [1, 5, 12.5], liq ? 12 : 25, 'low', ['No sugar', 'Low sugar', 'Too much sugar', 'Way too much sugar'], 'g');
   const gi = s.items.find(i => i.key === 'gi');
   if (gi) out.push({ key: 'gi', ic: 'fast', title: 'Fast-acting carbs', l: gi.pts <= -10 ? 3 : 2, desc: 'Syrups or refined starch', val: '' });

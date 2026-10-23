@@ -9,7 +9,7 @@ const serv15 = d => P15 && P15[d.code || d.id];
 function fixServ15(root) { if (!P15) return; (root || app).querySelectorAll('.li141:not([data-s15])').forEach(li => { li.dataset.s15 = 1; const a = li.querySelector('a.m14'), nt = li.querySelector('.nt141 > b'); if (!a || !nt) return;
     const code = decodeURIComponent((a.getAttribute('href') || '').split('/').pop()), s = P15[code], d = engine.byCode && engine.byCode(code); if (!s || !d || d.net == null) return;
     const g = s[0], lab = s[1], n = d.net * g / 100, lbl = /\(\s*[\d.]+\s*(g|ml)\s*\)|^[\d.]+ ?(g|ml)$/i.test(lab) ? lab : `${lab} (${Math.round(g)} g)`;
-    nt.textContent = (n < 1 ? '<1' : Math.round(n)) + ' g'; const t = nt.nextSibling; if (t && t.nodeType === 3) t.textContent = ` net carbs per ${lbl}` + (/·\s*$/.test(t.textContent) ? ' · ' : ''); li.querySelector('.nt141').title = `${Math.round(d.net)} g net carbs per 100 g`; }); }
+    nt.textContent = (n < 1 ? '<1' : Math.round(n)) + ' g'; const t = nt.nextSibling; if (t && t.nodeType === 3) t.textContent = ` carbs per ${lbl}` + (/·\s*$/.test(t.textContent) ? ' · ' : ''); li.querySelector('.nt141').title = `${Math.round(d.net)} g carbs per 100 g`; }); }
 new MutationObserver(() => { if (P15 && app.querySelector('.li141:not([data-s15])')) fixServ15(); }).observe(document.getElementById('app'), { childList: true, subtree: true });
 { const _h = home14; home14 = function () { loadP15().then(() => fixServ15()); return _h.apply(this, arguments); }; }
 
@@ -83,12 +83,12 @@ function viewFresh15(arg) { document.title = 'Add fresh food — Lumi';
     const W = v.split(/\s+/), L = engine.docs.filter(d => d.src === 'whole' && W.every(w => d.name.toLowerCase().includes(w)));
     L.sort((a, b) => (b.name.toLowerCase().startsWith(W[0]) - a.name.toLowerCase().startsWith(W[0])) || /\braw\b/i.test(b.name) - /\braw\b/i.test(a.name) || a.name.length - b.name.length);
     const R = L.slice(0, 12);
-    out.innerHTML = R.length ? `<ul class="fr15l">${R.map(d => `<li><button type="button" class="fr15b" data-fr15="${esc(d.code)}" aria-expanded="false"><b>${esc(short15(d.name))}</b><small>${Math.round(d.net)} g net carbs per 100 g</small></button><div class="fr15p" hidden></div></li>`).join('')}</ul>` : '<p class="small">No USDA whole food matches that. Try a simpler word.</p>';
+    out.innerHTML = R.length ? `<ul class="fr15l">${R.map(d => `<li><button type="button" class="fr15b" data-fr15="${esc(d.code)}" aria-expanded="false"><b>${esc(short15(d.name))}</b><small>${Math.round(d.net)} g carbs per 100 g</small></button><div class="fr15p" hidden></div></li>`).join('')}</ul>` : '<p class="small">No USDA whole food matches that. Try a simpler word.</p>';
     out.querySelectorAll('[data-fr15]').forEach(b => b.onclick = async () => { const box = b.nextElementSibling, open = b.getAttribute('aria-expanded') === 'true'; b.setAttribute('aria-expanded', !open); box.hidden = open; if (open || box.dataset.ok) return;
       box.innerHTML = '<p class="small">Loading portions…</p>'; let p = null; try { p = await genericProduct(b.dataset.fr15); } catch {} box.dataset.ok = 1;
       const P = p && (p.portions || []).filter(x => x && x[1] > 0).slice(0, 6); if (!p || !P.length) { box.innerHTML = `<p class="small">USDA lists no household portions for this food. <a class="lnk" href="#/product/${esc(b.dataset.fr15)}">Open it to log by grams</a>.</p>`; return; }
       const net = S.score(p).net;
-      box.innerHTML = `<div class="chips">${P.map((x, i) => `<button type="button" class="chip" data-po15="${i}">${esc(plab15(x[0], x[1]))} <small>${Math.round(x[1])} g · ${net == null ? '?' : Math.round(net * x[1] / 100)} g net</small></button>`).join('')}</div><p class="xs">Tap a portion to log it to ${esc(MEAL_L[mealFor(new Date())])}. Full name: ${esc(p.name)}</p>`;
+      box.innerHTML = `<div class="chips">${P.map((x, i) => `<button type="button" class="chip" data-po15="${i}">${esc(plab15(x[0], x[1]))} <small>${Math.round(x[1])} g · ${net == null ? '?' : Math.round(net * x[1] / 100)} g carbs</small></button>`).join('')}</div><p class="xs">Tap a portion to log it to ${esc(MEAL_L[mealFor(new Date())])}. Full name: ${esc(p.name)}</p>`;
       box.querySelectorAll('[data-po15]').forEach(c => c.onclick = () => { const x = P[+c.dataset.po15], lab = plab15(x[0], x[1]), meal = mealFor(new Date()); addEntry(p, x[1], lab, meal, Date.now()); const L = LOG.all(), e = L[L.length - 1]; haptic(15);
         snack9(`Logged ${short15(p.name)} · ${lab} to ${MEAL_L[meal]}`, () => { LOG.save(LOG.all().filter(z => z.id !== e.id)); toast('Removed'); }); }); }); });
   q.oninput = () => { clearTimeout(t); t = setTimeout(run, 180); }; run(); if (!arg) q.focus();

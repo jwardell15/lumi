@@ -1,8 +1,8 @@
 'use strict';
 /* Lumi v4: settings, portion helper, food log, custom foods, saved meals, onboarding. All data stays in localStorage. */
-const NK = ['carbs', 'net', 'sugars', 'fiber', 'protein', 'fat', 'kcal'];
-const NL = { carbs: 'Carbs', net: 'Net carbs', sugars: 'Sugar', fiber: 'Fiber', protein: 'Protein', fat: 'Fat', kcal: 'Calories' };
-const settings = () => { const s = Object.assign({ target: null, icr: null, icrBasis: 'total', onboarded: false }, store.get('settings', {})); return s; };
+const NK = ['carbs', 'sugars', 'fiber', 'protein', 'fat', 'kcal'];
+const NL = { carbs: 'Carbs', net: 'Carbs', sugars: 'Sugar', fiber: 'Fiber', protein: 'Protein', fat: 'Fat', kcal: 'Calories' };
+const settings = () => { const s = Object.assign({ target: null, icr: null, icrBasis: 'total', onboarded: false }, store.get('settings', {})); s.icrBasis = 'total'; s.mealBasis = 'carbs'; return s; };
 const setSettings = o => store.set('settings', Object.assign(settings(), o));
 const LOG = { all: () => store.get('log', []), save: l => store.set('log', l) };
 const MEALS = ['breakfast', 'lunch', 'dinner', 'snack'];
@@ -12,7 +12,7 @@ const mealFor = d => { const h = d.getHours() + d.getMinutes() / 60; return h >=
 const dayKey = d => { const x = new Date(d); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); };
 const fmtN = (k, v) => v == null ? '—' : k === 'kcal' ? Math.round(v) : r1(v) + (k === 'kcal' ? '' : 'g');
 
-/* per-100 snapshot for a product (net carbs computed once) */
+/* per-100 snapshot for a product ('net' kept for compatibility = total carbs) */
 function per100(p) { const s = S.score(p); const n = p.n || {}; return { carbs: n.carbs, net: s.net, sugars: n.sugars, added: n.added, fiber: n.fiber, protein: n.protein, fat: n.fat, kcal: n.kcal, sat: n.sat, sodiumMg: n.sodiumMg }; }
 const scale = (n100, g) => Object.fromEntries(Object.entries(n100).map(([k, v]) => [k, v == null ? null : v * g / 100]));
 function portionOptions(p) {
@@ -86,7 +86,7 @@ function addEntry(p, grams, label, meal, ts) {
 function remember(p) { const m = store.get('foods', {}); m[p.id] = p; const ks = Object.keys(m); if (ks.length > 400) delete m[ks[0]]; store.set('foods', m); }
 const customFoods = () => store.get('custom', []);
 const savedMeals = () => store.get('meals', []);
-function totals(entries) { const t = Object.fromEntries(NK.map(k => [k, 0])); entries.forEach(e => { const s = scale(e.n, e.grams); NK.forEach(k => t[k] += s[k] || 0); }); return t; }
+function totals(entries) { const t = Object.fromEntries(NK.map(k => [k, 0])); entries.forEach(e => { const s = scale(e.n, e.grams); NK.forEach(k => t[k] += s[k] || 0); }); t.net = t.carbs; return t; }
 /* ---------- Today / Log view ---------- */
 function ringSVG(val, target, size = 150) {
   const R = size / 2 - 12, c = 2 * Math.PI * R, frac = target ? Math.min(1, val / target) : 0, over = target && val > target;
@@ -162,7 +162,7 @@ function viewSettings() {
     <label class="field"><span>Daily carb target (g) — optional</span><input name="target" type="number" inputmode="numeric" min="0" step="1" value="${st.target ?? ''}" placeholder="Off"></label>
     <h2 style="margin-top:14px">Insulin-to-carb ratio — optional</h2><p class="small">Off unless you set it. When set, product pages show <i>carbs ÷ your ratio</i> as an estimate only. Lumi never suggests corrections or doses.</p>
     <label class="field"><span>Grams of carbs per unit (the “X” in 1:X)</span><input name="icr" type="number" inputmode="decimal" min="0" step="0.1" value="${st.icr ?? ''}" placeholder="Off"></label>
-    <div class="seg wide" id="basis"><button type="button" data-b="total" class="${st.icrBasis !== 'net' ? 'on' : ''}">Use total carbs</button><button type="button" data-b="net" class="${st.icrBasis === 'net' ? 'on' : ''}">Use net carbs</button></div>
+    <p class="xs">Uses total carbs as labeled.</p>
     <div class="actions"><button class="btn pri">Save</button></div></form>
   ${prefsCard()}
   <div class="card"><h2>Primary rating</h2><p class="small">Which rating is shown first on cards and product pages. The other one stays as a small badge.</p><div class="seg wide" id="prim"><button type="button" data-p="carb" class="${st.primary !== 'health' ? 'on' : ''}">Carb score</button><button type="button" data-p="health" class="${st.primary === 'health' ? 'on' : ''}">Health rating</button></div></div>
@@ -178,7 +178,7 @@ function onboarding(force) {
   if (!force && settings().onboarded) return;
   let step = 0; const st = settings();
   const steps = [
-    () => `<div class="onb-ic">${MASCOT(120, 'big wave')}</div><h2>Welcome to Lumi</h2><p>Every food gets a <b>carb-first score out of 100</b>. Net carbs and sugar weigh the most, then fiber and protein (good), and saturated fat, sodium, ultra-processing and additives (bad).</p>
+    () => `<div class="onb-ic">${MASCOT(120, 'big wave')}</div><h2>Welcome to Lumi</h2><p>Every food gets a <b>carb-first score out of 100</b>. Carbs and sugar weigh the most, then fiber and protein (good), and saturated fat, sodium, ultra-processing and additives (bad).</p>
       <div class="bands"><span><i class="bg-ex"></i>75+ Excellent</span><span><i class="bg-gd"></i>50–74 Good</span><span><i class="bg-pr"></i>25–49 Poor</span><span><i class="bg-bd"></i>0–24 Bad</span></div><p class="small">Informational only — not medical advice.</p>`,
     () => `<h2>Daily carb target</h2><p>Optional. Shows a progress ring on your Today log.</p><label class="field"><span>Grams per day</span><input id="onbT" type="number" inputmode="numeric" min="0" value="${st.target ?? ''}" placeholder="Skip"></label>`,
     () => `<h2>Insulin-to-carb ratio</h2><p>Optional and off by default. If you enter your own ratio (e.g. 1:10), product pages show carbs ÷ ratio as an <b>estimate only — confirm on your pump</b>. No corrections, no dosing advice.</p><label class="field"><span>Grams per unit</span><input id="onbI" type="number" inputmode="decimal" min="0" step="0.1" value="${st.icr ?? ''}" placeholder="Skip"></label>`,

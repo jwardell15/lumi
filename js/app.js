@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '16.0';
+const VERSION = '16.1';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -19,6 +19,10 @@ const store = {
 (() => { try { const s = store.get('settings', null); if (s && Object.keys(s).some(k => /^dx/.test(k))) { Object.keys(s).filter(k => /^dx/.test(k)).forEach(k => delete s[k]); store.set('settings', s); }
   const c = store.get('cgm', null); if (c && /^api/.test(c.src || '')) store.set('cgm', null);
   const q = new URLSearchParams(location.search); if (q.has('sid') || q.has('error')) history.replaceState(null, '', location.pathname + (location.hash || '')); } catch {} })();
+/* v16.1 migration: Lumi no longer uses carbs. Stored items keep a 'net' field for compatibility, now always equal to total carbs; carb-basis settings reset to total. */
+(() => { try { if (store.get('mig161', 0)) return; const fix = o => { if (Array.isArray(o)) o.forEach(fix); else if (o && typeof o === 'object') { if ('net' in o && 'carbs' in o) o.net = o.carbs; Object.values(o).forEach(fix); } };
+  ['log', 'meals', 'custom', 'recipes', 'plate', 'plan13', 'saved', 'foods', 'recent', 'lists', 'groc13', 'ideas13', 'compare', 'fav15', 'scans', 'watch'].forEach(k => { const v = store.get(k, null); if (v != null) { fix(v); store.set(k, v); } });
+  const s = store.get('settings', null); if (s) { s.icrBasis = 'total'; s.mealBasis = 'carbs'; store.set('settings', s); } store.set('mig161', 1); } catch {} })();
 const saved = () => store.get('saved', []);
 const isSaved = id => saved().some(s => s.p.id === id);
 function toggleSave(p) { let s = saved(); if (isSaved(p.id)) s = s.filter(x => x.p.id !== p.id); else s.unshift({ p, t: Date.now() }); store.set('saved', s.slice(0, 300)); return isSaved(p.id); }
@@ -139,7 +143,7 @@ function thumb(img, name, keys, cat, big, brand) {
   return `<div class="thumb${big ? ' big' : ''}">${bg}${src ? `<img src="${esc(src)}" alt="" ${big ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async" onload="LumiImg.ok(this)" onerror="LumiImg.err(this)">` : ''}</div>`;
 }
 const SRC = { local: '', off: '<span class="tag">OFF</span>', usda: '<span class="tag">USDA</span>', whole: '<span class="tag t-whole">Whole food</span>', rest: '<span class="tag t-rest">Restaurant</span>', chain: '<span class="tag t-rest">Restaurant</span>', custom: '<span class="tag">My food</span>' };
-function rowHTML(it) { return `<a class="row" href="#/product/${esc(it.id)}">${thumb(it.img, it.name, it.keys, it.cat, false, it.brand)}<div class="t"><div class="n">${alertIcon(it)}${esc(it.name)}${it.src === 'world' ? '<span class="wbadge" title="International product (Open Food Facts)">🌍 Intl</span>' : ''}</div><div class="b">${/^usda\b/i.test(it.brand || '') && it.src === 'usda' ? '' : SRC[it.src] || ''}${it.src === 'whole' ? esc(/^usda/i.test(it.brand || '') ? 'USDA' : /^cnf|canad/i.test(it.brand || '') ? 'CNF' : String(it.brand || '').split(' ')[0]) : esc(LumiSearch.fixBrand ? LumiSearch.fixBrand(it.brand, it.name) : it.brand || '')}${it.sizes > 1 ? ` · ${it.sizes} sizes` : ''}${it.wa ? ` · <span class="wa8" title="Watchlist: ${esc(it.wa)}">⚠ ${esc(it.wa)}</span>` : ''}${it.zc && !it.bad ? ' · <span class="c-pr badchip" title="The label lists sugar but 0 g net carbs, which cannot both be right">⚠ 0 g net carbs listed with sugar, check label</span>' : it.bad ? ' · <span class="c-bd badchip" title="Calories don\'t add up from carbs, protein and fat (4/4/9), so this label data is probably wrong">⚠ data looks wrong</span>' : it.score == null ? ' · <span class="c-pr">data incomplete</span>' : it.net != null ? ` · ${r1(it.net)}g net carbs/100` : ''}</div></div>${mini(it)}</a>`; }
+function rowHTML(it) { return `<a class="row" href="#/product/${esc(it.id)}">${thumb(it.img, it.name, it.keys, it.cat, false, it.brand)}<div class="t"><div class="n">${alertIcon(it)}${esc(it.name)}${it.src === 'world' ? '<span class="wbadge" title="International product (Open Food Facts)">🌍 Intl</span>' : ''}</div><div class="b">${/^usda\b/i.test(it.brand || '') && it.src === 'usda' ? '' : SRC[it.src] || ''}${it.src === 'whole' ? esc(/^usda/i.test(it.brand || '') ? 'USDA' : /^cnf|canad/i.test(it.brand || '') ? 'CNF' : String(it.brand || '').split(' ')[0]) : esc(LumiSearch.fixBrand ? LumiSearch.fixBrand(it.brand, it.name) : it.brand || '')}${it.sizes > 1 ? ` · ${it.sizes} sizes` : ''}${it.wa ? ` · <span class="wa8" title="Watchlist: ${esc(it.wa)}">⚠ ${esc(it.wa)}</span>` : ''}${it.zc && !it.bad ? ' · <span class="c-pr badchip" title="The label lists sugar but 0 g carbs, which cannot both be right">⚠ 0 g carbs listed with sugar, check label</span>' : it.bad ? ' · <span class="c-bd badchip" title="Calories don\'t add up from carbs, protein and fat (4/4/9), so this label data is probably wrong">⚠ data looks wrong</span>' : it.score == null ? ' · <span class="c-pr">data incomplete</span>' : it.net != null ? ` · ${r1(it.net)}g carbs/100` : ''}</div></div>${mini(it)}</a>`; }
 const skel = n => `<div class="list">${Array.from({ length: n }, () => `<div class="row skel"><div class="thumb sk"></div><div class="t"><div class="sk skl" style="width:80%"></div><div class="sk skl" style="width:45%"></div></div><div class="sk" style="width:44px;height:44px;border-radius:50%"></div></div>`).join('')}</div>`;
 function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 2200); }
 const go = h => { if (location.hash !== h) location.hash = h; else route(); };
@@ -181,7 +185,7 @@ function todayCard() {
   const pct = st.target ? Math.min(1, t.carbs / st.target) : null, R = 26, c = 2 * Math.PI * R;
   return `<a class="today-mini" href="#/log">
     <svg viewBox="0 0 64 64" width="64" height="64" class="tm-ring"><circle cx="32" cy="32" r="${R}" class="trk"/>${pct != null ? `<circle cx="32" cy="32" r="${R}" class="val ${t.carbs > st.target ? 'over' : ''}" stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - pct)}" transform="rotate(-90 32 32)"/>` : ''}<text x="32" y="37" text-anchor="middle">${Math.round(t.carbs)}</text></svg>
-    <div><b>${es.length ? `${Math.round(t.carbs)} g carbs today` : 'Nothing logged today'}</b><span>${es.length ? `${es.length} item${es.length > 1 ? 's' : ''} · ${Math.round(t.net)} g net · ${Math.round(t.kcal)} Cal${st.target ? ` · ${Math.max(0, Math.round(st.target - t.carbs))} g left` : ''}` : 'Tap to open your log'}</span></div><span class="chev">›</span></a>`;
+    <div><b>${es.length ? `${Math.round(t.carbs)} g carbs today` : 'Nothing logged today'}</b><span>${es.length ? `${es.length} item${es.length > 1 ? 's' : ''} · ${Math.round(t.kcal)} Cal${st.target ? ` · ${Math.max(0, Math.round(st.target - t.carbs))} g left` : ''}` : 'Tap to open your log'}</span></div><span class="chev">›</span></a>`;
 }
 function viewHomeOld() {
   const rec = store.get('recent', []), viewed = histItems('viewed').slice(0, 4), pl = plate(), nc = cmpIds().length;
@@ -219,7 +223,7 @@ function viewHomeOld() {
     let p = []; try { p = topPicks(); } catch (e) { console.warn('picks', e); }
     const items = p.length >= 4 ? p.filter(d => !prefs().hide || !conflicts(d)).map(itemFromDoc) : FALLBACK_PICKS.map(x => ({ id: x[0], code: x[0], name: x[1], brand: x[2], score: x[3], net: x[4], img: '', src: x[5] || 'local', keys: [], cat: '' }));
     el.innerHTML = `<div class="list">${items.map(rowHTML).join('')}</div>`;
-    const rb = $('#restBest'); if (rb) { let r = []; try { r = bestAtRestaurants(); } catch {} rb.innerHTML = r.length ? `<div class="swaps">${r.map(d => `<a class="swap" href="#/product/${esc(d.code)}">${thumb(d.img, d.name, d.keys, d.cat, false, d.brand)}<div class="b chain">${esc(d.brand)}</div><div class="n">${esc(d.name)}</div><div class="s"><span>${d.net}g net</span><span class="pills">${pills(d)}</span></div></a>`).join('')}</div>` : `<div class="empty sm">${MASCOT(48)}<span>Restaurant data is loading or unavailable offline.</span></div>`; }
+    const rb = $('#restBest'); if (rb) { let r = []; try { r = bestAtRestaurants(); } catch {} rb.innerHTML = r.length ? `<div class="swaps">${r.map(d => `<a class="swap" href="#/product/${esc(d.code)}">${thumb(d.img, d.name, d.keys, d.cat, false, d.brand)}<div class="b chain">${esc(d.brand)}</div><div class="n">${esc(d.name)}</div><div class="s"><span>${d.net}g carbs</span><span class="pills">${pills(d)}</span></div></a>`).join('')}</div>` : `<div class="empty sm">${MASCOT(48)}<span>Restaurant data is loading or unavailable offline.</span></div>`; }
   };
   const fb = setTimeout(drawPicks, 6000); // never leave the section empty
   loadIndex().then(() => { clearTimeout(fb); drawPicks(); return loadIndexFull(); }).then(drawPicks).catch(() => { clearTimeout(fb); drawPicks(); });
@@ -421,7 +425,7 @@ function lvl(v, t) { return v <= t[0] ? 0 : v <= t[1] ? 1 : v <= t[2] ? 2 : 3; }
 function factRows(p, s) {
   const n = p.n, liq = p.liquid, out = [], u = liq ? 'ml' : 'g';
   const push = (key, ic, title, l, desc, val) => out.push({ key, ic, title, l, desc: desc[l], val });
-  if (s.net != null) push('net', 'carbs', 'Net carbs', lvl(s.net, liq ? [2, 5, 8] : [5, 15, 30]), ['Low net carbs', 'Moderate net carbs', 'High net carbs', 'Very high net carbs'], `${r1(s.net)}g${s.perServ ? ` <small>· ${r1(s.perServ.net)}g/serv</small>` : ''}`);
+  if (s.net != null) push('net', 'carbs', 'Carbs', lvl(s.net, liq ? [2, 5, 8] : [5, 15, 30]), ['Low carbs', 'Moderate carbs', 'High carbs', 'Very high carbs'], `${r1(s.net)}g${s.perServ ? ` <small>· ${r1(s.perServ.net)}g/serv</small>` : ''}`);
   if (n.sugars != null) push('sugar', 'sugar', 'Sugar', lvl(n.sugars, liq ? [1, 2.5, 6] : [1, 5, 12.5]), ['No sugar', 'Low sugar', 'Too much sugar', 'Way too much sugar'], `${r1(n.sugars)}g`);
   const gi = s.items.find(i => i.key === 'gi');
   if (gi) out.push({ key: 'gi', ic: 'fast', title: 'Fast-acting carbs', l: gi.pts <= -10 ? 3 : 2, desc: 'Syrups or refined starch', val: '' });
@@ -496,7 +500,7 @@ async function viewProduct(id) {
   ${n.carbs != null && !s.bad ? portionCard(p) : ''}
   <div id="swapsCard"></div>
   ${n.carbs != null ? `<div class="card"><h2>Nutrition</h2><table><tr><th></th><th>per 100${unit}</th>${ps ? `<th>per serving<br>${esc(p.serv || p.servQ + unit)}</th>` : ''}</tr>
-    ${row('Total carbohydrate', n.carbs, 'g', 1)}${row('Net carbs', s.net, 'g', 1)}${row(n.added === 0 && n.sugars > 0 ? 'Total sugars (all natural)' : 'Total sugars', n.sugars)}${n.added != null ? row('Added sugars', n.added) : `<tr><td>Added sugars</td><td colspan="2" class="small">not declared${p.ing && /\b(sugar|syrup|honey|dextrose|cane)\b/i.test(p.ing) ? ' (ingredients list a sugar)' : ''}</td></tr>`}${row('Fiber', n.fiber)}${n.polyols ? row('Polyols', n.polyols) : ''}${row('Protein', n.protein)}${row('Fat', n.fat)}${row('Saturated fat', n.sat)}${n.trans != null ? row('Trans fat', n.trans) : ''}${row('Sodium', n.sodiumMg, 'mg')}${row('Energy (kcal)', n.kcal, 'kcal')}</table>
+    ${row('Total carbohydrate', n.carbs, 'g', 1)}${row(n.added === 0 && n.sugars > 0 ? 'Total sugars (all natural)' : 'Total sugars', n.sugars)}${n.added != null ? row('Added sugars', n.added) : `<tr><td>Added sugars</td><td colspan="2" class="small">not declared${p.ing && /\b(sugar|syrup|honey|dextrose|cane)\b/i.test(p.ing) ? ' (ingredients list a sugar)' : ''}</td></tr>`}${row('Fiber', n.fiber)}${n.polyols ? row('Polyols', n.polyols) : ''}${row('Protein', n.protein)}${row('Fat', n.fat)}${row('Saturated fat', n.sat)}${n.trans != null ? row('Trans fat', n.trans) : ''}${row('Sodium', n.sodiumMg, 'mg')}${row('Energy (kcal)', n.kcal, 'kcal')}</table>
     <div class="small" style="margin-top:8px">${esc(s.netNote)}.${p.nova ? ' NOVA ' + p.nova + '.' : ''}</div></div>` : ''}
   ${s.missing ? '' : `<details class="card"><summary><h2 style="display:inline">How the ${s.score} is calculated</h2></summary><ul class="bd" style="margin-top:8px"><li><span class="l"><b>Starting score</b></span><span class="v">100</span></li>
     ${s.items.map(i => `<li><span class="l">${esc(i.label)}${i.detail ? `<small>${esc(i.detail)}</small>` : ''}</span><span class="bar-s"><i class="${i.pts < 0 ? 'bg-bd' : 'bg-ex'}" style="width:${Math.round(Math.abs(i.pts) / maxAbs * 100)}%"></i></span><span class="v ${i.pts < 0 ? 'neg' : 'pos'}">${i.pts > 0 ? '+' : ''}${i.pts}</span></li>`).join('')}
@@ -533,9 +537,9 @@ function swapsFor(doc, cur, limit = 6) {
     if (gain < 5 || red < -2 || (cur.net >= 10 && d.net < cur.net * 0.35)) continue;
     out.push({ d, gain, red, sug: cur.sugar != null && d.sugar != null ? cur.sugar - d.sugar : 0, rank: gain + 0.6 * red - Math.min(d.rank, engine.docs.length) / engine.docs.length * 5 });
   }
-  out.sort((a, b) => Math.abs(a.d.score - b.d.score) <= 5 ? (a.d.net - b.d.net) || b.rank - a.rank : b.rank - a.rank); // within ~5 points, lower net carbs wins
+  out.sort((a, b) => Math.abs(a.d.score - b.d.score) <= 5 ? (a.d.net - b.d.net) || b.rank - a.rank : b.rank - a.rank); // within ~5 points, fewer carbs wins
   return LumiSearch.dedupe(out, x => x.d, limit)
-    .map(x => Object.assign({}, x.d, { reason: [x.red >= 1 ? `−${Math.round(x.red)}g net carbs` : '', x.sug >= 3 ? 'less sugar' : '', `+${x.gain} pts`].filter(Boolean).join(', ') }));
+    .map(x => Object.assign({}, x.d, { reason: [x.red >= 1 ? `−${Math.round(x.red)}g carbs` : '', x.sug >= 3 ? 'less sugar' : '', `+${x.gain} pts`].filter(Boolean).join(', ') }));
 }
 async function renderSwaps(p, s) {
   try { await loadIndex(); } catch { return; }
@@ -551,7 +555,7 @@ async function renderSwaps(p, s) {
 }
 async function share(p, s) {
   const url = location.origin + location.pathname + '#/product/' + encodeURIComponent(p.id);
-  const text = `${p.name}${p.brand ? ' (' + p.brand + ')' : ''} scores ${s.score ?? '?'}/100 on Lumi — ${r1(s.perServ ? s.perServ.net : s.net)}g net carbs ${s.perServ ? 'per serving' : 'per 100g'}.`;
+  const text = `${p.name}${p.brand ? ' (' + p.brand + ')' : ''} scores ${s.score ?? '?'}/100 on Lumi — ${r1(s.perServ ? s.perServ.net : s.net)}g carbs ${s.perServ ? 'per serving' : 'per 100g'}.`;
   if (navigator.share) { try { await navigator.share({ title: 'Lumi: ' + p.name, text, url }); return; } catch (e) { if (e.name === 'AbortError') return; } }
   try { await navigator.clipboard.writeText(url); toast('Link copied'); } catch { prompt('Copy this link:', url); }
 }
@@ -569,26 +573,23 @@ function viewSaved() {
 function viewAbout() {
   document.title = 'About — Lumi';
   app.innerHTML = `<div class="about-hero">${MASCOT(120, 'big')}<div><h1>About Lumi</h1><p class="small">Lumi is named after, and drawn from, Joe's white husky.</p></div></div><p class="lead">A carb-first food score, tuned for insulin dosing decisions. v${VERSION}</p>
-  <div class="card" id="howRated"><h2>How this is rated</h2><p>Every item gets <b>two ratings</b>. Choose which one is primary in Settings.</p><ul class="bul"><li><b>Carb score (0–100)</b>: Lumi's diabetes score. It looks at net carbs, sugar, fast-acting carbs, fiber and protein (formula below).</li><li><b>Health rating (0–100)</b>: a general rating modelled on Yuka's published method. About <b>60% nutrition</b> (the Nutri-Score 2023 algorithm, using energy, sugars, saturated fat, salt, fiber, protein and fruit/vegetable/legume share; beverages, fats/nuts and cheese use their own variants). About <b>30% additives</b> (curated risk tiers; any high-risk additive caps the rating at 49). About <b>10% organic</b>. When ingredients aren't known, as with most restaurant items and whole foods, the rating uses nutrition only and is marked that way.</li><li>Bands: <span class="c-ex">Excellent 75–100</span> · <span class="c-gd">Good 50–74</span> · <span class="c-pr">Poor 25–49</span> · <span class="c-bd">Bad 0–24</span>. Missing values are estimated and flagged. You see <b>?</b> only when the numbers can't be used.</li></ul><p class="small">Lumi isn't affiliated with Yuka. Informational only, not medical advice.</p></div>
+  <div class="card" id="howRated"><h2>How this is rated</h2><p>Every item gets <b>two ratings</b>. Choose which one is primary in Settings.</p><ul class="bul"><li><b>Carb score (0–100)</b>: Lumi's diabetes score. Sugar is the main driver (added sugar counts more than natural sugar), then total carbs and fast-acting carbs. Fiber is only a small bonus and is never subtracted from carbs (formula below).</li><li><b>Health rating (0–100)</b>: a general rating modelled on Yuka's published method. About <b>60% nutrition</b> (the Nutri-Score 2023 algorithm, using energy, sugars, saturated fat, salt, fiber, protein and fruit/vegetable/legume share; beverages, fats/nuts and cheese use their own variants). About <b>30% additives</b> (curated risk tiers; any high-risk additive caps the rating at 49). About <b>10% organic</b>. When ingredients aren't known, as with most restaurant items and whole foods, the rating uses nutrition only and is marked that way.</li><li>Bands: <span class="c-ex">Excellent 75–100</span> · <span class="c-gd">Good 50–74</span> · <span class="c-pr">Poor 25–49</span> · <span class="c-bd">Bad 0–24</span>. Missing values are estimated and flagged. You see <b>?</b> only when the numbers can't be used.</li></ul><p class="small">Lumi isn't affiliated with Yuka. Informational only, not medical advice.</p></div>
   <div class="card"><h2>Formula</h2><pre>score = clamp(0, 100, 100 + Σ terms)
 
-GLYCEMIC CORE
- Net carbs /100g          −0.6 × g   (max −30)
- Net carbs /serving       −0.6 × g   (max −25; assumes 50 g or 240 ml if unknown)
-                          drinks: −0.9 × g (max −30)
- Total sugars /100g       −0.4 × g   (max −15)
- Added sugars /100g       −0.5 × g   (max −12)
-   undeclared but sugar/syrup listed: −0.4 × sugars (max −8)
- Liquid sugar (drinks >2.5 g/100ml)  −3 × g  (max −30)
-   ≥15 g sugar per drink serving      −10
- Mostly sugar (>50% of net carbs, solids)   −5
- Glycemic proxies: each syrup/maltodextrin/dextrose −6 (max −12),
-   sugar/syrup first ingredient −5, refined starch −4 each (max −8);
-   combined max −18
-BUFFERS
- Fiber /100g              +1 × g     (max +10)
- Fiber ≥ 20% of carbs     +3
- Protein /100g            +0.3 × g   (max +6)
+SUGAR (primary driver)
+ Added sugars /100g       −1.0 × g   (max −36)
+ Natural sugars /100g     −0.55 × g  (max −22; e.g. fruit, lactose)
+   added vs natural unknown: total sugars −0.7 × g (max −26),
+   or −0.9 × g (max −34) if the ingredients list a sugar/syrup
+ Sugar /serving           −0.6 × g   (max −14)
+ Liquid sugar (drinks)    extra penalty for sugary drinks
+TOTAL CARBS (secondary)
+ Total carbs /100g        −0.4 × g   (max −22)
+ Total carbs /serving     −0.4 × g   (max −16; assumes 50 g or 240 ml if unknown)
+ Fast carbs (syrups, maltodextrin, refined starch)  max −14
+SMALL BONUSES
+ Fiber /100g              +0.4 × g   (max +4; never subtracted from carbs)
+ Protein                  small bonus (max +5, limited by the carb penalty)
 SECONDARY
  Saturated fat /100g      −0.8 × g   (max −8)
  Trans fat                −8 × g (max −8) or −6 if partially hydrogenated oil
@@ -597,7 +598,7 @@ SECONDARY
  Additives of concern     −2 each (max −8)
 
 Bands: 75+ Excellent · 50–74 Good · 25–49 Poor · &lt;25 Bad</pre>
-  <h2 style="margin-top:14px">Net carbs</h2><p class="small">US labels (and all USDA data) include fiber in total carbohydrate, so net = carbs − fiber. EU-style labels already exclude fiber. Declared polyols are subtracted (only half for maltitol).</p>
+  <h2 style="margin-top:14px">Carbs</h2><p class="small">Lumi always uses <b>total carbohydrate</b> as labeled. It does not use “carbs”: fiber and sugar alcohols are not subtracted. Fiber only earns a small bonus in the score.</p>
   <h2>Data sources</h2><p class="small"><a class="lnk" href="#/credits">All sources, licenses and image credits ›</a></p><p class="small">1) Lumi's bundled index: 633k US products (255k from Open Food Facts plus 378k from USDA Branded Foods, April 2026 release; lazy-loaded in tiers) from the Open Food Facts bulk export, pre-scored and searchable offline-fast with typo tolerance. 2) USDA FoodData Central (Branded + generic foods) via the public demo key. 3) Live Open Food Facts search across country mirrors. Results are merged and de-duplicated by barcode. 4) Whole foods: USDA Foundation, SR Legacy and FNDDS. 5) Restaurants: official nutrition published by Chick-fil-A, Subway, Arby's, Dunkin', Five Guys, Culver's, Shake Shack, Sonic, Jack in the Box, Qdoba, Whataburger, Jimmy John's, Little Caesars, Carl's Jr., Tropical Smoothie Cafe, Buffalo Wild Wings, The Cheesecake Factory, Waffle House, Portillo's, Dutch Bros, Taco John's, Cheddar's Scratch Kitchen, Pollo Tropical and Cinnabon (fetched once, cached, robots.txt respected; preferred over USDA), plus USDA SR Legacy restaurant items for other chains. 6) USDA Branded Foods: about 378k extra US barcoded products (photos where Open Food Facts has one). Chains that block automated access were skipped. A free FatSecret or Nutritionix key could add many more chains and branded restaurant items, but Lumi does not use one. Product links: <code>#/product/&lt;barcode&gt;</code> or <code>#/product/fdc-&lt;USDA id&gt;</code>.</p>
   <h2>Limits</h2><p class="small">Crowd-sourced and label data can be wrong or stale. There is no measured GI/GL; ingredients are used as proxies. Fat/protein-heavy meals (delayed rises) are only reflected via saturated fat. USDA's demo key is rate-limited per device.</p>
   <div class="note"><b>Informational only — not medical advice.</b> Always dose from the physical label and your own CGM data.</div></div>

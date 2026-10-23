@@ -37,7 +37,7 @@ function mealSplit12(stats) {
 function kpis12(stats, st) {
   const logged = stats.filter(s => s.n), nd = logged.length, avg = k => nd ? logged.reduce((a, s) => a + s.t[k], 0) / nd : null;
   const inT = st.target ? logged.filter(s => s.t.carbs <= st.target).length : null;
-  const k = [['Avg carbs / day', avg('carbs') == null ? '—' : g0(avg('carbs')) + ' g', 'carbs'], ['Avg net carbs', avg('net') == null ? '—' : g0(avg('net')) + ' g'], ['Days logged', `${nd}<small> of ${stats.length}</small>`]];
+  const k = [['Avg carbs / day', avg('carbs') == null ? '—' : g0(avg('carbs')) + ' g', 'carbs'], ['Days logged', `${nd}<small> of ${stats.length}</small>`]];
   k.push(st.target ? ['At or under target', nd ? `${inT}<small> of ${nd} days</small>` : '—'] : ['Avg calories', avg('kcal') == null ? '—' : g0(avg('kcal'))]);
   return `<div class="kp12">${k.map(([l, v, c]) => `<div class="${c ? 'key' : ''}"><small>${l}</small><b>${v}</b></div>`).join('')}</div>`;
 }
@@ -52,7 +52,7 @@ function viewWeek12(off) {
   ${kpis12(stats, st)}
   <div class="card cc12"><div class="fx-h"><h2>Carbs per day</h2><span class="small">grams, by meal</span></div>${bars12(stats, st.target)}${st.target ? '' : '<p class="small"><a class="lnk" href="#/settings">Set a daily carb target</a> to see it on the chart.</p>'}</div>
   <div class="g12"><div class="card"><h2>Average by meal</h2>${logged.length ? mealSplit12(stats) : '<p class="small">Log a few meals to see how carbs split across your day.</p>'}</div>
-  <div class="card"><h2>Days</h2><ul class="grp11 flat dl12">${stats.slice().reverse().map(s => `<li><a class="hr11" href="#/log/${s.k}"><span class="ht11"><b>${s.d.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</b><small>${s.n ? `${s.n} item${s.n > 1 ? 's' : ''} · ${g0(s.t.net)} g net · ${g0(s.t.kcal)} Cal` : 'Nothing logged'}</small></span><span class="dv12${st.target && s.t.carbs > st.target ? ' over' : ''}">${s.n ? g0(s.t.carbs) + ' g' : '–'}</span>${ic12('chev', 16)}</a></li>`).join('')}</ul></div></div>
+  <div class="card"><h2>Days</h2><ul class="grp11 flat dl12">${stats.slice().reverse().map(s => `<li><a class="hr11" href="#/log/${s.k}"><span class="ht11"><b>${s.d.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</b><small>${s.n ? `${s.n} item${s.n > 1 ? 's' : ''} · ${g0(s.t.carbs)} g carbs · ${g0(s.t.kcal)} Cal` : 'Nothing logged'}</small></span><span class="dv12${st.target && s.t.carbs > st.target ? ' over' : ''}">${s.n ? g0(s.t.carbs) + ' g' : '–'}</span>${ic12('chev', 16)}</a></li>`).join('')}</ul></div></div>
   <div class="actions"><a class="btn pri" href="#/report">Report for my care team</a><button class="btn" id="expCsv">Export CSV</button></div></section>`;
   $('#expCsv').onclick = exportCSV;
 }
@@ -121,8 +121,8 @@ function viewRecipe12(id) {
   const isNew = id === 'new'; document.title = (r.name || 'New recipe') + ' — Lumi'; const st = settings();
   const draft = () => { if (isNew) store.set('recDraft', r); };
   const render = () => { const x = recTotals12(r), ps = k => x.t[k] / x.sv, sg = x.g / x.sv; const anyMiss = RK.some(k => x.miss[k]);
-    $('#rtot').innerHTML = r.items.length ? `<div class="rt12"><div class="key"><small>Net carbs / serving</small><b>${g0(ps('net'))} g</b></div><div><small>Carbs / serving</small><b>${g0(ps('carbs'))} g</b></div><div><small>Fiber</small><b>${r1(ps('fiber'))} g</b></div><div><small>Protein</small><b>${r1(ps('protein'))} g</b></div><div><small>Fat</small><b>${r1(ps('fat'))} g</b></div><div><small>Calories</small><b>${g0(ps('kcal'))}</b></div></div>
-      <p class="small">Whole recipe: ${g0(x.g)} g · ${g0(x.t.carbs)} g carbs · ${g0(x.t.net)} g net · ${g0(x.t.fiber)} g fiber · ${g0(x.t.protein)} g protein · ${g0(x.t.fat)} g fat · ${g0(x.t.kcal)} Cal. One serving ≈ ${g0(sg)} g.</p>
+    $('#rtot').innerHTML = r.items.length ? `<div class="rt12"><div class="key"><small>Carbs / serving</small><b>${g0(ps('carbs'))} g</b></div><div><small>Fiber</small><b>${r1(ps('fiber'))} g</b></div><div><small>Protein</small><b>${r1(ps('protein'))} g</b></div><div><small>Fat</small><b>${r1(ps('fat'))} g</b></div><div><small>Calories</small><b>${g0(ps('kcal'))}</b></div></div>
+      <p class="small">Whole recipe: ${g0(x.g)} g · ${g0(x.t.carbs)} g carbs · ${g0(x.t.fiber)} g fiber · ${g0(x.t.protein)} g protein · ${g0(x.t.fat)} g fat · ${g0(x.t.kcal)} Cal. One serving ≈ ${g0(sg)} g.</p>
       ${anyMiss ? `<p class="note sp-pr">Some ingredients have no data for ${RK.filter(k => x.miss[k]).map(k => NL[k] ? NL[k].toLowerCase() : k).join(', ')}; those totals only count ingredients with data.</p>` : ''}
       ${st.icr > 0 ? `<div class="icr"><b>${r1(st.icrBasis === 'net' ? ps('net') : ps('carbs'))} g ${st.icrBasis === 'net' ? 'net' : 'total'} carbs per serving ÷ your 1:${r1(st.icr)} ratio = ${r1((st.icrBasis === 'net' ? ps('net') : ps('carbs')) / st.icr)} units</b><small>Estimate only, confirm on your pump.</small></div>` : ''}` : '<p class="small">Add ingredients to see totals.</p>';
     $('#ring').innerHTML = r.items.length ? r.items.map((it, i) => `<li class="ri12"><span class="ht11"><b>${esc(it.name)}</b><small>${esc(it.brand || '')}${it.n && it.n.carbs != null ? `${it.brand ? ' · ' : ''}${r1(it.n.carbs * it.grams / 100)} g carbs` : ' · no carb data'}</small></span>
@@ -156,7 +156,7 @@ function logRecipe12(r) {
   const x = recTotals12(r); if (!x.g) return toast('Ingredients need gram amounts');
   const n = Object.fromEntries(RK.map(k => [k, x.miss[k] === r.items.length ? null : x.t[k] / x.g * 100])); const sg = x.g / x.sv;
   const now = new Date(); let meal = mealFor(now), q = 1;
-  sheet(`<h2>Log ${esc(r.name)}</h2><p class="small">1 serving ≈ ${g0(sg)} g · <b>${g0(x.t.carbs / x.sv)} g carbs</b> (${g0(x.t.net / x.sv)} g net)</p>
+  sheet(`<h2>Log ${esc(r.name)}</h2><p class="small">1 serving ≈ ${g0(sg)} g · <b>${g0(x.t.carbs / x.sv)} g carbs</b></p>
     <label class="field"><span>Servings eaten</span><input type="number" id="rsq" min="0.25" step="0.25" value="1" inputmode="decimal"></label>
     <div class="seg wide" id="mealSeg" role="group" aria-label="Meal">${MEALS.map(m => `<button type="button" data-m="${m}" aria-pressed="${m === meal}" class="${m === meal ? 'on' : ''}">${MEAL_L[m]}</button>`).join('')}</div>
     <label class="field"><span>Time</span><input type="datetime-local" id="logTime" value="${localDT(now)}"></label>

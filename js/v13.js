@@ -10,8 +10,8 @@ const M13 = () => m13p || (m13p = getData('data/meals13.json').then(d => { d.byI
 const DEF13 = { breakfast: 45, lunch: 60, dinner: 60, snack: 20 };
 function tgt13() { const t = mealT9(), own = MEALS.some(m => t[m]); return { own, t: Object.fromEntries(MEALS.map(m => [m, own ? t[m] || null : DEF13[m]])) }; }
 const B13 = () => mealBasis9();
-const val13 = s => B13() === 'net' ? s.net : s.c;
-const unit13 = () => B13() === 'net' ? 'g net carbs' : 'g carbs';
+const val13 = s => s.c;
+const unit13 = () => 'g carbs';
 function sum13(parts) { const s = { c: 0, net: 0, f: 0, p: 0, fat: 0, kcal: 0 }; parts.forEach(([it, m]) => Object.keys(s).forEach(k => s[k] += (it[k] || 0) * m)); return s; }
 function rng13(seed) { let s = (seed >>> 0) || 1; return () => (s = (Math.imul(s, 1664525) + 1013904223) >>> 0) / 4294967296; }
 const C13 = {};
@@ -38,7 +38,7 @@ function log13(parts, meal, what) { const ts = Date.now(), L = LOG.all(), ids = 
   parts.forEach(([it, m], i) => { const e = ent13(it, m), id = 'e' + (ts + i).toString(36) + Math.random().toString(36).slice(2, 5); ids.push(id); L.push({ id, ts, meal, pid: e.id, name: e.name, brand: e.brand, grams: e.grams, label: e.label, n: e.n, score: null }); });
   LOG.save(L); haptic(15); snack9(`Logged ${what || 'meal'} to ${MEAL_L[meal]} · ${g0(val13(sum13(parts)))} ${unit13()}`, () => { LOG.save(LOG.all().filter(e => !ids.includes(e.id))); toast('Removed'); }); }
 function toPlate13(entries) { const l = plate(), t = Date.now(); entries.forEach((e, i) => l.push({ k: (t + i).toString(36) + i, id: e.id, name: e.name, brand: e.brand || '', grams: e.grams, label: e.label, n: e.n, perItem: !!e.perItem, liquid: false })); store.set('plate', l); }
-const nut13 = s => `<p class="nt13"><span><b>${g0(s.net)}</b> g net carbs</span><span>${g0(s.c)} g carbs</span><span>${g0(s.f)} g fiber</span><span>${g0(s.p)} g protein</span><span>${g0(s.fat)} g fat</span><span>${g0(s.kcal)} kcal</span></p>`;
+const nut13 = s => `<p class="nt13"><span><b>${g0(s.c)}</b> g carbs</span><span>${g0(s.f)} g fiber</span><span>${g0(s.p)} g protein</span><span>${g0(s.fat)} g fat</span><span>${g0(s.kcal)} kcal</span></p>`;
 const who13 = it => it.chain ? '' : it.pk ? esc(it.br) : 'USDA';
 const parts13 = ps => `<ul class="pt13">${ps.map(([it, m]) => `<li><b>${esc(it.nm)}</b> <small>${m !== 1 ? r1(m) + ' × ' : ''}${esc(it.pl || '')}${who13(it) ? ' · ' + who13(it) : ''}</small></li>`).join('')}</ul>`;
 function card13(x, i, meal, T, head) { return `<li class="card id13">${head || ''}${parts13(x.parts)}${nut13(x.s)}${T ? bar9(val13(x.s), T, MEAL_L[meal]) : ''}<div class="actions"><button class="btn sm pri" data-lg13="${i}">Log to ${MEAL_L[meal]}</button><button class="btn sm" data-pl13="${i}">Open in builder</button></div></li>`; }
@@ -76,14 +76,14 @@ async function swapsFor13(items) { const d = await M13(); try { await loadIndex(
   return out; }
 /* items: log-entry-like rows; acts: [[label, fn(newItems)]] */
 async function swapSheet13(items, title, acts) {
-  sheet(`<h2>Lower-carb swaps</h2><p class="small">${esc(title)}: similar foods from the same category with fewer net carbs.</p><div id="sw13" aria-live="polite"><p class="small">Finding swaps…</p></div>`);
+  sheet(`<h2>Lower-carb swaps</h2><p class="small">${esc(title)}: similar foods from the same category with fewer carbs.</p><div id="sw13" aria-live="polite"><p class="small">Finding swaps…</p></div>`);
   let S; try { S = await swapsFor13(items); } catch { const el = $('#sw13'); if (el) el.innerHTML = '<p class="small">Swaps need the food index. Check your connection.</p><div class="actions"><button class="btn" data-close>Close</button></div>'; return; }
   const el = $('#sw13'); if (!el) return; const any = S.some(Boolean);
-  el.innerHTML = `<ul class="sw13">${items.map((e, i) => { const s = S[i]; return `<li>${s ? `<label><input type="checkbox" data-sw13="${i}" checked><span><s>${esc(e.name)}</s> → <b>${esc(s.name)}</b><small>${s.br ? s.br + ' · ' : ''}${esc(s.por)} · saves <b>${g0(s.save)} g net carbs</b></small></span></label>` : `<span class="small"><b>${esc(e.name)}</b> · keep (no lower-carb match in the same category)</span>`}</li>`; }).join('')}</ul>
+  el.innerHTML = `<ul class="sw13">${items.map((e, i) => { const s = S[i]; return `<li>${s ? `<label><input type="checkbox" data-sw13="${i}" checked><span><s>${esc(e.name)}</s> → <b>${esc(s.name)}</b><small>${s.br ? s.br + ' · ' : ''}${esc(s.por)} · saves <b>${g0(s.save)} g carbs</b></small></span></label>` : `<span class="small"><b>${esc(e.name)}</b> · keep (no lower-carb match in the same category)</span>`}</li>`; }).join('')}</ul>
   ${any ? `<p class="sv13" id="sv13"></p><div class="actions">${acts.map((a, i) => `<button class="btn${i ? '' : ' pri'}" data-act13="${i}">${esc(a[0])}</button>`).join('')}<button class="btn" data-close>Cancel</button></div>` : '<p class="small">No lower-carb swaps found for these foods.</p><div class="actions"><button class="btn" data-close>Close</button></div>'}`;
   el.querySelectorAll('[data-close]').forEach(x => x.onclick = closeSheet);
   const sel = () => [...el.querySelectorAll('[data-sw13]:checked')].map(x => +x.dataset.sw13);
-  const upd = () => { const t = sel().reduce((a, i) => a + S[i].save, 0), sv = $('#sv13'); if (sv) sv.innerHTML = `Saves about <b>${g0(t)} g net carbs</b> (${g0(totals(items).net)} → ${g0(totals(items).net - t)} g)`; };
+  const upd = () => { const t = sel().reduce((a, i) => a + S[i].save, 0), sv = $('#sv13'); if (sv) sv.innerHTML = `Saves about <b>${g0(t)} g carbs</b> (${g0(totals(items).carbs)} → ${g0(totals(items).carbs - t)} g)`; };
   el.querySelectorAll('[data-sw13]').forEach(x => x.onchange = upd); upd();
   el.querySelectorAll('[data-act13]').forEach(b => b.onclick = async () => { b.disabled = true; const on = new Set(sel()), res = [];
     try { for (let i = 0; i < items.length; i++) { const s = S[i], e = items[i]; if (!s || !on.has(i)) { res.push(e); continue; }
@@ -108,7 +108,7 @@ function meal13() { const l = plate(), h1 = app.querySelector('h1'); if (!h1 || 
     $('#shr13').onclick = () => share11('meal', { name: 'My plate', items: asMeal13(plate()) }); }
   let qt; $('#mq13').oninput = () => { clearTimeout(qt); qt = setTimeout(async () => { const q = $('#mq13').value.trim(), out = $('#mres13'); if (!out) return; if (q.length < 2) { out.innerHTML = ''; return; }
     try { await loadIndex(); } catch {} const seen = new Set(), res = []; for (const d of engine.search(q, { limit: 6, filter: d => d.src === 'whole' }).concat(engine.search(q, { limit: 12 }))) if (!seen.has(d.code) && res.length < 10) { seen.add(d.code); res.push(d); }
-    out.innerHTML = res.map(d => `<li><button class="hr11" data-ad13="${esc(d.code)}"><span class="ht11"><b>${esc(d.name)}</b><small>${esc(d.src === 'whole' ? 'USDA / staple' : d.brand || '')}${d.net != null ? ` · ${r1(d.net)} g net/100 g` : ''}</small></span><span class="small">Add</span></button></li>`).join('') || '<li class="small">No matches.</li>';
+    out.innerHTML = res.map(d => `<li><button class="hr11" data-ad13="${esc(d.code)}"><span class="ht11"><b>${esc(d.name)}</b><small>${esc(d.src === 'whole' ? 'USDA / staple' : d.brand || '')}${d.net != null ? ` · ${r1(d.net)} g carbs/100 g` : ''}</small></span><span class="small">Add</span></button></li>`).join('') || '<li class="small">No matches.</li>';
     out.querySelectorAll('[data-ad13]').forEach(b => b.onclick = async () => { b.disabled = true; try { const p = await resolveProduct(b.dataset.ad13); if (!p) throw 0; const por = p.portions && p.portions[0]; const g = (por && por[1]) || p.servQ || 100; addToPlate(p, Math.round(g * 10) / 10, por ? por[0] : g0(g) + ' g'); viewMeal(); } catch { b.disabled = false; toast("Couldn't load that food"); } }); }, 250); }; }
 
 /* ---------- 3. Restaurant meal picks ---------- */
