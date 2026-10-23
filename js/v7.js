@@ -9,6 +9,7 @@ function typeBarcode(msg) {
 }
 document.addEventListener('click', e => { if (e.target && e.target.id === 'scanType') { if (typeof stopScan === 'function') stopScan(); typeBarcode(''); } });
 const V7_NEWS = [
+  ['🛒', 'More Whole Foods items (17.2.1)', '38 more Whole Foods Market and 365 items from Whole Foods product pages: bakery bread, croissants, cookies, muffins, chips, crackers, cereal bars, trail mix, yogurt, deli salads, rotisserie chicken and more. Cheddar Chicks crackers now show the label from the Whole Foods page.'],
   ['🔍', 'Search inside a store (17.2)', 'After picking a store in Browse (and in aisle lists), a search box filters only that list. It forgives typos like “chese” or “greek yogrt”, keeps your sort, and stays pinned at the top on phones.'],
   ['🌍', 'About 1.47 million foods (17.1)', '460,000 more real packaged foods from Open Food Facts outside the US index (mainly France, the UK, Germany, Ireland and Spain), deduplicated by barcode against everything already in Lumi and scored with the new formula. They load only when you search international foods, so Home stays fast. Whole Foods Market items can now come straight from wholefoodsmarket.com product pages.'],
   ['🩹', 'My foods tile fix (17.0.1)', 'The My foods shortcut on Home now has its heart icon and lines up with the other tiles.'],
