@@ -3,7 +3,7 @@
  --e1:0 1px 0 rgba(40,36,30,.04),0 1px 3px rgba(40,36,30,.06);--e2:0 6px 24px rgba(40,36,30,.08);--bs14:#0b6bcb;--bs14s:#e8f1fb;--hl14:#17803f;--hl14s:#e7f5ec}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0b0b0d;--card:#17171a;--bg2:#17171a;--chip:#26262b;--line:rgba(255,255,255,.09);--bs14:#7cb8ff;--bs14s:#13233a;--hl14:#5fd08a;--hl14s:#112a1b}}
 :root[data-theme=dark]{--bg:#0b0b0d;--card:#17171a;--bg2:#17171a;--chip:#26262b;--line:rgba(255,255,255,.09);--bs14:#7cb8ff;--bs14s:#13233a;--hl14:#5fd08a;--hl14s:#112a1b}
-html,body{overflow-x:hidden}
+html,body{overflow-x:hidden}@supports (overflow:clip){html,body{overflow-x:clip}}
 html body #app{min-width:0}
 html body #app *{min-width:0}
 html body #app img,html body #app svg,html body #app video,html body #app canvas{max-width:100%}
