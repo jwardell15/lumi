@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="css/app.css"><link rel="stylesheet" href="css/v10.css"><link rel="stylesheet" href="css/v11.css"><link rel="stylesheet" href="css/v12.css">
 <link rel="stylesheet" href="css/v13.css"><link rel="stylesheet" href="css/v14.css"><link rel="stylesheet" href="css/v15.css"><link rel="stylesheet" href="css/v16.css">
 <script>try{const t=localStorage.getItem('lumi.theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<link rel="preconnect" href="https://lumi-data-cky.pages.dev" crossorigin>
 <link rel="preconnect" href="https://images.openfoodfacts.org" crossorigin>
 </head><body>
 <header class="bar">
@@ -35,6 +36,7 @@
 </nav>
 <div id="scanner" class="scanner" hidden><div class="scan-top"><span>Point at a barcode</span><button id="scanClose" class="icon light" aria-label="Close">✕</button></div><div id="reader"></div><div class="scan-hint">EAN-13 · UPC-A · EAN-8 · UPC-E · <button type="button" class="lnkbtn" id="scanType">Type the number instead</button></div></div>
 <div id="toast" class="toast" role="status"></div>
+<script src="js/dbase.js"></script>
 <script src="js/score.js"></script>
 <script src="js/cats.js"></script>
 <script src="js/search.js"></script>

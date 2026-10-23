@@ -9,6 +9,7 @@ function typeBarcode(msg) {
 }
 document.addEventListener('click', e => { if (e.target && e.target.id === 'scanType') { if (typeof stopScan === 'function') stopScan(); typeBarcode(''); } });
 const V7_NEWS = [
+  ['☁️', 'Faster, roomier food data (17.4)', 'Lumi\'s food database now loads from its own fast host, so there\'s room to keep adding foods past the old 1 GB website limit. Nothing changes in how you search, scan or log, and recent data still works offline.'],
   ['🍦', 'Way more Whole Foods + 4 chains (17.3)', '195 Whole Foods Market items now come straight from Whole Foods product pages, including yogurt, granola, pasta sauce, frozen pizza, crackers, chips, bakery and 365 staples, and they now show in the Whole Foods store view and in-store search. Added official nutrition for Cold Stone Creamery (every flavor and size), Wienerschnitzel, Chuy\'s and Pei Wei. Searching Cheddar Chicks now shows both the database label and the Whole Foods page version.'],
   ['🛒', 'More Whole Foods items (17.2.1)', '38 more Whole Foods Market and 365 items from Whole Foods product pages: bakery bread, croissants, cookies, muffins, chips, crackers, cereal bars, trail mix, yogurt, deli salads, rotisserie chicken and more. Cheddar Chicks crackers now show the label from the Whole Foods page.'],
   ['🔍', 'Search inside a store (17.2)', 'After picking a store in Browse (and in aisle lists), a search box filters only that list. It forgives typos like “chese” or “greek yogrt”, keeps your sort, and stays pinned at the top on phones.'],

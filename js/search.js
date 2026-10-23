@@ -116,7 +116,7 @@ const IMGBASE = 'https://images.openfoodfacts.org/images/products/';
 function imgURL(code, v) {
   if (!v) return '';
   if (v[0] === '~') { const parts = code.length > 8 ? code.padStart(13, '0').match(/^(...)(...)(...)(.*)$/).slice(1).join('/') : code; return IMGBASE + parts + '/' + v.slice(1) + '.200.jpg'; }
-  if (v.startsWith('w:')) return 'img/w/' + v.slice(2) + '-200.webp';
+  if (v.startsWith('w:')) return (typeof dataURL === 'function' ? dataURL : String)('img/w/' + v.slice(2) + '-200.webp');
   return v.startsWith('http') ? v : IMGBASE + v;
 }
 class Engine {

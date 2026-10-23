@@ -50,7 +50,7 @@ function viewCredits() {
       <li>${A('https://www.wikidata.org/', 'Wikidata')}: E-numbers, CAS numbers, descriptions and synonyms, ${A('https://creativecommons.org/publicdomain/zero/1.0/', 'CC0')}.</li>
       <li>${A('https://world.openbeautyfacts.org/', 'Open Beauty Facts')}: cosmetics, ODbL / CC BY-SA.</li>
       <li>Chain nutrition, ingredient and allergen pages, and Chick-fil-A menu photos: © each chain. Shown with a link to the official page.</li></ul></div>
-    <div class="card"><ul class="credits">${L.map(([s, m]) => `<li><img src="img/w/${esc(s)}-200.webp" alt="" loading="lazy" width="56" height="56"><div><b>${esc(m.foods.join(', '))}</b><div class="small">${esc(m.artist)} · ${m.licUrl ? A(m.licUrl, m.license) : esc(m.license)} · ${A(m.page, m.file.replace(/_/g, ' '))}</div></div></li>`).join('')}</ul></div>`;
+    <div class="card"><ul class="credits">${L.map(([s, m]) => `<li><img src="${esc(dataURL(`img/w/${s}-200.webp`))}" alt="" loading="lazy" width="56" height="56"><div><b>${esc(m.foods.join(', '))}</b><div class="small">${esc(m.artist)} · ${m.licUrl ? A(m.licUrl, m.license) : esc(m.license)} · ${A(m.page, m.file.replace(/_/g, ' '))}</div></div></li>`).join('')}</ul></div>`;
   });
 }
 /* v6.2: US regulatory status (FDA Substances Added to Food inventory) + Wikidata identifiers. */
