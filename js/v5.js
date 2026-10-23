@@ -1,6 +1,6 @@
 /* ---------- v5.1 dual ratings ---------- */
 const HLTH = window.LumiHealth;
-const PRIM = () => (store.get('settings', {}).primary === 'health' ? 'health' : 'carb');
+const PRIM = () => (store.get('settings', {}).primary === 'carb' ? 'carb' : 'health'); // 17.0: health leads by default
 const HB = s => s == null ? 'na' : s >= 75 ? 'ex' : s >= 50 ? 'gd' : s >= 25 ? 'pr' : 'bd';
 const HL = s => s == null ? 'Not rated' : s >= 75 ? 'Excellent' : s >= 50 ? 'Good' : s >= 25 ? 'Poor' : 'Bad';
 const sortKey = sort => sort === 'health' ? 'h' : sort === 'score' || sort === 'carb' ? 'score' : (PRIM() === 'health' ? 'h' : 'score');
@@ -81,7 +81,7 @@ function addToPlate(p, grams, label) {
 }
 function plateAvg(l) { const av = k => { let w = 0, t = 0; l.forEach(x => { if (x[k] != null) { w += x.grams; t += x[k] * x.grams; } }); return w ? Math.round(t / w) : null; };
   const c = av('cs'), h = av('h'); if (c == null && h == null) return '';
-  return `<div class="pavg small">Plate average (by weight): <span class="b2"><i class="bg-${S.band(c)}"></i>Carb ${c ?? '?'}</span> <span class="b2"><i class="bg-${HB(h)}"></i>Health ${h ?? '?'} ${h == null ? '' : HL(h)}</span></div>`; }
+  return `<div class="pavg small">Plate average (by weight): <span class="b2"><i class="bg-${HB(h)}"></i>Health ${h ?? '?'} ${h == null ? '' : HL(h)}</span> <span class="b2"><i class="bg-${S.band(c)}"></i>Carb ${c ?? '?'}</span></div>`; }
 function viewMeal() {
   document.title = 'Meal builder — Lumi';
   const l = plate(), st = settings();

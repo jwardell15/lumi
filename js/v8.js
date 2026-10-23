@@ -76,7 +76,7 @@ function scoreDisk(x, cx, cy, v, band, label) { x.beginPath(); x.arc(cx, cy, 78,
 function productCanvas(p) { const s = S.score(p), hr = HR(p), b = bgImpact(p);
   return canvasCard(x => { x.fillStyle = '#1d1824'; x.font = '800 54px system-ui,sans-serif'; const nl = wrapText(x, p.name, 60, 190, 700, 62, 2); x.fillStyle = '#6b6478'; x.font = '28px system-ui,sans-serif'; x.fillText(String(p.brand || '') + (p.src === 'custom' ? ' · user-entered' : ''), 60, 190 + nl * 62 + 4);
     x.fillStyle = '#1d1824'; x.font = '600 34px system-ui,sans-serif'; x.fillText(`${r1(s.net ?? 0)} g carbs / 100${p.liquid ? 'ml' : 'g'}`, 60, 430); if (b) { x.font = '28px system-ui,sans-serif'; x.fillStyle = '#4a4356'; x.fillText(`Blood sugar impact: ${b.size}, ${b.speed}`, 60, 480); }
-    scoreDisk(x, 900, 230, s.score, s.band, 'Carb score'); scoreDisk(x, 1080, 230, hr.score, HB(hr.score), 'Health'); }); }
+    scoreDisk(x, 900, 230, hr.score, HB(hr.score), 'Health'); scoreDisk(x, 1080, 230, s.score, s.band, 'Carb score'); }); }
 function swapCanvas(a, b) { const sa = S.score(a), sb = S.score(b);
   return canvasCard(x => { x.fillStyle = '#1d1824'; x.font = '700 40px system-ui,sans-serif'; x.fillText('Better swap', 60, 160);
     [[a, sa, 60], [b, sb, 640]].forEach(([p, s, X]) => { x.fillStyle = '#1d1824'; x.font = '700 34px system-ui,sans-serif'; wrapText(x, p.name, X, 250, 480, 40, 2); x.fillStyle = '#6b6478'; x.font = '24px system-ui,sans-serif'; x.fillText(String(p.brand || ''), X, 340); x.fillStyle = BC8[s.band] || BC8.unknown; x.font = '800 72px system-ui,sans-serif'; x.fillText(String(s.score ?? '?'), X, 440); x.fillStyle = '#4a4356'; x.font = '26px system-ui,sans-serif'; x.fillText(`/100 · ${r1(s.net ?? 0)} g carbs`, X + 110, 440); });

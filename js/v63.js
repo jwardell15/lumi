@@ -2,7 +2,7 @@
 const STO = window.LumiStores, AIS = window.LumiAisles;
 function storeChips() { const ch = L => L.map(s => `<a class="chip" href="#/store/${s[0]}" data-store="${s[0]}">${esc(s[1])}</a>`).join(''); const g = STO.STORES.filter(s => s[5] !== 'c'); g.sort((a, b) => (b[0] === 'costco') - (a[0] === 'costco')); /* v12.1: Costco first + feature card */ return `<div class="sec-h"><h2>Shop by store</h2></div><div class="card costco121"><a href="#/store/costco"><b>🛒 Costco</b><span>Kirkland Signature + products tagged as sold at Costco</span></a><a href="#/browse/rest-costco-food-court"><b>🍕 Costco Food Court</b><span>Official nutrition: pizza, hot dogs, Chicken Bake, treats</span></a></div><div class="chips storechips">${ch(g)}</div><div class="sec-h"><h2>Convenience stores</h2></div><div class="chips storechips">${ch(STO.STORES.filter(s => s[5] === 'c'))}</div>`; }
 function aisleTiles() { return `<div class="sec-h"><h2>Grocery aisles</h2></div><div class="aisles">${AIS.AISLES.map(a => `<a class="aisle" href="#/aisle/${a[0]}"><span>${a[2]}</span><b>${esc(a[1])}</b></a>`).join('')}</div>`; }
-const SORTS = [['score', 'Carb score'], ['health', 'Health'], ['carb', 'Lowest carbs']];
+const SORTS = [['health', 'Health'], ['score', 'Carb score'], ['carb', 'Lowest carbs']];
 /* v6.3.4 packaged picks: blend carb score, health, popularity (index order follows Open Food Facts scan counts) and photo/data completeness */
 function blendVal(d, N) { const pop = 1 - Math.min(1, Math.log10(d.rank + 10) / Math.log10(N + 10)); return 0.45 * (d.score ?? 0) + 0.3 * (d.h ?? 40) + 30 * pop + (d.img ? 6 : 0) + (d.h != null && !d.hn ? 3 : 0) - (d.src === 'local' && !usEnglish(d) ? 15 : 0); }
 const NUTS = new Set(['sn-nuts', 'pt-nutbutter'].map(k => AIS.BYID[k]));

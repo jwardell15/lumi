@@ -13,7 +13,7 @@ function homePicks() {
 }
 function restPicks74() { let r = []; try { r = bestAtRestaurants(); } catch {} return r.filter(d => !ALC74.test(d.name)).slice(0, 4); }
 function newsPill() { if (store.get('seenV', '') === VERSION) return ''; return `<div class="pill74" id="pill74"><a href="#/whatsnew">New in Lumi ${VERSION} ›</a><button aria-label="Dismiss" id="pill74x">✕</button></div>`; }
-const SC74 = [['#/browse', 'Browse'], ['#/lists', 'Lists'], ['#/compare', 'Compare'], ['#/log', 'Log'], ['#/browse/rest', 'Restaurants']];
+const SC74 = [['#/browse', 'Browse'], ['#/myfoods', 'My foods'], ['#/lists', 'Lists'], ['#/compare', 'Compare'], ['#/log', 'Log'], ['#/browse/rest', 'Restaurants']];
 function viewHome() {
   const rec = store.get('recent', []), es = (typeof todayEntries === 'function' ? todayEntries() : null);
   const logged = (() => { try { const h = todayCard(); return /Nothing logged today/.test(h) ? '' : h; } catch { return ''; } })();

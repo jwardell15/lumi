@@ -38,3 +38,5 @@
 .sugg{z-index:40;border:1px solid var(--line)}
 .sugg .k{line-height:1.35;padding:1px 0}
 .home74:has(.sugg.on) .rec74{visibility:hidden}
+/* 17.0 My foods */
+.mf17r{display:flex;align-items:center;gap:8px}.mf17r>.row{flex:1;min-width:0}.mf17 .sg12{margin:6px 0 12px}

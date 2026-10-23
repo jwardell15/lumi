@@ -5,6 +5,8 @@ const SYRUPS = /(glucose[- ]?fructose|fructose[- ]?glucose|high[- ]fructose|corn
 const SUGAR_WORDS = /\b(sugar|cane sugar|brown sugar|sucrose|evaporated cane juice|azucar|sucre)\b/i;
 const STARCH = /(modified (corn |food |potato |tapioca )?starch|corn ?starch|potato starch|potato flakes|dehydrated potato|tapioca starch|rice flour|white rice|enriched (wheat )?flour|enriched corn|unbleached (enriched )?(wheat )?flour|bleached flour|degermed|corn flour|cornmeal)/gi;
 const HYDRO = /hydrogenated/i;
+const REFINED = /\b(white rice|rice, white|rice, cooked|steamed rice|fried rice|jasmine rice|basmati rice|sushi rice|bread, white|white bread|bagels?|pasta|spaghetti|macaroni|linguine|fettuccine|penne|noodles?|ramen|udon|crackers?|pretzels?|rice cakes?|corn ?flakes|puffed rice|rice krispies|couscous|grits|cream of wheat|english muffins?|pancakes?|waffles?|biscuits?|pita|naan|croissants?|flour tortillas?|tortillas?, flour|mashed potato(es)?|potatoes, mashed|instant potato(es)?|hash browns?|french fries|white flour|wheat flour, white|all[- ]purpose flour|buns?|dinner rolls?|baguette|sourdough|saltines?|breadsticks?|breadcrumbs|panko|tater tots|gnocchi|risotto|rice pudding|tapioca|cornstarch|corn starch)\b/i;
+const WHOLEG = /\b(whole[- ]?(wheat|grain|grains|meal)|brown rice|rice, brown|wild rice|bran|oats?|oatmeal|quinoa|lentils?|chickpeas?|beans?|almond|coconut flour|keto|low[- ]carb|carb ?(smart|balance)|cauliflower|protein|zero ?carb|konjac|shirataki|hearts of palm|sprouted|flax|rye|barley|bulgur|farro|buckwheat)\b/i;
 const ADDITIVES = { e150c:'Ammonia caramel', e150d:'Sulphite ammonia caramel', e171:'Titanium dioxide', e250:'Sodium nitrite', e251:'Sodium nitrate', e252:'Potassium nitrate', e249:'Potassium nitrite', e102:'Tartrazine', e110:'Sunset yellow', e124:'Ponceau 4R', e129:'Allura red', e122:'Azorubine', e104:'Quinoline yellow', e133:'Brilliant blue', e951:'Aspartame', e950:'Acesulfame K', e955:'Sucralose', e954:'Saccharin', e320:'BHA', e321:'BHT', e319:'TBHQ', e433:'Polysorbate 80', e466:'Carboxymethylcellulose', e407:'Carrageenan', e338:'Phosphoric acid', e211:'Sodium benzoate', e220:'Sulphur dioxide', e1442:'Hydroxypropyl distarch phosphate', e965:'Maltitol' };
 const LIQUID = /(beverage|drink|soda|juice|nectar|smoothie|milk(?!.*chocolate)|tea|coffee|water)/i;
 const r1 = v => v == null ? null : Math.round(v * 10) / 10;
@@ -109,12 +111,22 @@ function score(p) {
   const st = [...new Set(ing.match(STARCH) || [])];
   if (st.length) { gi += Math.min(8, st.length * 4); hits.push(...st); }
   if (gi) add('gi', 'Fast carbs (syrups, refined starch)', -Math.min(14, gi), hits.slice(0, 4).join(', '));
+  // --- 2b. v17: refined starch / refined grains (white rice, white bread, pasta, crackers…). Starch = total carbs − sugar − fiber.
+  // Sugar stays the top driver (sugar penalties can reach −80 for drinks); this tops out at −28.
+  const nm = (p.name || '') + ' ' + (p.cat || '');
+  const refName = REFINED.test(nm) && !WHOLEG.test(p.name || '');
+  const refIng = st.length > 0 && !WHOLEG.test(p.name || '') && !/^\s*(whole|brown rice|oat|100% whole)/i.test(ing);
+  const starch = Math.max(0, nc - (sg || 0) - (n.fiber || 0));
+  if ((refName || refIng) && starch >= 10) {
+    add('starch', 'Refined starch', -Math.min(20, starch * 0.4), r1(starch) + ' g/100' + u + (refName ? ' (refined grain)' : ' (refined starch in ingredients)'));
+    const sS = starch * sq / 100; add('starchServ', p.servQ ? 'Refined starch per serving' : `Refined starch per assumed ${sq}${u} serving`, -Math.min(8, sS * 0.2), r1(sS) + ' g');
+  }
   // --- buffers
   if (n.fiber != null && !fiberDropped) {
     add('fiber', 'Fiber (small bonus)', Math.min(4, n.fiber * 0.4), r1(n.fiber) + ' g/100');
   }
   // v6.3: protein only buffers carbs, so its bonus is capped at half the carb penalty and can't outweigh a lower-carb/lower-sugar profile
-  if (n.protein != null) { const carbPen = Math.abs(items.filter(i => /^(sugar|added|sugarServ|carbs100|carbsServ)$/.test(i.key)).reduce((a, i) => a + i.pts, 0)); const cap = Math.min(5, carbPen / 3); const raw = Math.min(6, n.protein * 0.3); add('protein', raw > cap ? 'Protein (capped)' : 'Protein', Math.min(raw, cap), r1(n.protein) + ' g/100'); }
+  if (n.protein != null) { const carbPen = Math.abs(items.filter(i => /^(sugar|added|sugarServ|carbs100|carbsServ|starch|starchServ)$/.test(i.key)).reduce((a, i) => a + i.pts, 0)); const cap = Math.min(5, carbPen / 3); const raw = Math.min(6, n.protein * 0.3); add('protein', raw > cap ? 'Protein (capped)' : 'Protein', Math.min(raw, cap), r1(n.protein) + ' g/100'); }
   // --- secondary
   if (n.sat != null) add('sat', 'Saturated fat', -Math.min(8, n.sat * 0.8), r1(n.sat) + ' g/100');
   if ((n.trans || 0) > 0.05) add('trans', 'Trans fat', -Math.min(8, n.trans * 8), r1(n.trans) + ' g/100');

@@ -77,6 +77,16 @@ for (const d of idx0.docs) { const sub = SUBS[d[14]]; const pk = PK[sub]; if (!p
   const sq = +p.servQ; if (!(sq >= 10 && sq <= 300)) continue; const n = p.n; if ([n.carbs, n.protein, n.fat, n.kcal].some(x => x == null)) continue; const q = S.quality(p); if (!q.ok) continue;
   if (/\b(kids?|variety pack|assorted)\b/i.test(p.name) || p.name.length > 60) continue;
   const dk = (p.brand + '|' + p.name).toLowerCase().replace(/[^a-z0-9|]/g, ''); if (SEEN.has(dk)) continue; SEEN.add(dk); const v = per(n, sq); const sm = d[13]; items.push({ id: d[0], nm: p.name, br: p.brand || '', ro: pk[0].split(' '), g: sq, pl: p.serv || `${sq} g`, sg: pk[1], ai: AI.AISLES.find(a => a[0] === AI.SUB[d[14]][1])[0], sub, sm, pk: 1, ...v }); cnt[sub] = (cnt[sub] || 0) + 1; }
+/* v17: real store-brand equivalents per store (own-brand regex match in the index, same aisle subcategory, label serving). Used by Grocery › Shop by store. */
+const STO = require('../js/stores.js'); const SB = {}; let sbN = 0;
+for (const f of ['index-0.json', 'index-1.json', 'index-2.json']) { const fp = path.join(out, f); if (!fs.existsSync(fp)) continue; const J = f === 'index-0.json' ? idx0 : JSON.parse(fs.readFileSync(fp, 'utf8'));
+  for (const d of J.docs) { const sub = SUBS[d[14]]; if (!PK[sub] || !d[13] || d[3] < 0) continue; if (d[10] & 8) continue;
+    STO.STORES.forEach((st, i) => { if (st[5] === 'c' || !STO.has(d[13], i)) return; const L = ((SB[st[0]] = SB[st[0]] || {})[sub] = SB[st[0]][sub] || []); if (L.length >= 8) return;
+      if (!/^[\x20-\x7e’]+$/.test(d[1] + (d[2] || ''))) return; const c = det(d[0]); if (!c) return; const p = S.fromCompact(c); const sq = +p.servQ; if (!(sq >= 10 && sq <= 300)) return; const n = p.n; if ([n.carbs, n.protein, n.fat, n.kcal].some(x => x == null)) return; if (!S.quality(p).ok || p.name.length > 60) return;
+      if (L.some(x => x.nm.toLowerCase() === p.name.toLowerCase())) return; const v = per(n, sq); L.push({ id: d[0], nm: p.name, br: p.brand || '', pl: p.serv || `${sq} g`, sc: d[3], h: d[9] < 0 ? null : d[9], c: v.c, kcal: v.kcal }); sbN++; }); } }
+for (const o of Object.values(SB)) for (const k in o) o[k] = o[k].sort((a, b) => b.sc - a.sc).slice(0, 2);
+sbN = Object.values(SB).reduce((a, o) => a + Object.values(o).flat().length, 0);
+console.log('v17 store-brand options', sbN, 'stores', Object.keys(SB).length);
 // restaurant meal picks: main + side + drink per chain, only from categories classified reliably
 const MAING = /^(Entrees|Entrées|Sandwiches|Burgers|Pizza|Salads|Breakfast)$/, SIDEG = /^(Appetizers & Sides|Fried Potatoes|Sides)$/, DRINKG = /^(Beverages|Drinks|Coffee)$/, FOODW = /\b(steak|chicken|beef|turkey|ham|cheese|egg|bacon|sausage|pork|fish|shrimp)\b/i;
 const ALC = /\b(beer|wine|margarita|martini|sangria|mimosa|cocktail|ale|lager|ipa|vodka|whiske?y|rum|tequila|bourbon|mojito|daiquiri|spritz|mule|sake|seltzer, hard|hard seltzer)\b/i;
@@ -87,11 +97,13 @@ const DRINKK = /\b(water|soda|pepsi|coke|coca-cola|sprite|diet|iced tea|tea|coff
 const SHAKE = /\b(shake|malt|smoothie|frapp|freeze|float|blizzard|concrete|latte|mocha|frozen)\b/i;
 const SIDEX = /\b(pickles?|bacon|cheese sauce|sour cream|guacamole|queso|salsa|butter|syrup|jelly|ketchup)\b/i;
 const chains = {}, R = []; let used = 0;
+const ALL17 = {};
 for (const r of G.values()) { if (!r.keys || !r.keys.includes('rest')) continue; const slug = (r.keys.find(k => k.startsWith('rest-')) || '').slice(5); if (!slug) continue;
   const g = r.perItem ? 100 : (r.portions && r.portions[0] && r.portions[0][1]) || null; if (!g) continue; const v = per(r.n, g); if (v.c == null || v.kcal == null) continue;
   const nm = r.name; let role = null;
   if (r.group) { if (MAING.test(r.group) && !NOT.test(nm) && v.kcal >= 250 && !(r.group === 'Salads' && /side/i.test(nm))) role = 'main'; else if (SIDEG.test(r.group) && !SIDEX.test(nm) && v.kcal >= 60 && v.kcal < 600 && !NOT.test(nm)) role = 'side'; else if (DRINKG.test(r.group) && !ALC.test(nm) && !SHAKE.test(nm) && !FOODW.test(nm) && DRINKK.test(nm) && !/\b(gallon|catering)\b/i.test(nm) && !/\bice\b(?! ?tea)/i.test(nm)) role = 'drink'; }
   else { if (DRINKK.test(nm) && !FOODW.test(nm) && !/\b(gallon|catering|box)\b/i.test(nm) && !ALC.test(nm) && !SHAKE.test(nm) && !MAINK.test(nm)) role = 'drink'; else if (SIDEK.test(nm) && !SIDEX.test(nm) && v.kcal >= 60 && !MAINK.test(nm.replace(/side salad/i, '')) && !NOT.test(nm.replace(/\bside\b/i, '')) && v.kcal < 600) role = 'side'; else if (MAINK.test(nm) && !NOT.test(nm) && !SIDEK.test(nm) && v.kcal >= 250) role = 'main'; }
+  (ALL17[slug] = ALL17[slug] || { name: r.brand, L: [] }).L.push({ id: r.id, nm, grp: r.group || '', pl: r.portions && r.portions[0] ? r.portions[0][0] : '1 item', ...v, sg: r.n.sugars == null ? null : r1(r.n.sugars * g / 100) });
   if (!role) continue; (chains[slug] = chains[slug] || { name: r.brand, main: [], side: [], drink: [] })[role].push({ id: r.id, nm, pl: r.portions && r.portions[0] ? r.portions[0][0] : '1 item', ...v }); }
 /* v16: a side must suit its main (no "Pizza Sub + Hash Browns", "Cobb Salad + Hashbrowns", "Taco + Hash Brown"). */
 const BFM16 = /breakfast|biscuit|croissant|omelet|mc ?muffin|english muffin|bagel|pancake|hotcake|\bwaffles?\b(?! fries)|\beggs?\b|scramble|wake-up|french toast|grits|oatmeal|platter|sunrise|morning|yogurt|parfait/i;
@@ -110,6 +122,20 @@ for (const [slug, c] of Object.entries(chains)) { if (!c.main.length || (!c.side
   const meals = [], seen = new Set(); for (const m of M) { const base = m.nm.toLowerCase().replace(/,.*$|\(.*\)|\b(small|medium|large|regular|half|whole|\d+["”]?|single|double|triple)\b/g, '').replace(/\s+/g, ' ').trim(); if (seen.has(base)) continue; seen.add(base); const Sc = Sd.filter(x => fit16(m.nm, x.nm)); const s0 = Sc.length ? Sc[Math.min(meals.length, Sc.length - 1)] : null, s = s0 && (s0.net <= Sc[0].net + 6 ? s0 : Sc[0]); if (!s && !Dr.length) continue; meals.push([m, s, Dr[0]].filter(Boolean)); if (meals.length >= 3) break; }
   if (!meals.length) { skipped.push(c.name + ' (no sensible pairing)'); continue; }
   RM[slug] = { name: c.name, meals: meals.map(x => x.map(y => ({ id: y.id, nm: y.nm, pl: y.pl, c: y.c, f: y.f, p: y.p, fat: y.fat, kcal: y.kcal, net: y.net }))) }; }
-const OUT = { v: '13.0', built: new Date().toISOString().slice(0, 10), items, rest: RM, note: 'Every value is Lumi data scaled to the stated portion. No invented nutrition.' };
+/* v17: chains with no sensible main+side+drink get real single-item picks (official chain nutrition already in Lumi's data; nothing invented).
+   Food: entrées/bowls/pizza/sandwich items ≥200 Cal, lowest sugar first then total carbs. Drink-only chains: lowest-sugar real drinks. */
+const NOFOOD17 = /dessert|topping|ingredient|sauce|dressing|condiment|extra|add[- ]?on|beverage|drink|coffee|tea|smoothie|kids|catering|bakery|sweet/i, NOFN17 = /cookie|brownie|donut|doughnut|cake|pie\b|gelato|ice cream|shake|frost|syrup|sauce|dressing|dip\b|ranch|chips?\b|bacon \(|cheese only|catering|gallon|family|party|box\b|dozen|supplier|a la carte|tortilla only|\bextra\b|side of/i;
+const fb17 = [];
+const PART17 = /^(bacon|butter|olive oil|peanut butter|hamburger patty|hot dog buns?|seasoned beef|white rice|brown rice|guacamole|sour cream|queso|cheese|pepperoni|sausage|ham|chicken|steak|meatballs|pastrami|turkey|tuna|egg|scrambled eggs?|black beans|pinto beans|fajita veg\w*|lettuce|tomato\w*|onions?|peppers|jalape\w*|olives?|mushrooms?|cucumbers?|spinach|pickles)\b(?!.*\b(sandwich|sub|wrap|bowl|salad|platter|plate|burrito|taco|quesadilla|pizza\b(?!.*\d+" pizza)|burger|melt|panini|entr))|\b\d+" (pizza|olive oil)\b|, \d+" pizza$|butter garlic|crust only|\bflavor\b|\bbuns?\b/i;
+for (const [slug, c] of Object.entries(ALL17)) { if (RM[slug] || /^(other|krispy-kreme|baskin-robbins|five-guys)$/.test(slug)) continue; // dessert-only chains: no honest pick
+  const base = nm => nm.toLowerCase().replace(/,.*$|\(.*\)|\b(small|medium|large|regular|half|whole|\d+["”]?|single|double|triple|kids?)\b/g, '').replace(/\s+/g, ' ').trim();
+  const pickN = (L, n) => { const out = [], seen = new Set(); for (const x of L) { const b = base(x.nm); if (seen.has(b)) continue; seen.add(b); out.push([x]); if (out.length >= n) break; } return out; };
+  const food = c.L.filter(x => x.c != null && x.kcal >= 200 && x.kcal <= 1100 && !NOFOOD17.test(x.grp) && !NOFN17.test(x.nm) && !PART17.test(x.nm) && !/^(fresh mozzarella|oven roasted|black olives|powdered|guacamole|individdial)\b| style$/i.test(x.nm) && !DRINKK.test(x.nm) && x.sg != null && x.sg <= 12 && !/donut|fritter|kreme|glazed|ice cream|scoop|float|sundae/i.test(x.nm)).sort((a, b) => (a.sg ?? 99) * 2 + a.c - ((b.sg ?? 99) * 2 + b.c) || a.kcal - b.kcal);
+  let meals = pickN(food, 3), kind = 'single';
+  if (!meals.length) { const dr = c.L.filter(x => x.c != null && x.sg != null && x.sg <= 10 && DRINKK.test(x.nm) && !ALC.test(x.nm) && !/gallon|catering|box/i.test(x.nm)).sort((a, b) => a.sg - b.sg || a.c - b.c); meals = pickN(dr, 3); kind = 'drink'; }
+  if (!meals.length) continue; fb17.push(c.name + ' (' + kind + ')');
+  RM[slug] = { name: c.name, solo: kind, meals: meals.map(x => x.map(y => ({ id: y.id, nm: y.nm, pl: y.pl, c: y.c, f: y.f, p: y.p, fat: y.fat, kcal: y.kcal, net: y.net }))) }; }
+console.log('v17 single-item picks for', fb17.length, 'chains:', fb17.join('; '));
+const OUT = { v: '17.0', built: new Date().toISOString().slice(0, 10), items, rest: RM, sb: SB, note: 'Every value is Lumi data scaled to the stated portion. No invented nutrition.' };
 fs.writeFileSync(path.join(out, 'meals13.json'), JSON.stringify(OUT));
 console.log('staples+packaged', items.length, 'packaged', items.filter(x => x.pk).length, 'missing', miss, 'chains with picks', Object.keys(RM).length, 'skipped', skipped.length); fs.writeFileSync('/workspace/m13/skipped.json', JSON.stringify(skipped, null, 1));

@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '16.1.1';
+const VERSION = '17.0';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -23,6 +23,8 @@ const store = {
 (() => { try { if (store.get('mig161', 0)) return; const fix = o => { if (Array.isArray(o)) o.forEach(fix); else if (o && typeof o === 'object') { if ('net' in o && 'carbs' in o) o.net = o.carbs; Object.values(o).forEach(fix); } };
   ['log', 'meals', 'custom', 'recipes', 'plate', 'plan13', 'saved', 'foods', 'recent', 'lists', 'groc13', 'ideas13', 'compare', 'fav15', 'scans', 'watch'].forEach(k => { const v = store.get(k, null); if (v != null) { fix(v); store.set(k, v); } });
   const s = store.get('settings', null); if (s) { s.icrBasis = 'total'; s.mealBasis = 'carbs'; store.set('settings', s); } store.set('mig161', 1); } catch {} })();
+/* v17.0: Overall health leads by default (Settings › Primary rating can switch back). */
+(() => { try { if (store.get('mig17', 0)) return; const s = store.get('settings', null); if (s) { s.primary = 'health'; store.set('settings', s); } store.set('mig17', 1); } catch {} })();
 const saved = () => store.get('saved', []);
 const isSaved = id => saved().some(s => s.p.id === id);
 function toggleSave(p) { let s = saved(); if (isSaved(p.id)) s = s.filter(x => x.p.id !== p.id); else s.unshift({ p, t: Date.now() }); store.set('saved', s.slice(0, 300)); return isSaved(p.id); }
@@ -285,7 +287,7 @@ function renderForYou() {
 let rs = null; // current result state
 function resultsShell(title, q) {
   app.innerHTML = `${searchBox(q)}
-  <div class="tools"><div class="seg" id="sort"><button data-s="rel">Relevance</button><button data-s="score">Carb score</button><button data-s="health">Health</button><button data-s="carb">Low carb</button></div>
+  <div class="tools"><div class="seg" id="sort"><button data-s="rel">Relevance</button><button data-s="health">Health</button><button data-s="score">Carb score</button><button data-s="carb">Low carb</button></div>
   <button class="chip tog" id="fGood">Good+ carb</button><button class="chip tog" id="fHealthy">Healthy 50+</button><button class="chip tog" id="fLow">≤10g carbs</button><button class="chip tog" id="fHide">Hide conflicts</button><button class="chip tog" id="fReady">📦 Ready-to-eat</button><button class="chip tog" id="fPhoto">📷 Has photo</button><button class="chip tog" id="fBad">Hide bad data</button></div>
   <div class="chips grp" id="grp"></div><div id="dym"></div><div id="cosHint"></div>
   <div class="status" id="status"></div><div id="res">${skel(6)}</div>`;
@@ -573,7 +575,7 @@ function viewSaved() {
 function viewAbout() {
   document.title = 'About — Lumi';
   app.innerHTML = `<div class="about-hero">${MASCOT(120, 'big')}<div><h1>About Lumi</h1><p class="small">Lumi is named after, and drawn from, Joe's white husky.</p></div></div><p class="lead">A carb-first food score, tuned for insulin dosing decisions. v${VERSION}</p>
-  <div class="card" id="howRated"><h2>How this is rated</h2><p>Every item gets <b>two ratings</b>. Choose which one is primary in Settings.</p><ul class="bul"><li><b>Carb score (0–100)</b>: Lumi's diabetes score. Sugar is the main driver (added sugar counts more than natural sugar), then total carbs and fast-acting carbs. Fiber is only a small bonus and is never subtracted from carbs (formula below).</li><li><b>Health rating (0–100)</b>: a general rating modelled on Yuka's published method. About <b>60% nutrition</b> (the Nutri-Score 2023 algorithm, using energy, sugars, saturated fat, salt, fiber, protein and fruit/vegetable/legume share; beverages, fats/nuts and cheese use their own variants). About <b>30% additives</b> (curated risk tiers; any high-risk additive caps the rating at 49). About <b>10% organic</b>. When ingredients aren't known, as with most restaurant items and whole foods, the rating uses nutrition only and is marked that way.</li><li>Bands: <span class="c-ex">Excellent 75–100</span> · <span class="c-gd">Good 50–74</span> · <span class="c-pr">Poor 25–49</span> · <span class="c-bd">Bad 0–24</span>. Missing values are estimated and flagged. You see <b>?</b> only when the numbers can't be used.</li></ul><p class="small">Lumi isn't affiliated with Yuka. Informational only, not medical advice.</p></div>
+  <div class="card" id="howRated"><h2>How this is rated</h2><p>Every item gets <b>two ratings</b>. Choose which one is primary in Settings.</p><ul class="bul"><li><b>Carb score (0–100)</b>: Lumi's diabetes score. Sugar is the main driver (added sugar counts more than natural sugar), then total carbs, refined starch and fast-acting carbs. Fiber is only a small bonus and is never subtracted from carbs (formula below).</li><li><b>Health rating (0–100)</b>: a general rating modelled on Yuka's published method. About <b>60% nutrition</b> (the Nutri-Score 2023 algorithm, using energy, sugars, saturated fat, salt, fiber, protein and fruit/vegetable/legume share; beverages, fats/nuts and cheese use their own variants). About <b>30% additives</b> (curated risk tiers; any high-risk additive caps the rating at 49). About <b>10% organic</b>. When ingredients aren't known, as with most restaurant items and whole foods, the rating uses nutrition only and is marked that way.</li><li>Bands: <span class="c-ex">Excellent 75–100</span> · <span class="c-gd">Good 50–74</span> · <span class="c-pr">Poor 25–49</span> · <span class="c-bd">Bad 0–24</span>. Missing values are estimated and flagged. You see <b>?</b> only when the numbers can't be used.</li></ul><p class="small">Lumi isn't affiliated with Yuka. Informational only, not medical advice.</p></div>
   <div class="card"><h2>Formula</h2><pre>score = clamp(0, 100, 100 + Σ terms)
 
 SUGAR (primary driver)
@@ -587,6 +589,9 @@ TOTAL CARBS (secondary)
  Total carbs /100g        −0.4 × g   (max −22)
  Total carbs /serving     −0.4 × g   (max −16; assumes 50 g or 240 ml if unknown)
  Fast carbs (syrups, maltodextrin, refined starch)  max −14
+ Refined starch (white rice/bread, pasta, crackers, fries;
+   starch = carbs − sugar − fiber, ≥10 g/100)  −0.4 × g (max −20)
+   plus per serving −0.2 × g (max −8)
 SMALL BONUSES
  Fiber /100g              +0.4 × g   (max +4; never subtracted from carbs)
  Protein                  small bonus (max +5, limited by the carb penalty)
@@ -669,7 +674,7 @@ function route() {
   if (view === 'recipes') return viewRecipes12();
   if (view === 'recipe' && arg) return viewRecipe12(arg);
   if (view === 'dexcom') { history.replaceState(null, '', '#/glucose'); return viewGlucose11(); } // v16: Dexcom login removed
-  const V15 = { quick: 'viewQuick15', fresh: 'viewFresh15', review: 'viewReview15', prices: 'viewPrices15', today: 'viewToday16', insights: 'viewToday16' }; // v15 (js/v15.js loads after this file)
+  const V15 = { quick: 'viewQuick15', fresh: 'viewFresh15', review: 'viewReview15', prices: 'viewPrices15', today: 'viewToday16', insights: 'viewToday16', myfoods: 'viewMyFoods17' }; // v15 (js/v15.js loads after this file)
   if (V15[view]) { if (typeof window[V15[view]] === 'function') return window[V15[view]](arg); app.innerHTML = skel(3); return; }
   viewHome();
 }

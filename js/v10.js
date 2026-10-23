@@ -40,9 +40,9 @@
       const dot = sl.querySelector('.sdot'); const cls = dot ? [...dot.classList].find(c => /^bg-/.test(c)) || 'bg-na' : 'bg-na';
       const lab = (sl.querySelector('.slab') || {}).firstChild; const L = lab ? String(lab.textContent).trim() : '';
       const C = 2 * Math.PI * 34, off = C * (1 - Math.max(0, Math.min(100, n)) / 100);
-      const ring = document.createElement('div'); ring.className = 'score10 ' + cls.replace('bg-', 's-'); ring.setAttribute('role', 'img'); ring.setAttribute('aria-label', `Carb score ${n} out of 100, ${L}`);
+      const ring = document.createElement('div'); ring.className = 'score10 ' + cls.replace('bg-', 's-'); ring.setAttribute('role', 'img'); ring.setAttribute('aria-label', `${PRIM() === 'health' ? 'Health rating' : 'Carb score'} ${n} out of 100, ${L}`);
       ring.innerHTML = `<svg viewBox="0 0 80 80" aria-hidden="true"><circle cx="40" cy="40" r="34" class="tr"/><circle cx="40" cy="40" r="34" class="fg" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"/></svg><span class="v"><b>${n}</b><small>/100</small></span>`;
-      const wrap = document.createElement('div'); wrap.className = 'sc10'; wrap.append(ring); const tx = document.createElement('div'); tx.className = 'sct10'; tx.innerHTML = `<b>${L || 'Not rated'}</b><small>Carb score</small>`; wrap.append(tx);
+      const wrap = document.createElement('div'); wrap.className = 'sc10'; wrap.append(ring); const tx = document.createElement('div'); tx.className = 'sct10'; tx.innerHTML = `<b>${L || 'Not rated'}</b><small>${PRIM() === 'health' ? 'Health rating' : 'Carb score'}</small>`; wrap.append(tx);
       sl.replaceWith(wrap);
     }
     // order: hero, positives/negatives, blood sugar, better choice, portion, health, then the rest in original order
