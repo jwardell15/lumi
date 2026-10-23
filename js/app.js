@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '17.4';
+const VERSION = '18.0';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -67,11 +67,14 @@ function loadIndexX() { // USDA Branded extras (tiers 3+), only fetched when the
 }
 let tierW = null; // v12.1: international OFF layer (index-w-*), loaded only on demand (setting, few US hits, or "include international")
 const wantWorld = () => { try { return localStorage.getItem('lumi_world') === '1'; } catch { return false; } };
-function loadIndexW() { if (!tierW) tierW = Promise.all([loadIndexX(), loadMeta()]).then(async ([, m]) => { for (let i = 0; i < ((m && m.world && m.world.tiers) || 0); i++) { engine.add(await getData(`data/index-w-${i}.json`)); notifyTier(); } }); return tierW; }
+function loadIndexW() { if (!tierW) tierW = Promise.all([loadIndexX(), loadMeta()]).then(async ([, m]) => { const W = (m && m.world) || {}; for (let i = 0; i < (W.core || W.tiers || 0); i++) { engine.add(await getData(`data/index-w-${i}.json`)); notifyTier(); } }); return tierW; }
+let tierW2 = null; /* v18: extended international tiers (beyond the core set), only when a search still has few hits */
+function loadIndexW2() { if (!tierW2) tierW2 = Promise.all([loadIndexW(), loadMeta()]).then(async ([, m]) => { const W = (m && m.world) || {}; for (let i = W.core || W.tiers || 0; i < (W.tiers || 0); i++) { engine.add(await getData(`data/index-w-${i}.json`)); notifyTier(); } }); return tierW2; }
 const ghash = id => { let h = 0; for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h % 40; };
 const gshardCache = new Map();
 async function genericProduct(id) { const k = ghash(id); if (!gshardCache.has(k)) gshardCache.set(k, getData(`data/g/${k}.json`).catch(() => ({}))); const sh = await gshardCache.get(k); return sh[id] ? S.fromCompact(sh[id]) : null; }
-function notifyTier() { tierWaiters.forEach(f => f()); }
+let tierHook18 = null;
+function notifyTier() { tierWaiters.forEach(f => f()); if (tierHook18) tierHook18(); }
 const shardCache = new Map();
 const wshardCache = new Map();
 function wshard(code) { const k = code.slice(-3); if (!wshardCache.has(k)) wshardCache.set(k, fetch(`data/w/${k}.json`).then(r => r.ok ? r.json() : {}).catch(() => ({}))); return wshardCache.get(k); }
@@ -357,9 +360,10 @@ function runQuery(q, typing) {
     el.innerHTML = L.length ? `<a class="cos-hint" href="#/cosmetics/all/${encodeURIComponent(q)}">🧴 <b>${L.length}</b> cosmetic${L.length > 1 ? 's' : ''} match "${esc(q)}" ›</a>` : ''; }).catch(() => {});
   const done = (k, list, err) => { if (rs !== my) return; my.src[k] = err ? 'err' : 'ok'; if (list) { my.counts[k] = list.length; mergeItems(list); } renderResults(); };
   const runLocal = () => { if (rs !== my) return; const seen = new Set(), r = [];
-    for (const d of engine.search(q, { limit: 160 }).concat(engine.search(q, { limit: 30, filter: d => d.src === 'rest' }), engine.search(q, { limit: 30, filter: d => d.src === 'whole' }))) if (!seen.has(d.code)) { seen.add(d.code); r.push(itemFromDoc(d)); } for (const it of r) my.items.delete(it.id); my.keyIdx = null; done('local', r);
-    const d = $('#dym'); if (d) { const sug = didYouMean(q); d.innerHTML = (sug ? `<div class="dym">Did you mean <a href="#/search/${encodeURIComponent(sug)}">${esc(sug)}</a>?</div>` : '') + (my.worldOn ? `<div class="dym">🌍 Including international products (Open Food Facts, country shown).</div>` : `<div class="dym"><button class="linkbtn" id="worldBtn">🌍 Also search 330,000+ international products</button></div>`); const wb = $('#worldBtn'); if (wb) wb.onclick = () => { my.worldOn = true; wb.textContent = 'Loading international products…'; loadIndexW().then(runLocal).catch(runLocal); }; } };
-  loadIndex().then(() => { runLocal(); return loadIndexFull(); }).then(() => { runLocal(); return loadIndexAll(); }).then(() => { runLocal(); return loadIndexX(); }).then(() => { runLocal(); if (rs === my && (wantWorld() || my.worldOn || (my.counts.local || 0) < 12)) { my.worldOn = true; return loadIndexW().then(() => runLocal()); } }).catch(e => { if (!engine.docs.length) done('local', null, e); else runLocal(); });
+    for (const d of engine.search(q, { limit: 160 }).concat(engine.search(q, { limit: 30, filter: d => d.src === 'rest' }), engine.search(q, { limit: 30, filter: d => d.src === 'whole' }))) if (!seen.has(d.code)) { seen.add(d.code); r.push(itemFromDoc(d)); } for (const id of (my.lids || [])) my.items.delete(id); for (const it of r) my.items.delete(it.id); my.lids = r.map(it => it.id); my.keyIdx = null; done('local', r); /* v18: drop the previous local pass's rows so a later shard's better representative can't be blocked as a duplicate */
+    const d = $('#dym'); if (d) { const sug = didYouMean(q); d.innerHTML = (sug ? `<div class="dym">Did you mean <a href="#/search/${encodeURIComponent(sug)}">${esc(sug)}</a>?</div>` : '') + (my.worldOn ? `<div class="dym">🌍 Including international products (Open Food Facts, country shown).</div>` : `<div class="dym"><button class="linkbtn" id="worldBtn">🌍 Also search 2 million+ international products</button></div>`); const wb = $('#worldBtn'); if (wb) wb.onclick = () => { my.worldOn = true; wb.textContent = 'Loading international products…'; loadIndexW().then(runLocal).catch(runLocal); }; } };
+  tierHook18 = () => { if (rs !== my) { tierHook18 = null; return; } clearTimeout(my.tt); my.tt = setTimeout(runLocal, 250); }; /* v18: refresh results as each shard arrives */
+  loadIndex().then(() => { runLocal(); return loadIndexFull(); }).then(() => { runLocal(); return loadIndexAll(); }).then(() => { runLocal(); return loadIndexX(); }).then(() => { runLocal(); if (rs === my && (wantWorld() || my.worldOn || (my.counts.local || 0) < 12)) { my.worldOn = true; return loadIndexW().then(() => { runLocal(); if (rs === my && (my.counts.local || 0) < 12) return loadIndexW2().then(() => runLocal()); }); } }).catch(e => { if (!engine.docs.length) done('local', null, e); else runLocal(); });
   const cf = customFoods().filter(c => textRel(q, c.name, c.brand) >= 50).map(c => itemFromProduct(c, textRel(q, c.name, c.brand) + 30)); if (cf.length) mergeItems(cf);
   // remote sources: wait until typing pauses
   clearTimeout(runQuery.t); runQuery.t = setTimeout(() => { if (rs !== my) return;
@@ -378,12 +382,15 @@ function viewBrowse(key) {
   document.title = `${label} — Lumi`;
   resultsShell(label, '');
   app.insertAdjacentHTML('afterbegin', `<h1>${C.CATS[top][0]} ${esc(parent ? C.CATS[top][1] + ' · ' + label : label)}</h1><div class="chips subchips"><a class="chip${key === top ? ' on' : ''}" href="#/browse/${top}">All</a>${C.subs(top).map(k => `<a class="chip${k === key ? ' on' : ''}" href="#/browse/${k}">${esc(C.CATS[k][1])}</a>`).join('')}</div>`);
-  const my = rs = { q: label, items: new Map(), src: { local: 'load' }, counts: {}, limit: 40 };
+  const my = rs = { q: label, items: new Map(), src: { local: 'load' }, counts: {}, limit: 40, f18: '' };
+  { const h1 = app.querySelector('.subchips'); if (h1) h1.insertAdjacentHTML('afterend', `<div class="bf18" role="search"><label for="bf18" class="sr-only">Search in ${esc(label)}</label><input id="bf18" type="search" autocomplete="off" enterkeyhint="search" placeholder="Search in ${esc(label)}…"><span class="small" id="bf18n" aria-live="polite"></span></div>`); }
   const chain13 = /^rest-/.test(key); // v13: chain pages list mains before condiments/sodas (same ranking as a chain-name search)
   if (chain13 && store.get('sort', 'rel') !== 'rel') { store.set('sort', 'rel'); document.querySelectorAll('#sort button').forEach(b => b.classList.toggle('on', b.dataset.s === 'rel')); }
   else if (!chain13 && store.get('sort', 'rel') === 'rel') { store.set('sort', 'score'); document.querySelectorAll('#sort button').forEach(b => b.classList.toggle('on', b.dataset.s === 'score')); }
   const run = () => { if (rs !== my) return; my.items.clear(); const ds = engine.browse(ki); let lo = Infinity, hi = -Infinity; if (chain13) ds.forEach(d => { lo = Math.min(lo, d.rank); hi = Math.max(hi, d.rank); });
-    const r = ds.map(d => { const it = itemFromDoc(d); if (chain13) it.rel = 100 + LumiSearch.restRole(d, '') + 12 * (1 - (d.rank - lo) / Math.max(1, hi - lo)) + (d.net != null ? Math.min(6, d.net / 8) : 0); return it; }); my.src.local = 'ok'; my.counts.local = r.length; mergeItems(r); renderResults(); };
+    const ft = LumiSearch.norm(my.f18 || '').split(' ').filter(Boolean); const ds2 = ft.length ? ds.filter(d => { const t = ' ' + LumiSearch.norm((d.name || '') + ' ' + (d.brand || '')) + ' '; return ft.every(w => t.includes(' ' + w) || t.includes(w)); }) : ds; const bn = $('#bf18n'); if (bn) bn.textContent = ft.length ? `${ds2.length} match${ds2.length === 1 ? '' : 'es'}` : '';
+    const r = ds2.map(d => { const it = itemFromDoc(d); if (chain13) it.rel = 100 + LumiSearch.restRole(d, '') + 12 * (1 - (d.rank - lo) / Math.max(1, hi - lo)) + (d.net != null ? Math.min(6, d.net / 8) : 0); return it; }); my.src.local = 'ok'; my.counts.local = r.length; mergeItems(r); renderResults(); };
+  { const bi = $('#bf18'); if (bi) { let t; bi.oninput = () => { clearTimeout(t); t = setTimeout(() => { my.f18 = bi.value; my.limit = 40; run(); }, 150); }; } }
   loadIndex().then(run).then(loadIndexFull).then(run).catch(() => { my.src.local = 'err'; renderResults(); });
   renderResults();
   if ((key === 'rest' || chain13) && typeof restPicks13 === 'function') restPicks13(key); // v13 restaurant meal picks
@@ -674,7 +681,7 @@ function route() {
   if (view === 'recipes') return viewRecipes12();
   if (view === 'recipe' && arg) return viewRecipe12(arg);
   if (view === 'dexcom') { history.replaceState(null, '', '#/glucose'); return viewGlucose11(); } // v16: Dexcom login removed
-  const V15 = { quick: 'viewQuick15', fresh: 'viewFresh15', review: 'viewReview15', prices: 'viewPrices15', today: 'viewToday16', insights: 'viewToday16', myfoods: 'viewMyFoods17' }; // v15 (js/v15.js loads after this file)
+  const V15 = { quick: 'viewQuick15', fresh: 'viewFresh15', review: 'viewReview15', prices: 'viewPrices15', today: 'viewToday16', insights: 'viewToday16', myfoods: 'viewMyFoods17', patterns: 'viewPatterns18' }; // v15 (js/v15.js loads after this file)
   if (V15[view]) { if (typeof window[V15[view]] === 'function') return window[V15[view]](arg); app.innerHTML = skel(3); return; }
   viewHome();
 }
