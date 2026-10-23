@@ -6,6 +6,9 @@ const DATA = path.join(__dirname, '..', 'data'), ghash = id => { let h = 0; for 
 const IG = JSON.parse(fs.readFileSync(path.join(DATA, 'index-g.json'), 'utf8')); IG.docs = IG.docs.filter(d => !/^wfm-/.test(d[0]));
 const sh = {}; const shard = k => sh[k] = sh[k] || JSON.parse(fs.readFileSync(path.join(DATA, 'g', k + '.json'), 'utf8'));
 const g = v => { const m = String(v || '').match(/([\d.]+)\s*(m?g)/i); return m ? +m[1] / (m[2].toLowerCase() === 'mg' ? 1000 : 1) : null; };
+const STO = require('../js/stores.js'), WI = STO.STORES.findIndex(x => x[0] === 'wholefoods');
+// v17.3: tag Whole Foods store bit (own brand for 365/Whole Foods brands, else 'sold at') so items show in the store view
+const WFB = b => 2 ** (/^(365|whole foods|bakery|prepared foods|salad bar|specialty|meat|seafood)/i.test(String(b || '').trim()) ? WI : STO.SOLD + WI);
 const OZ = 28.3495; let n = 0, skip = 0;
 const group = 'Whole Foods Market'; if (!IG.cats.includes(group)) IG.cats.push(group); const gi = IG.cats.indexOf(group);
 for (const l of fs.readFileSync(process.argv[2], 'utf8').split('\n').filter(Boolean)) {
@@ -21,7 +24,7 @@ for (const l of fs.readFileSync(process.argv[2], 'utf8').split('\n').filter(Bool
   const dm = D.analyze({ name: r.name, ing: r.ing || '' }); comp.push({ w: 0, g: group, o: /organic/i.test(r.name) ? 1 : 0, am: dm.am, tm: dm.tm, df: dm.df, s: { n: 'wfm', i: r.ing ? 'wfm' : '', p: comp[4] ? 'wfm' : '' } });
   const p = S.fromCompact(comp), s = S.score(p), hr = H.rate(p, { whole: false, group, organic: !!comp[15].o });
   shard(ghash(id))[id] = comp;
-  IG.docs.push([id, comp[1], comp[2], s.score == null ? -1 : s.score, s.score == null || s.net == null ? -1 : Math.round(s.net), gi, comp[4], 'grocery-wfm', nut[1] == null ? -1 : Math.round(nut[1]), hr.score == null ? -1 : hr.score, (hr.basis === 'nutrition' ? 1 : 0) | (hr.est.length ? 2 : 0) | (S.isFiller(p) ? 4 : 0) | (s.bad ? 8 : 0), dm.am | dm.tm << 9, dm.df, 0, -1, 0]);
+  IG.docs.push([id, comp[1], comp[2], s.score == null ? -1 : s.score, s.score == null || s.net == null ? -1 : Math.round(s.net), gi, comp[4], 'grocery-wfm', nut[1] == null ? -1 : Math.round(nut[1]), hr.score == null ? -1 : hr.score, (hr.basis === 'nutrition' ? 1 : 0) | (hr.est.length ? 2 : 0) | (S.isFiller(p) ? 4 : 0) | (s.bad ? 8 : 0), dm.am | dm.tm << 9, dm.df, WFB(comp[2]), -1, 0]);
   n++; console.log(id, comp[1], 'carb', s.score, 'health', hr.score);
 }
 for (const [k, v] of Object.entries(sh)) fs.writeFileSync(path.join(DATA, 'g', k + '.json'), JSON.stringify(v));

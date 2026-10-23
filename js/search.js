@@ -103,10 +103,12 @@ function sameNutLoose(a, b) { return near(a.net, b.net, 0.45, 4) && near(a.sugar
 function subset(A, B) { if (A.size < 2 || B.size < 2) return false; const [S, L] = A.size <= B.size ? [A, B] : [B, A]; for (const t of S) if (!L.has(t)) return false; if (L.size - S.size > 2) return false; for (const t of L) if (!S.has(t) && TYPEW.has(t)) return false; return true; }
 const TYPEW = new Set('bar protein cookie mix bite chip crisp cereal drink shake powder ice cream frozen sauce dip snack cake keto light lite diet zero sugar free reduced fat low spicy hot sweet salted unsalted roasted milk dark white chocolate peanut butter cheese vanilla strawberry cinnamon honey'.split(' '));
 function sameNut(a, b) { return near(a.net, b.net) && near(a.sugar, b.sugar) && near(a.score, b.score, 0.1, 3) && near(a.h, b.h, 0.1, 5); }
+const isW = d => /^wfm-/.test(String(d.code || d.id || ''));
 function dedupe(list, get = x => x, max = Infinity) { const seen = new Map(), buck = new Map(), out = [];
   for (const x of list) { if (out.length >= max) break; const d = get(x); const k = groupKey(d.name, d.brand);
     let f = seen.get(k); const bk = (norm(String(d.brand || '').toLowerCase()).split(' ')[0] || '?'); const T = dtoks(d);
     if (!f) { const B = buck.get(bk) || []; for (let i = 0; i < B.length && i < 400; i++) { const [t2, d2] = B[i]; if ((simTok(T, t2) >= 0.85 && sameNut(d, d2)) || (core(T) && core(T) === core(t2) && sameNut5(d, d2)) || (core(T) && core(T) === core(t2) && sameNutLoose(d, d2)) || (subset(T, t2) && sameNutLoose(d, d2))) { f = d2; break; } } }
+    if (f && isW(f) !== isW(d)) f = null; /* v17.3: a Whole Foods page item and a label-database item stay separate rows */
     if (f) { f.sizes = (f.sizes || 1) + 1; continue; }
     d.sizes = 0; seen.set(k, d); if (!buck.has(bk)) buck.set(bk, []); buck.get(bk).push([T, d]); out.push(x); }
   return out; }
