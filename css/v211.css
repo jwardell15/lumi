@@ -24,3 +24,4 @@
 #rs211{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}#rs211 .chip{min-height:44px;display:inline-flex;align-items:center}
 @media (min-width:900px){.nl211{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .sg211 .chips{display:flex;flex-wrap:wrap;gap:8px;overflow:visible}
+.sg211 .chip small{color:inherit;font-weight:500}
