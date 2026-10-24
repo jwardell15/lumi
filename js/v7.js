@@ -9,6 +9,8 @@ function typeBarcode(msg) {
 }
 document.addEventListener('click', e => { if (e.target && e.target.id === 'scanType') { if (typeof stopScan === 'function') stopScan(); typeBarcode(''); } });
 const V7_NEWS = [
+  ['📍', 'Restaurants near you', 'Tap Near you on Home to see chains around you that Lumi has nutrition data for, closest first, each with its top picks by both scores. Lumi asks for your location only when you tap. Your location stays on your phone; only a rounded position goes to OpenStreetMap to find places.'],
+  ['📷', 'Scan a menu', 'Photograph a chain restaurant menu (Scan a menu on Home) and Lumi finds the dishes it has the chain\'s official nutrition data for, ranked by both scores, and suggests which chain it is. The photo is read on your phone. Dishes it can\'t match, and menus from local restaurants, get no scores, never guesses.'],
   ['🛒', 'Grocery list', 'A new grocery list (the Grocery list shortcut on Home) groups items by store section, shows the Health and Blood sugar scores for each item, and lets you check items off. Pick a store (Whole Foods and Costco are pinned first, or type any store). Share, copy or print it. The list stays on this device. Add items from any product page, your favorites or a swap card.'],
   ['🏷️', 'Smarter label scan', 'Label scans now read more label layouts (side-by-side, per 100 g, per serving plus per 100 g, and tables). You see what was read, with any doubtful numbers flagged, and the scores update as you fix a value before saving.'],
   ['🔁', 'Swaps of the same kind', 'Swap ideas now stay the same kind of food: a cereal suggests another cereal and a shake suggests another shake, not a diet soda or baby oatmeal.'],
