@@ -9,6 +9,7 @@ function typeBarcode(msg) {
 }
 document.addEventListener('click', e => { if (e.target && e.target.id === 'scanType') { if (typeof stopScan === 'function') stopScan(); typeBarcode(''); } });
 const V7_NEWS = [
+  ['🥤', 'Six more chains on official data', 'These replace 2018 data with each chain\'s official nutrition: Potbelly (October 16, 2026, 426 items), Jamba (October 2026, 195 items), El Pollo Loco (September 2026, 82 items), Auntie Anne\'s (August 2026, 126 items) and Sbarro (October 2022, 94 items). Blaze Pizza\'s current menu now has 205 items.'],
   ['🥢', 'Four more chains on official data', 'These replace 2018 data with each chain\'s official nutrition: P.F. Chang\'s (September 2026, 237 items), Del Taco (September 2026, 165 items), Carrabba\'s Italian Grill (May 2026, 298 items) and McAlister\'s Deli (June 18, 2026, 411 items).'],
   ['🎉', 'One Chuck E. Cheese', 'Chuck E. Cheese was listed twice. The old 2018 listing is gone, and its official 2025 menu stays under Chuck E. Cheese\'s.'],
   ['🍳', 'Five more chains on official data', 'These replace 2018 data with each chain\'s official nutrition: Friendly\'s (September 16, 2026, 856 items), Yard House (June 8, 2026, 199 items), Frisch\'s Big Boy (June 2026, 134 items) and Jason\'s Deli (May 2025, 180 items). Smokey Bones gained 2 items from its official menu.'],
