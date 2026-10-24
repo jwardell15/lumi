@@ -9,6 +9,8 @@ function typeBarcode(msg) {
 }
 document.addEventListener('click', e => { if (e.target && e.target.id === 'scanType') { if (typeof stopScan === 'function') stopScan(); typeBarcode(''); } });
 const V7_NEWS = [
+  ['🍕', 'Six big chains refreshed', 'Now using each chain\'s current official nutrition: Domino\'s (August 2026 guide, 110 items), Olive Garden (August 2026, 254 items), Panera Bread (September 2026, 584 items), Pizza Hut (updated October 23, 2026, 1,105 items), KFC (October 19, 2026, 217 items) and Applebee\'s (October 23, 2026, 439 items). These replace 2018 data.'],
+  ['📋', 'Source dates for 35 chains', 'Each chain we checked now records where its numbers come from and when we checked. Chains with no newer official source keep their current data.'],
   ['🍗', 'Dave\'s, Freddy\'s and Sweetgreen', 'Added from each chain\'s own nutrition info: Dave\'s Hot Chicken (89 items, chart revised March 2026), Freddy\'s Frozen Custard & Steakburgers (306 items) and Sweetgreen (56 menu items, updated September 2026).'],
   ['🥙', 'Qdoba and Pokeworks refreshed', 'Qdoba now uses its September 2026 nutrition PDF (142 items) and Pokeworks its October 2026 nutrition PDF (148 items). Both builders now start from an empty bowl and add each base, protein, topping and sauce from the official per-ingredient numbers.'],
   ['🔎', 'Clearer restaurant carbs', 'Search results for restaurant items now say "g carbs per item" instead of "per 100 g".'],
