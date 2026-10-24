@@ -91,6 +91,20 @@ function smallUse(p) {
   const why = /\bhoney\b/i.test(nm) ? 'honey' : /\b(jams?|jell(y|ies)|preserves|marmalades?|fruit spreads?)\b/i.test(nm) ? 'jam / fruit spread' : /\b(syrups?|agave|molasses)\b/i.test(nm) ? 'syrup' : /\b(dressings?|vinaigrettes?)\b/i.test(nm) ? 'dressing' : /\bspreads?\b/i.test(nm) ? 'spread' : 'sauce / condiment';
   return { why };
 }
+/* v20.0: single-ingredient sugars (honey, maple syrup, agave, molasses, table/brown/cane/coconut sugar, corn/rice/date/golden syrup).
+   All of their sugar is free sugar, so it's scored as ADDED sugar whatever the label says (US labels may list honey/maple's sugar as
+   "0 g added" for the pure product). Mixed foods that merely contain honey (honey mustard, honey-roasted nuts, honey wheat bread) don't match. */
+const PURESUGAR = /\b(honey|(pure |real |organic )?maple syrup|agave( nectar| syrup)?|molasses|treacle|(cane|brown|white|granulated|powdered|confectioners'?|coconut|turbinado|demerara|raw|date|palm|beet|table|caster|muscovado) sugar|sugar|(corn|light corn|dark corn|brown rice|rice|date|golden|cane|pancake|table|simple|tapioca|sorghum) syrup|sorghum|jaggery|piloncillo|panela)\b/i;
+const NOTPURE = /\b(sugar[- ]?free|no sugar|zero sugar|unsweetened|reduced sugar|less sugar|lite|light syrup|sugar[- ]?(snap|cookies?|peas?|plums?|wafers?)|mustard|roasted|glazed|wheat|oat|nut|bun|graham|butter|barbecue|bbq|sauce|dressing|vinaigrette|marinade|chicken|ham|salmon|turkey|bacon|sausage|ice|yog(h)?urt|cereal|bar|bars|cookies?|crackers?|candy|candies|chews?|drops|lozenges?|pops?|cough|tea|teas|coffee|latte|drink|water|soda|lemonade|crisps?|chips|pretzels?|bread|rolls?|cake|pie|tart|donuts?|doughnuts?|pastry|muffins?|biscuits?|waffles?|pancakes?(?! syrup)|granola|clusters|bites|bunches|comb cereal|cured|scrub|lip|soap|mix|baking mix|frosting|icing|jam|jelly|preserves|spread|whipped|cream|creamed|infused with|with|&|and)\b/i;
+function pureSugar(p) {
+  if (!p) return false; const nm = String(p.name || '').replace(/\b(organic|raw|pure|natural|real|100 ?%|grade a|amber|dark|golden|light|wildflower|clover|orange blossom|manuka|local|unfiltered|filtered|premium|kirkland signature|365|great value|good & gather|market pantry)\b/gi, ' ');
+  if (!PURESUGAR.test(nm) || NOTPURE.test(nm)) return false;
+  const n = p.n || {}; if (n.sugars == null || n.carbs == null || n.carbs <= 0 || n.sugars < n.carbs * 0.6) return false; // honey/syrups/sugars are mostly sugar
+  if ((n.protein || 0) > 3 || (n.fat || 0) > 3) return false;
+  const ing = String(p.ing || '').toLowerCase().trim(); if (!ing) return true;
+  const parts = ing.split(/[,;]/).map(x => x.replace(/[^a-z ]/g, ' ').trim()).filter(Boolean);
+  return parts.every(x => /honey|maple|agave|molasses|treacle|sugar|syrup|nectar|sorghum|jaggery|water|natural flavou?r|vanilla|salt|caramel colou?r|sodium benzoate|potassium sorbate|sorbic acid|citric acid|cellulose gum|pollen|propolis/.test(x));
+}
 /* v19.2: 70 %+ cacao dark chocolate isn't capped as a sweet when it has ≤ 25 g sugar per 100 g (it is still sugar-penalized normally). */
 function darkChoc(p) {
   const nm = p.name || '', m = nm.match(/(\d{2,3})\s?%/); if (!m || +m[1] < 70 || +m[1] > 100) return false;
@@ -170,7 +184,7 @@ function servBasis(p, opt) {
    label says which is which), then TOTAL carbs per serving, then a refined-starch penalty; fiber per serving is a small bonus only and
    is never subtracted from carbs. opt: {mult} (0.5/1/2 servings) or {grams}. */
 function score(p, opt) {
-  const n = p.n || {}, items = [];
+  const pure = pureSugar(p), n = pure ? Object.assign({}, p.n, { added: p.n.sugars }) : (p.n || {}), items = []; // v20.0: honey/syrup/agave sugar = added
   const { net, note } = netCarbs(p); const fiberDropped = quality(p).dropFiber;
   const sb = servBasis(p, opt), G = sb.g, k = G / 100;
   const base = { net, carbs: net, netNote: note, perServ: null, servQ: p.servQ || null, servG: G, servKind: sb.kind, servLabel: sb.label };
@@ -210,6 +224,7 @@ function score(p, opt) {
   if (SUGAR_WORDS.test(first) || new RegExp(SYRUPS.source, 'i').test(first)) { gi += 4; hits.push('sugar/syrup first'); }
   const st = [...new Set(ing.match(STARCH) || [])];
   if (st.length) { gi += Math.min(8, st.length * 4); hits.push(...st); }
+  if (pure) { gi = 9; hits.length = 0; hits.push('single-ingredient sugar'); } // v20.0: same fast-carb penalty with or without an ingredient list
   if (gi && ncS >= 3) add('gi', 'Fast carbs (syrups, refined starch)', -Math.min(12, gi * Math.min(1, ncS / 15)), hits.slice(0, 4).join(', '));
   // --- 3. refined-starch penalty (white rice, white bread, pasta, crackers…). Starch = total carbs − sugar − fiber, per serving.
   const nm = (p.name || '') + ' ' + (p.cat || '');
@@ -236,7 +251,7 @@ function score(p, opt) {
   if (tr && sc > TREAT_CAP) { items.push({ key: 'treat', label: 'Sweets & sugary drinks: capped at ' + TREAT_CAP + ' at any serving size', pts: TREAT_CAP - sc, detail: tr.why + ', ' + tr.s100 + ' g sugar per 100 ' + (liquid ? 'ml' : 'g') }); sc = TREAT_CAP; }
   items.sort((a, b) => a.pts - b.pts);
   const missing = [['fiber', 'fiber'], ['sugars', 'sugars'], ['sat', 'sat fat'], ['sodiumMg', 'sodium'], ['protein', 'protein']].filter(([k]) => n[k] == null).map(x => x[1]);
-  return Object.assign(base, { score: sc, band: band(sc), label: label(sc), items, missingFields: missing, treat: tr, small: sm, meal: !tr && !sm && n.kcal != null && mealItem(p, n.kcal * G / 100), dark: !tr && darkChoc(p) && (sg || 0) > 0, assumedServing: sb.kind === 'default' || sb.kind === 'per100', netServ: ncS, carbsServ: ncS, sugarServ: sgS });
+  return Object.assign(base, { score: sc, band: band(sc), label: label(sc), items, missingFields: missing, treat: tr, small: sm, pure, meal: !tr && !sm && n.kcal != null && mealItem(p, n.kcal * G / 100), dark: !tr && darkChoc(p) && (sg || 0) > 0, assumedServing: sb.kind === 'default' || sb.kind === 'per100', netServ: ncS, carbsServ: ncS, sugarServ: sgS });
 }
 /* v6.3 "filler": basics with ~no calories or carbs (water, plain tea/coffee, salt, spices, extracts, zero-cal sweeteners, gum).
    They still get a score, but they're kept out of "best of" rankings (home, stores, aisles, swaps, better options). */
@@ -296,5 +311,5 @@ function fromCompact(a) {
   return { id: code, code: /^\d+$/.test(code) ? code : '', src: meta ? (meta.src.includes('official') ? 'chain' : 'usda') : 'local', fdcId: /^fdc-/.test(code) ? code.slice(4) : undefined, name, brand, qty, img: img ? (img.startsWith('w:') ? (typeof dataURL === 'function' ? dataURL : String)('img/w/' + img.slice(2) + '-200.webp') : img.startsWith('http') ? img : 'https://images.openfoodfacts.org/images/products/' + img) : '', servQ, serv, nova, additives: adds ? adds.split(',') : [], ing, cat, cats: cat, naLabel: !!(fl & 1), liquid: notSolid(name, !!(fl & 2)), carby: fl & 16 ? !!(fl & 4) : undefined, dry: fl & 16 ? !!(fl & 8) : undefined, portions: portions || null, meta: meta || null, hx: a[15] || null, n };
 }
 const imgSize = (u, n) => u ? u.replace(/\.(100|200|400|full)\.jpg$/, '.' + n + '.jpg').replace(/-(200|400)\.webp$/, '-' + n + '.webp') : '';
-return { treat, smallUse, darkChoc, sugar100, mealItem, MEAL_KCAL, TREAT_CAP, servBasis, DEFSERV, implausible, isFiller, DRY, CARBY, imgSize, score, quality, fromOFF, fromUSDA, fromCompact, band, label, netCarbs, addTags, isNA, isLiquid, DK, ADDITIVES };
+return { pureSugar, treat, smallUse, darkChoc, sugar100, mealItem, MEAL_KCAL, TREAT_CAP, servBasis, DEFSERV, implausible, isFiller, DRY, CARBY, imgSize, score, quality, fromOFF, fromUSDA, fromCompact, band, label, netCarbs, addTags, isNA, isLiquid, DK, ADDITIVES };
 });
