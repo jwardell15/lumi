@@ -9,6 +9,7 @@ function typeBarcode(msg) {
 }
 document.addEventListener('click', e => { if (e.target && e.target.id === 'scanType') { if (typeof stopScan === 'function') stopScan(); typeBarcode(''); } });
 const V7_NEWS = [
+  ['🍦', 'Four more chains on official data', 'These replace 2018 data with each chain\'s official nutrition: Baskin-Robbins (September 18, 2026 guide, 324 items), Checkers & Rally\'s (August 2026, 202 items), Captain D\'s (July 20, 2026, 58 items) and Hooters (September 2023, 209 food items). Ci Ci\'s Pizza duplicates were folded into CiCi\'s Pizza.'],
   ['🥩', 'Three more chains on official data', 'These replace 2018 data with each chain\'s official nutrition: The Capital Grille (August 24, 2026, 102 items), Moe\'s Southwest Grill (2026 ingredient chart, 84 items) and Romano\'s Macaroni Grill (October 2021, 98 items). Flame Broiler\'s current menu now has 163 items.'],
   ['🥤', 'Six more chains on official data', 'These replace 2018 data with each chain\'s official nutrition: Potbelly (October 16, 2026, 426 items), Jamba (October 2026, 195 items), El Pollo Loco (September 2026, 82 items), Auntie Anne\'s (August 2026, 126 items) and Sbarro (October 2022, 94 items). Blaze Pizza\'s current menu now has 205 items.'],
   ['🥢', 'Four more chains on official data', 'These replace 2018 data with each chain\'s official nutrition: P.F. Chang\'s (September 2026, 237 items), Del Taco (September 2026, 165 items), Carrabba\'s Italian Grill (May 2026, 298 items) and McAlister\'s Deli (June 18, 2026, 411 items).'],
