@@ -163,10 +163,13 @@ const BOWL20 = [
     ['base', 'Base', /^(White Rice|Brown Rice|Flour Tortilla|Cheddar Jalapeno Tortilla)$/, 2], ['protein', 'Protein', /^(Barbacoa|Chicken|Chorizo|Fish|Pork|Steak|Taco Meat), Regular Entree Portion$/, 2],
     ['beans', 'Beans', /^(Black Beans|Pinto Beans)$/, 2], ['top', 'Toppings', /Topping$/, 0], ['sauce', 'Salsas & sauces', /^(Corn Salsa|Pico Salsa|Roja Salsa|Verde Salsa|Wild Salsa|BBQ Sauce|Cholula Sauce|Hot Head Sauce|Jalapeno Ranch|Mango Habanero Sauce|Ranch Sauce|Smoky Tabasco|Southwest Ranch Sauce|Straight Habanero Sauce|Sweet Habanero Sauce|Sweet Teriyaki Sauce|Taco Sauce)$/, 0],
     ['side', 'Sides', /^(Bag of Tortilla Chips)$/, 0]] },
-  { id: 'qdoba', chain: 'Qdoba', title: 'Qdoba bowl', kind: 'bowl', note: 'Qdoba publishes full nutrition for its signature bowls and add-ons, not for each rice, bean or protein scoop, so start from a signature bowl and add extras.', groups: [
-    ['base', 'Signature bowl', /^(Keto Bowl - (Brisket Birria|Chicken|Steak)|Chicken Queso Bowl|Cholula® Hot & Sweet Chicken Bowl)$/, 1],
-    ['top', 'Add-ons', /^(Chile Crema \(1 oz\)|Cotija Cheese \(\.25 oz\.\)|Picante Ranch Dressing \(1\.5 oz\.\)|Queso Diablo \(2 oz\.\)|Romaine Lettuce \(0\.25 oz\.\)|Salsa Verde \(1 oz\.\)|Seasoned Potatoes \(2 oz\.\)|Shredded Cheese \(1\.0 oz\.\)|Sour Cream, \(1 oz\.\)|Three Cheese Queso \(2 oz\.\)|Chopped Cilantro.*)$/, 0],
-    ['side', 'Sides', /^(Tortilla Chips \(2 oz\.\) WG|Side \(black beans w\/ cheese\))$/, 0]] },
+  { id: 'qdoba', chain: 'Qdoba', title: 'Qdoba bowl or burrito', kind: 'bowl', src: 'Qdoba official Nutrition Facts 2026 PDF (Sep 2026)', ex: /^Kids /, note: 'Qdoba lists every rice, bean, protein, topping and tortilla scoop with its weight. For a burrito, choose a flour tortilla as one of the bases; for a salad, Romaine Lettuce for Salad.', groups: [
+    ['base', 'Base', /^((Cilantro Lime Rice|Seasoned Brown Rice) \(4 oz\.\)|Romaine Lettuce for Salad \(3\.5 oz\)|Flour Tortilla \((10|12\.5)"\)|Crunchy Tortilla Shell)$/, 2],
+    ['protein', 'Protein', /^(Grilled Adobo Chicken \(3\.5 oz\.\)|Grilled Steak \(3\.5 oz\.\)|Ground Beef \(3\.5 oz\.\)|Pork Carnitas \(3\.5 oz\.\)|Brisket Birria \(3\.5 oz\)|Chorizo \((1\.5|3\.0) oz\.\)|Plant-Based Impossible™ \(3\.1 oz\.\)|Spicy Tequila Lime Steak \(3\.5 oz\)|Eggs \(6 oz\.\)|Bacon \((1|2) oz\.\))$/, 2],
+    ['beans', 'Beans', /^(Black Beans|Pinto Beans) \(4 oz\.\)$/, 2],
+    ['top', 'Queso, guac & toppings', /^(Fajita Veggies|Three Cheese Queso|Queso Diablo|Hand Crafted Guacamole|Shredded Cheese|Cotija Cheese|Sour Cream|Chile Crema|Pico de Gallo|Roasted Tomato Salsa|Salsa Roja|Salsa Verde|Habanero Salsa|Chile Corn Salsa|Pickled Jalapenos|Pickled Red Onion|Romaine Lettuce|Chopped Cilantro|Tortilla Strips|Seasoned Potatoes) \([\d.]+ oz\.?\)$/, 0],
+    ['sauce', 'Dressing', /^(Picante Ranch Dressing|Citrus Vinaigrette) \(1\.5 oz\.\)$/, 0],
+    ['side', 'Sides', /^(Tortilla Chips \(4 oz\.\)|Crispy Taco Shell)$/, 0]] },
   { id: 'subway', chain: 'Subway', title: 'Subway 6-inch', kind: 'sandwich', note: 'Subway lists each bread, meat, cheese, vegetable and sauce for a 6-inch sub.', groups: [
     ['base', 'Bread', /^(6" (Artisan Italian|Hearty Multigrain|Italian Herbs & Cheese|Jalapeño Cheddar) Bread|6" Artisan Flatbread|9" Wrap \(Pocket\)|12" Wrap)$/, 1],
     ['protein', 'Protein', /^(All-American Club Meats.*|Bacon \(2 strips\)|Cold Cut Combo® Meats|Genoa Salami.*|Grilled Chicken, Sweet Onion Teriyaki Glazed|Meatballs|Pastrami|Pepperoni, \(3 slices\)|Rotisserie-Style Chicken|Steak \(no cheese\)|Subway Club® Meats.*)$/, 2],
@@ -186,10 +189,13 @@ const BOWL20 = [
     ['protein', 'Meats', /^(Anchovies|Canadian Bacon|Crispy Bacon|Egg – Scrambled|Grilled Chicken|Mild Italian Sausage|Pepperoni|Plant-Based Italian Sausage|Salami|Seasoned Ground Beef|Spicy Chicken Sausage)$/, 0],
     ['top', 'Vegetables', /^(Artichokes|Arugula|Banana Peppers|Basil, Fresh Chopped|Black Olives|Broccoli, Roasted|Chickpeas|Cilantro|Corn, Roasted|Cucumbers|Garlic, Chopped|Garlic, Roasted|Greek Olives|Green Bell Peppers|Jalapenos|Mama Lil's Sweet Hot Peppas|Mixed Spring Greens|Mushrooms|Pineapple|Red Onion|Red Peppers, Roasted|Romaine|Serrano Peppers|Spinach|Vine-Ripened Tomatoes, Diced|Vine-Ripened Tomatoes, Sliced)$/, 0],
     ['fin', 'Finishes', /^(Balsamic Fig Glaze|Garlic Pesto Drizzle|Hot Buffalo Sauce|Mike’S Hot Honey|Ranch Finish|Sriracha Ranch|Sweet BBQ Swirl|Tomato Sauce Dollops)$/, 0]] },
-  { id: 'pokeworks', chain: 'Pokeworks', title: 'Pokeworks poke bowl', kind: 'bowl', note: 'Pokeworks publishes its signature bowls (with base and protein) and its sauces and sides, not each scoop, so start from a signature bowl.', groups: [
-    ['base', 'Signature bowl', /^(Avocado Salad|Bang Bang Chicken|Hawaiian Ahi|Luxe Lobster|Spicy Ahi Tuna|Sweet Sesame Chicken|Sweet Shoyu Tofu|Umami Ahi|Yuzu Ponzu Salmon) Bowl, (Small|Regular)$/, 1],
-    ['sauce', 'Extra sauce', /^(Black Garlic Aioli|Hawaiian Salt & Chili|O\.G\. Shoyu|Pokeworks Classic|Ponzu Fresh|Spicy Serrano Aioli|Sriracha Aioli|Sweet Chili Gochujang|Sweet Shoyu|Umami Shoyu)$/, 0],
-    ['side', 'Sides', /^(Furikake Mac Salad|Miso Soup|Seaweed Salad|Spicy Edamame|Surimi Salad|Spam Musubi)$/, 0]] }
+  { id: 'pokeworks', chain: 'Pokeworks', title: 'Pokeworks poke bowl', kind: 'bowl', src: 'Pokeworks official Allergen & Nutrition Info PDF (Oct 2026)', note: 'Pokeworks lists each base by bowl size and each protein per scoop (Small bowl = 1 scoop, Regular = 2, Large = 3; use + for more scoops). Sauces are per pump level: Light = 1 pump, Medium = 2, Heavy = 3.', groups: [
+    ['base', 'Base', /^(White Rice|Brown Rice|Salad Mix|Kale Noodles|Ramen Noodles) \((Small|Regular|Large) base, [\d.]+ oz\)$/, 2],
+    ['protein', 'Protein (per scoop)', /\(1 scoop, 2 oz\)$/, 3],
+    ['mix', 'Mix-ins', /^(Cilantro|Cucumber|Diced Pineapple|Diced Mango|Edamame|Hijiki Seaweed|Sweet Corn|Shredded Kale|Shredded Cabbage|Serrano Pepper|Mandarin Orange|Sliced Onion) \(/, 0],
+    ['top', 'Toppings & crunch', /^(Avocado|Soft Tofu|Chili Crisp|Green Onion|Masago|Pickled Ginger|Seaweed Salad \(topping, 1 oz\)|Surimi Salad \(topping, 0\.7 oz\)|Thai Chili|Sesame Seeds|Wasabi|Garlic Crisps|Spicy Furikake|Onion Crisps|Shredded Nori|Wonton Strips)( \(|$)/, 0],
+    ['sauce', 'Sauce', / Sauce \((Light|Medium|Heavy), \d pumps?\)$/, 0],
+    ['side', 'Sides', /^(Garlic Spam Musubi|Miso Soup \(|Chicken Miso Ramen Soup|Furikake Mac Salad|Surimi Salad \(side|Spicy Edamame|Seaweed Salad \(side)/, 0]] }
 ];
 async function bowlItems20(cfg) {
   try { await loadIndex(); } catch {} const D = engine.docs.filter(d => d.src === 'rest' && d.brand === cfg.chain && !(cfg.ex && cfg.ex.test(d.name)));
@@ -202,7 +208,7 @@ async function viewBowlHub20() {
   const A = bowlAvail20();
   app.innerHTML = `<section class="pg13 bw20"><h1>Build your own</h1><p class="lead">Pick a chain, then assemble your bowl, sub or pizza from that chain's own published nutrition for each ingredient. Totals and both scores update as you go.</p>
   <ul class="bwh20">${A.map(c => `<li><a href="#/bowl/${c.id}"><span class="bi20" aria-hidden="true">${c.kind === 'pizza' ? '🍕' : c.kind === 'sandwich' ? '🥪' : '🥗'}</span><span><b>${esc(c.title)}</b><small>${esc(c.chain)}</small></span><span aria-hidden="true">›</span></a></li>`).join('')}</ul>
-  <p class="foot">Only chains that publish nutrition for individual ingredients are here. Sweetgreen isn't included yet: Lumi has no allowed official ingredient-level source for it right now.</p></section>`;
+  <p class="foot">Only chains that publish nutrition for individual ingredients are here. Sweetgreen's own nutrition page lists its menu items but not each ingredient, so it has no builder; its menu items are in search.</p></section>`;
 }
 const draft20 = id => store.get('bowl20:' + id, null);
 async function viewBowl20(id) {

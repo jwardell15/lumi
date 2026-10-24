@@ -9,6 +9,9 @@ function typeBarcode(msg) {
 }
 document.addEventListener('click', e => { if (e.target && e.target.id === 'scanType') { if (typeof stopScan === 'function') stopScan(); typeBarcode(''); } });
 const V7_NEWS = [
+  ['🍗', 'Dave\'s, Freddy\'s and Sweetgreen', 'Added from each chain\'s own nutrition info: Dave\'s Hot Chicken (89 items, chart revised March 2026), Freddy\'s Frozen Custard & Steakburgers (306 items) and Sweetgreen (56 menu items, updated September 2026).'],
+  ['🥙', 'Qdoba and Pokeworks refreshed', 'Qdoba now uses its September 2026 nutrition PDF (142 items) and Pokeworks its October 2026 nutrition PDF (148 items). Both builders now start from an empty bowl and add each base, protein, topping and sauce from the official per-ingredient numbers.'],
+  ['🔎', 'Clearer restaurant carbs', 'Search results for restaurant items now say "g carbs per item" instead of "per 100 g".'],
   ['🫓', 'CAVA is here', 'All 113 items from CAVA\'s official Nutrition and Allergen Guide (September 2026): curated bowls and pitas, bases, mains, dips, toppings, dressings, sides, kids and drinks. Build your own CAVA bowl or pita with live totals and both scores.'],
   ['🌯', 'Chipotle refreshed', 'Chipotle now uses its own current US nutrition facts (123 items, including kids and drinks) instead of the 2018 archive, and the Chipotle bowl builder uses the new values.'],
   ['🔁', 'Smart swaps', 'Every product page now suggests 2–3 real, lower-sugar or better-scoring alternatives from the same category (your stores or the same chain first), with per-serving sugar, carb and score differences. Swaps also show under search results and logged foods.'],

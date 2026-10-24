@@ -6,7 +6,7 @@ const DATA = path.join(__dirname, '..', 'data'), ghash = id => { let h = 0; for 
 const slug = s => s.toLowerCase().replace(/['’]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 const R = JSON.parse(fs.readFileSync(process.argv[2], 'utf8')); const chains = [...new Set(R.map(r => r.chain))];
 const IG = JSON.parse(fs.readFileSync(path.join(DATA, 'index-g.json'), 'utf8')); const sh = {}; const shard = k => sh[k] = sh[k] || JSON.parse(fs.readFileSync(path.join(DATA, 'g', k + '.json'), 'utf8'));
-const pre = chains.map(c => 'r-' + slug(c) + '-'); IG.docs = IG.docs.filter(d => !pre.some(p => d[0].startsWith(p)));
+const pre = chains.map(c => 'r-' + slug(c) + '-'); IG.docs = IG.docs.filter(d => { if (!pre.some(p => d[0].startsWith(p))) return true; delete shard(ghash(d[0]))[d[0]]; return false; }); // 20.2: also drop the replaced items from their shards
 // 20.1: REPLACE_MS="Chipotle" also drops that chain's older MenuStat (ms-*) items when its own official PDF replaces them
 const RMS = (process.env.REPLACE_MS || '').split('|').filter(Boolean); let rms = 0;
 if (RMS.length) IG.docs = IG.docs.filter(d => { if (d[0].startsWith('ms-') && RMS.includes(d[2])) { const s = shard(ghash(d[0])); delete s[d[0]]; rms++; return false; } return true; });
