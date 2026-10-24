@@ -69,6 +69,33 @@ function netCarbs(p) {
   return { net: n.carbs, note: p.naLabel === false ? 'Total carbohydrate as labeled (EU-style labels list carbohydrate without fiber)' : 'Total carbohydrate as labeled' };
 }
 
+/* v19.1 SWEETS & SUGARY DRINKS ("treat") detector. A food is a treat when its category/name says sweets (candy, chocolate, cookies,
+   pastries, cakes, donuts, ice cream, desserts, sugary cereal, soda and other sweetened drinks…) AND it is actually sugar-dense with added
+   sugar (added-sugar share of sugar ≥ 40 % or sugar in the ingredients), or when it is very sugar-dense with added sugar regardless of name.
+   Sugar density is measured per 100 g/ml (restaurant items: per estimated item weight), so a tiny serving can't hide it. */
+const TREAT_SOLID = /\b(cand(y|ies)|confection\w*|chocolates?|truffles?|fudge|caramels?|toffees?|gumm(y|ies)|jelly beans?|marshmallows?|lollipops?|licorice|liquorice|cookies?|biscuits?|brownies?|blondies?|pastr(y|ies)|danish|croissants?|cakes?|cupcakes?|cheesecakes?|donuts?|doughnuts?|muffins?|cinnamon rolls?|sweet rolls?|cinnabons?|pies?|tarts?|toaster pastr\w*|pop-?tarts?|ice creams?|gelato|frozen (desserts?|yogurt|custard|treats?)|sherbet|sorbet|popsicles?|ice pops?|sundaes?|blizzards?|concretes?|desserts?|sweets|wafers?|macarons?|frosting|icing|snickers|kit ?kat|twix|m&m'?s|reese'?s|oreos?|cobbler|churros?|funnel cake|kolache|scones?|pudding|custard|nougat|praline|bonbons?|mochi|baklava|eclairs?|cannoli|biscotti|shortbread|snack cakes?|honey buns?|cream puffs?)\b/i;
+const TREAT_DRINK = /\b(soda|sodas|soft drinks?|cola|pop|lemonade|limeade|sweet tea|iced tea|energy drinks?|sports drinks?|punch|fruit drinks?|juice drinks?|cocktail|milkshakes?|shakes?|frapp\w*|slush\w*|smoothies?|horchata|boba|bubble tea|milk tea|hot chocolate|hot cocoa|chocolate milk|sweetened|frosty|refresher|agua fresca|mocha|latte|macchiato|chiller|cooler|freeze|frozen (coffee|drink))\b/i;
+const CEREALW = /\b(cereals?|granola|frosted|loops|puffs|crunch|flakes|o's|pops)\b/i;
+function treat(p) {
+  const n = p.n || {}; if (n.sugars == null && !(n.carbs >= 40 && !p.liquid && TREAT_SOLID.test((p.name || '') + ' ' + (p.cat || '')))) return null;
+  const nm = (p.name || '') + ' ' + (p.cat || '') + ' ' + (p.cats || ''), ing = String(p.ing || '').toLowerCase(), liq = !!p.liquid;
+  let w = 100; if (p.meta && p.meta.perItem) { const m = (n.carbs || 0) + (n.protein || 0) + (n.fat || 0); w = Math.max(m / (liq ? 0.2 : 0.5), (n.kcal || 0) / (liq ? 1.2 : 4), 20); }
+  const s100 = (n.sugars == null ? n.carbs * 0.4 : n.sugars) * 100 / w; // sugar not listed: assume 40 % of carbs (typical for cookies/cakes)
+  const sugarIng = SUGAR_WORDS.test(ing) || SYRUPS.test(ing) || /\b(honey|syrup|molasses|fruit juice concentrate)\b/.test(ing);
+  const addR = n.added != null && n.sugars > 0 ? n.added / n.sugars : null;
+  const added = (addR != null && addR >= 0.4) || sugarIng || (addR == null && !ing); // no ingredient list (restaurant menus, bakery items): a sweets-named, sugar-dense food is assumed to have added sugar
+  if (!added || /\b(unsweetened|sugar[- ]free|no sugar added|diet|zero sugar|zero)\b/i.test(p.name || '')) return null;
+  let why = '';
+  const drink = liq && !/\b(sauces?|ketchup|dressings?|jams?|jell(y|ies)|preserves|spreads?|syrups?|honey|powders?|mix|creamers?|marinades?|salsa|dips?|crisps|chips|pretzels?|ice creams?|frozen desserts?|gelato|sorbet|yog(h)?urts?|soups?|purees?|baby food)\b/i.test(nm);
+  const lac = drink && /\b(milks?|kefir|lassi|dairy|yog(h)?urts?|skyr|protein shakes?)\b/i.test(nm) ? 5 : 0; // milk sugar (lactose) isn't added sugar
+  if (drink && ((TREAT_DRINK.test(nm) && s100 >= 4 + lac) || s100 >= 6 + lac)) why = 'sweetened drink';
+  else if (drink) why = '';
+  else if (TREAT_SOLID.test(nm) && s100 >= 12) why = 'sweets/dessert';
+  else if (CEREALW.test(nm) && /cereal/i.test(nm) && s100 >= 22) why = 'sugary cereal';
+  else if (s100 >= 30) why = 'very high in added sugar';
+  return why ? { why, s100: Math.round(s100 * 10) / 10 } : null;
+}
+const TREAT_CAP = 30;
 /* v19.0 serving basis. Scores are computed PER SERVING. Order of preference:
    1) the labeled serving size in grams/ml (servQ)  2) restaurant items: per item as published
    3) a documented category default serving (DEFSERV below)  4) per 100 g, flagged "per 100 g (no serving size)". */
@@ -127,6 +154,10 @@ function score(p, opt) {
   } else if (sugarIng) add('sugar', 'Sugar amount not listed (sugar in ingredients)', -8, 'unknown');
   if (liquid && (sg || 0) > 2.5 && sgS > 3) add('liquid', 'Liquid sugar: rapid absorption', -Math.min(25, sgS * 0.8), r1(sgS) + ' g' + ps);
   if (liquid && sgS != null && sgS >= 15) add('liquidDose', '15 g or more sugar per drink', -10, r1(sgS) + ' g');
+  // v19.1: per-100 g sugar density (added sugar only), so a tiny serving of a very sugary food can't escape
+  const tr = treat(p);
+  if (sg != null && (sugarIng || (n.added || 0) > 0)) { const w = p.meta && p.meta.perItem ? null : 100; const s100 = tr ? tr.s100 : w ? sg : null;
+    if (s100 != null) { const dp = liquid ? Math.min(20, Math.max(0, s100 - 4) * 2) : Math.min(20, Math.max(0, s100 - 10) * 0.4); if (dp >= 0.5) add('density', 'Sugar density: ' + r1(s100) + ' g per 100 ' + (liquid ? 'ml' : 'g'), -dp, 'any serving size'); } }
   // --- 2. total carbs per serving (secondary)
   add('carbsServ', 'Total carbs' + ps, -Math.min(35, ncS * 0.7), r1(ncS) + ' g');
   let gi = 0; const hits = [];
@@ -157,10 +188,11 @@ function score(p, opt) {
   if (n.carbs != null && n.carbs < 0.5 && p.naLabel && p.servQ && p.servQ < 100 && !(p.meta && p.meta.perItem)) { const unc = 0.99 * G / p.servQ; if (unc >= 0.5) add('round0', 'Label rounding: "0 g" per serving can hide up to 0.99 g', -Math.min(6, unc * 3), 'up to ' + r1(unc) + ' g'); }
   if (Math.abs(hidden) >= 0.05) items.push({ key: 'small', label: 'Small amounts (sodium, sat fat, sugar…) combined', pts: Math.round(hidden * 10) / 10, detail: 'each under 0.5' });
   const raw = 100 + items.reduce((s, i) => s + i.pts, 0);
-  const sc = Math.max(0, Math.min(100, Math.round(raw)));
+  let sc = Math.max(0, Math.min(100, Math.round(raw)));
+  if (tr && sc > TREAT_CAP) { items.push({ key: 'treat', label: 'Sweets & sugary drinks: capped at ' + TREAT_CAP + ' at any serving size', pts: TREAT_CAP - sc, detail: tr.why + ', ' + tr.s100 + ' g sugar per 100 ' + (liquid ? 'ml' : 'g') }); sc = TREAT_CAP; }
   items.sort((a, b) => a.pts - b.pts);
   const missing = [['fiber', 'fiber'], ['sugars', 'sugars'], ['sat', 'sat fat'], ['sodiumMg', 'sodium'], ['protein', 'protein']].filter(([k]) => n[k] == null).map(x => x[1]);
-  return Object.assign(base, { score: sc, band: band(sc), label: label(sc), items, missingFields: missing, assumedServing: sb.kind === 'default' || sb.kind === 'per100', netServ: ncS, carbsServ: ncS, sugarServ: sgS });
+  return Object.assign(base, { score: sc, band: band(sc), label: label(sc), items, missingFields: missing, treat: tr, assumedServing: sb.kind === 'default' || sb.kind === 'per100', netServ: ncS, carbsServ: ncS, sugarServ: sgS });
 }
 /* v6.3 "filler": basics with ~no calories or carbs (water, plain tea/coffee, salt, spices, extracts, zero-cal sweeteners, gum).
    They still get a score, but they're kept out of "best of" rankings (home, stores, aisles, swaps, better options). */
@@ -220,5 +252,5 @@ function fromCompact(a) {
   return { id: code, code: /^\d+$/.test(code) ? code : '', src: meta ? (meta.src.includes('official') ? 'chain' : 'usda') : 'local', fdcId: /^fdc-/.test(code) ? code.slice(4) : undefined, name, brand, qty, img: img ? (img.startsWith('w:') ? (typeof dataURL === 'function' ? dataURL : String)('img/w/' + img.slice(2) + '-200.webp') : img.startsWith('http') ? img : 'https://images.openfoodfacts.org/images/products/' + img) : '', servQ, serv, nova, additives: adds ? adds.split(',') : [], ing, cat, cats: cat, naLabel: !!(fl & 1), liquid: notSolid(name, !!(fl & 2)), carby: fl & 16 ? !!(fl & 4) : undefined, dry: fl & 16 ? !!(fl & 8) : undefined, portions: portions || null, meta: meta || null, hx: a[15] || null, n };
 }
 const imgSize = (u, n) => u ? u.replace(/\.(100|200|400|full)\.jpg$/, '.' + n + '.jpg').replace(/-(200|400)\.webp$/, '-' + n + '.webp') : '';
-return { servBasis, DEFSERV, implausible, isFiller, DRY, CARBY, imgSize, score, quality, fromOFF, fromUSDA, fromCompact, band, label, netCarbs, addTags, isNA, isLiquid, DK, ADDITIVES };
+return { treat, TREAT_CAP, servBasis, DEFSERV, implausible, isFiller, DRY, CARBY, imgSize, score, quality, fromOFF, fromUSDA, fromCompact, band, label, netCarbs, addTags, isNA, isLiquid, DK, ADDITIVES };
 });

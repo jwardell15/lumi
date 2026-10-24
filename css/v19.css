@@ -59,3 +59,8 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,su
 .sv19c button[aria-pressed=true]{background:var(--acc);color:var(--accFg);border-color:var(--acc)}
 .sv19c input{width:84px;min-height:40px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:0 8px;font:inherit}
 .sv19c .sv19b{font-size:12.5px;color:var(--mut);flex-basis:100%}
+/* 19.1 sweet-treat cap note */
+.bl19.tr191{margin-top:6px;padding:8px 10px;border-radius:10px;background:color-mix(in srgb,#c2410c 12%,transparent);color:inherit;line-height:1.4}
+.bl19.tr191 b{color:#b13a07}
+:root[data-theme=dark] .bl19.tr191 b{color:#ffb38a}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .bl19.tr191 b{color:#ffb38a}}

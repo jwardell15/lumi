@@ -7,7 +7,8 @@ function giMatch(p) { if (!GI8 || !p || !p.name) return null; const nm = String(
   for (const [food, gi, re, prep] of GI8.re) if (re.test(nm)) { if ((prep === 'cooked' && notCooked) || (prep === 'raw' && notRaw)) return null; return { food, gi }; } return null; }
 function bgImpact(p) {
   const s = S.score(p), n = p.n || {}; if (s.net == null) return null;
-  const perItem = p.meta && p.meta.perItem, g = perItem ? 100 : (p.servQ || 100), basis = perItem ? 'per item' : p.servQ ? `per serving (${Math.round(g)}${p.liquid ? 'ml' : 'g'})` : 'per 100 g';
+  const perItem = p.meta && p.meta.perItem, u = p.liquid ? 'ml' : 'g'; // v19.1: same serving as the scores (follows the ½×/1×/2×/grams control)
+  const g = s.servG || (perItem ? 100 : (p.servQ || 100)), basis = s.servKind === 'per100' ? `per 100 ${u} (no serving size)` : s.servKind === 'item' ? (g === 100 ? 'per item' : `per ${s.servLabel}`) : s.servKind === 'default' ? `per typical serving (${s.servLabel})` : `per serving (${s.servLabel || Math.round(g) + ' ' + u})`;
   const k = g / 100, net = Math.max(0, s.net * k), fat = (n.fat || 0) * k, pro = (n.protein || 0) * k, fib = (n.fiber || 0) * k, sug = (n.sugars || 0) * k;
   const ref = giMatch(p);
   let size, speed, why = [], method;

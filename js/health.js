@@ -55,7 +55,11 @@ function rate(p, opt = {}) {
   const LS0 = typeof self !== 'undefined' && self.LumiScore ? self.LumiScore : (typeof require === 'function' ? require('./score.js') : null);
   const bevLike = !!p.liquid;
   { const sb = opt.serv || (LS0 && LS0.servBasis ? LS0.servBasis(p, opt) : { g: 100, kind: 'per100' }); out.servG = sb.g; out.servKind = sb.kind; out.servLabel = sb.label;
-    if (!inval0) { const gServ = sb.perItem ? (n._itemG || 100) * sb.g / 100 : sb.g; out.servGEff = Math.round(gServ); const f = Math.max(0.5, Math.min(2.5, gServ / (bevLike ? 250 : 100))); out.servF = Math.round(f * 100) / 100;
+    if (!inval0) { const gServ = sb.perItem ? (n._itemG || 100) * sb.g / 100 : sb.g; out.servGEff = Math.round(gServ); const tr = LS0 && LS0.treat ? LS0.treat(p) : null; out.treat = tr;
+      /* v19.1: portion floor. Ordinary foods follow the portion down to 0.3 × the reference; savory snacks stop at 0.5 ×; sweets & sugary
+         drinks never go below 1 × (a small serving of a treat is still judged as a treat). */
+      const snack = !tr && /\b(chips|crisps|puffs|cheese curls|pretzels|crackers|fries|tortilla chips|pork rinds|snack mix|jerky)\b/i.test((p.name || '') + ' ' + (p.cat || ''));
+      const fMin = tr ? 1 : snack ? 0.5 : 0.3; const f = Math.max(fMin, Math.min(2.5, gServ / (bevLike ? 250 : 100))); out.servF = Math.round(f * 100) / 100;
       if (f !== 1) n = Object.fromEntries(Object.entries(n).map(([k, v]) => [k, v == null || k === '_itemG' ? v : v * f])); } }
   let kcal = n.kcal; const mac = [n.carbs, n.protein, n.fat];
   if (kcal == null && mac.some(v => v != null)) { kcal = (n.carbs || 0) * 4 + (n.protein || 0) * 4 + (n.fat || 0) * 9; out.est.push('energy'); }
@@ -101,6 +105,7 @@ function rate(p, opt = {}) {
     out.additiveScore = asc; out.organic = organic;
     let sc = Math.round(nut * 0.6 + asc * 0.3 + (organic ? 10 : 0)); if (high) sc = Math.min(sc, 49); if (cls === 'E') sc = Math.min(sc, 24); else if (cls === 'D') sc = Math.min(sc, 49); out.score = sc;
   }
+  if (out.treat && out.score > 30) { out.score = 30; out.capped = 'Sweets & sugary drinks are capped at 30 at any serving size (' + out.treat.why + ', ' + out.treat.s100 + ' g sugar per 100 ' + (bevLike ? 'ml' : 'g') + ')'; }
   out.band = out.score >= 75 ? 'excellent' : out.score >= 50 ? 'good' : out.score >= 25 ? 'poor' : 'bad';
   // negatives / positives (levels judged on the serving-scaled amounts; values shown per serving), Yuka-style
   const lvl = (x, a, b, c) => x <= a ? 0 : x <= b ? 1 : x <= c ? 2 : 3;

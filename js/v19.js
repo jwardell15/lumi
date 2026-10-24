@@ -54,7 +54,8 @@ let SV19 = null; // { id, mult } or { id, grams } — the serving chosen on the 
 function basisLine19(s) {
   if (!s || s.servKind == null) return '';
   const u = ''; const t = s.servKind === 'per100' ? s.servLabel : s.servKind === 'item' ? 'per item (as published)' : s.servKind === 'default' ? `per typical serving (${s.servLabel}) · no serving size on the label` : `per serving (${s.servLabel})`;
-  return `<div class="bl19" role="note">Scores are ${esc(t)}${u}</div>`;
+  const cap = s.treat ? `<div class="bl19 tr191" role="note"><b>Sweet treat:</b> sweets and sugary drinks are capped at ${LumiScore.TREAT_CAP || 30} on both scores at any serving size (${esc(s.treat.why)}, ${s.treat.s100} g sugar per 100 ${s.treat.why === 'sweetened drink' ? 'ml' : 'g'}).</div>` : '';
+  return `<div class="bl19" role="note">Scores are ${esc(t)}${u}</div>` + cap;
 }
 if (typeof ratingLines === 'function') { const rl0 = ratingLines; ratingLines = function (s) { return rl0.apply(this, arguments) + basisLine19(s); }; }
 function servCtl19() {
