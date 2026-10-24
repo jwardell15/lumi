@@ -9,6 +9,8 @@ function typeBarcode(msg) {
 }
 document.addEventListener('click', e => { if (e.target && e.target.id === 'scanType') { if (typeof stopScan === 'function') stopScan(); typeBarcode(''); } });
 const V7_NEWS = [
+  ['🥢', 'Four more chains on official data', 'These replace 2018 data with each chain\'s official nutrition: P.F. Chang\'s (September 2026, 237 items), Del Taco (September 2026, 165 items), Carrabba\'s Italian Grill (May 2026, 298 items) and McAlister\'s Deli (June 18, 2026, 411 items).'],
+  ['🎉', 'One Chuck E. Cheese', 'Chuck E. Cheese was listed twice. The old 2018 listing is gone, and its official 2025 menu stays under Chuck E. Cheese\'s.'],
   ['🍳', 'Five more chains on official data', 'These replace 2018 data with each chain\'s official nutrition: Friendly\'s (September 16, 2026, 856 items), Yard House (June 8, 2026, 199 items), Frisch\'s Big Boy (June 2026, 134 items) and Jason\'s Deli (May 2025, 180 items). Smokey Bones gained 2 items from its official menu.'],
   ['🥯', 'One Einstein Bros', 'Einstein Bros was listed twice. The old 2018 listing is gone, and its official 2025 menu stays under Einstein Bros. Bagels.'],
   ['🥩', 'Nine more chains on official data', 'These replace 2018 data with each chain\'s current official nutrition: Golden Corral (July 28, 2026, 1,185 items), LongHorn Steakhouse (August 10, 2026, 150), BJ\'s Restaurant & Brewhouse (August 31, 2026, 481), Round Table Pizza (October 2026, 443), Denny\'s (April 2026, 242), TGI Fridays (February 17, 2026, 229), Quiznos (April 2024, 333), Sheetz (October 23, 2026, 1,197) and Firehouse Subs (September 9, 2026, 983).'],
