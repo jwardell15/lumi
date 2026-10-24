@@ -7,6 +7,10 @@ const slug = s => s.toLowerCase().replace(/['’]/g, '').replace(/[^a-z0-9]+/g, 
 const R = JSON.parse(fs.readFileSync(process.argv[2], 'utf8')); const chains = [...new Set(R.map(r => r.chain))];
 const IG = JSON.parse(fs.readFileSync(path.join(DATA, 'index-g.json'), 'utf8')); const sh = {}; const shard = k => sh[k] = sh[k] || JSON.parse(fs.readFileSync(path.join(DATA, 'g', k + '.json'), 'utf8'));
 const pre = chains.map(c => 'r-' + slug(c) + '-'); IG.docs = IG.docs.filter(d => !pre.some(p => d[0].startsWith(p)));
+// 20.1: REPLACE_MS="Chipotle" also drops that chain's older MenuStat (ms-*) items when its own official PDF replaces them
+const RMS = (process.env.REPLACE_MS || '').split('|').filter(Boolean); let rms = 0;
+if (RMS.length) IG.docs = IG.docs.filter(d => { if (d[0].startsWith('ms-') && RMS.includes(d[2])) { const s = shard(ghash(d[0])); delete s[d[0]]; rms++; return false; } return true; });
+if (rms) console.log('removed MenuStat items', rms);
 for (const c of chains) { const k = 'rest-' + slug(c); if (!IG.chains.some(x => x[0] === k)) IG.chains.push([k, c]); }
 IG.chains.sort((a, b) => a[1].localeCompare(b[1])); const gi = IG.cats.indexOf('') >= 0 ? IG.cats.indexOf('') : (IG.cats.push(''), IG.cats.length - 1);
 const DR = /\b(latte|mocha|tea|coffee|smoothie|lemonade|soda|shake|malt|cocoa|juice|milk|water|drink|limeade|float|coke|sprite|pepper|fanta|root beer|punch|refresher|frozen beverage)\b/i;
@@ -14,9 +18,9 @@ const ids = new Set(); let n = 0;
 for (const r of R) {
   const s_ = slug(r.chain); let id = ('r-' + s_ + '-' + slug(r.item)).slice(0, 90), k = id, i = 2; while (ids.has(k)) k = id + '-' + i++; id = k; ids.add(id);
   const gr = r.grams || null, f = gr ? 100 / gr : 1, v = x => x == null ? null : Math.round(x * f * 10) / 10;
-  const nut = [v(r.carbs), v(r.sugar), null, v(r.fiber), v(r.protein), v(r.fat), v(r.sat), null, r.sodium == null ? null : Math.round(r.sodium * f), r.kcal == null ? null : Math.round(r.kcal * f), null];
+  const nut = [v(r.carbs), v(r.sugar), r.added == null ? null : v(r.added), v(r.fiber), v(r.protein), v(r.fat), v(r.sat), r.trans == null ? null : v(r.trans), r.sodium == null ? null : Math.round(r.sodium * f), r.kcal == null ? null : Math.round(r.kcal * f), null];
   const serv = r.serving || (gr ? `1 item (${gr} g)` : '1 item');
-  const comp = [id, r.item, r.chain, '', '', gr || 100, serv, null, nut, '', '', '', 17, [[serv, gr || 100]], { src: r.srcLabel || (r.chain + ' official nutrition'), url: r.source, date: r.date, perItem: !gr }];
+  const comp = [id, r.item, r.chain, '', '', gr || 100, serv, null, nut, '', '', '', 17, [[serv, gr || 100]], Object.assign({ src: r.srcLabel || (r.chain + ' official nutrition'), url: r.source, date: r.date, perItem: !gr }, r.section ? { sec: r.section } : {}, r.chol != null ? { chol: r.chol } : {}, r.note ? { note: r.note } : {})];
   const dm = D.analyze({ name: r.item, ing: '' }); comp.push({ w: 0, g: '', o: 0, s: { n: 'g' }, am: dm.am, tm: dm.tm, df: dm.df });
   if (DR.test(r.item) && !gr) comp[14].liquid = true;
   const p = S.fromCompact(comp), sc = S.score(p), hr = H.rate(p, { whole: false, group: '' });

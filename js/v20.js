@@ -129,11 +129,18 @@ async function todaySwaps20() {
 
 /* ---------- 3. build-your-own bowls (official component items only) ---------- */
 const BOWL20 = [
-  { id: 'chipotle', chain: 'Chipotle', title: 'Chipotle bowl', kind: 'bowl', src: 'Chipotle component nutrition (MenuStat 2018 archive of Chipotle\'s published values)', ex: /Kids|Chips &|Large|for Tacos/, groups: [
-    ['base', 'Base', /^(White Rice|Brown Rice|Romaine Lettuce, for Salads|Flour Tortilla|3 Crispy Corn Tortillas|3 Soft Flour Tortillas)$/, 2],
+  { id: 'chipotle', chain: 'Chipotle', title: 'Chipotle bowl', kind: 'bowl', src: 'Chipotle official US nutrition facts PDF (OCT-2024-US)', ex: /^Kids /, groups: [
+    ['base', 'Base', /^(Cilantro-Lime White Rice|Cilantro-Lime Brown Rice|Supergreens Salad Mix|Flour Tortilla \(burrito\)|Flour Tortilla \(taco\)|Crispy Corn Tortilla|Romaine Lettuce \(tacos\))$/, 2],
     ['protein', 'Protein', /^(Chicken|Steak|Barbacoa|Carnitas|Sofritas)$/, 2], ['beans', 'Beans', /^(Black Beans|Pinto Beans)$/, 2],
-    ['top', 'Salsas & toppings', /^(Fajita Vegetables|Fresh Tomato Salsa|Roasted Chili Corn Salsa|Tomatillo Green Chili Salsa|Tomatillo Red Chili Salsa|Sour Cream|Cheese|Guacamole|Queso, 2 oz|Vinaigrette)$/, 0],
-    ['side', 'Sides', /^(Chips|Queso, 4 oz)$/, 0]] },
+    ['top', 'Salsas & toppings', /^(Fajita Vegetables|Fresh Tomato Salsa|Roasted Chili-Corn Salsa|Tomatillo-Green Chili Salsa|Tomatillo-Red Chili Salsa|Sour Cream|Cheese|Guacamole \(topping\/side\)|Queso Blanco \(entreé\)|Chipotle-Honey Vinaigrette)$/, 0],
+    ['side', 'Sides', /^(Chips \(regular\)|Chips \(large\)|Queso Blanco \(side\)|Queso Blanco \(large\)|Guacamole \(large\))$/, 0]] },
+  { id: 'cava', chain: 'CAVA', title: 'CAVA bowl or pita', kind: 'bowl', src: 'CAVA official Nutrition and Allergen Guide (PDF, Sep 2026)', note: 'CAVA lists each base, main, dip, topping and dressing as one standard portion but gives no weights, so totals are per portion as served. For a pita, choose Whole Pita as a base.', groups: [
+    ['base', 'Base', /^(Saffron Basmati Rice|Brown Rice|Black Lentils|Super Greens|Arugula|Baby Spinach|Romaine|Power Greens|Whole Pita)$/, 2],
+    ['protein', 'Main', /^(Grilled Chicken|Harissa Honey Chicken|Grilled Steak|Braised Lamb|Spicy Lamb Meatballs|Falafel|Glazed Salmon|Roasted Vegetables)$/, 2],
+    ['dip', 'Dips & spreads', /^(Hummus|Red Pepper Hummus|Crazy Feta®|Tzatziki|Roasted Eggplant|Harissa \(dip\))$/, 0],
+    ['top', 'Toppings', /^(Shredded Romaine|Pita Crisps|Sumac Cabbage Slaw|Tomato \+ Onion|Persian Cucumber|Tomato \+ Cucumber|Kalamata Olives|Fiery Broccoli|Pickled Onions|Salt-Brined Pickles|Crumbled Feta|Fire-Roasted Corn|Avocado)$/, 0],
+    ['sauce', 'Dressing', /^(Greek Goddess Dressing|Balsamic Date Vinaigrette|Yogurt Dill Dressing|Lemon Herb Tahini Dressing|Greek Vinaigrette|Skhug Dressing|Hot Harissa Vinaigrette|Garlic Dressing)$/, 0],
+    ['side', 'Sides', /^(Side Quarter Pita|Pita Chips|Harissa BBQ Pita Chips)$/, 0]] },
   { id: 'moes', chain: "Moe's Southwest Grill", title: "Moe's bowl", kind: 'bowl', ex: /for (Kids|Tacos|Nachos|Stacks|Quesadillas|Junior)|Double/, groups: [
     ['base', 'Base', /^(Cilantro Lime Rice, for Bowls|Seasoned Rice, for Bowls|Salad Bowl|Chopped Romaine|Flour Tortilla, 12 in|Whole Grain Tortilla, 12 in)$/, 2],
     ['protein', 'Protein', /^(Adobo Chicken|Grilled Steak|Pork Carnitas|Ground Beef|Organic Tofu|Fish), Regular$/, 2], ['beans', 'Beans', /^(Black Beans|Pinto Beans)$/, 2],
@@ -195,7 +202,7 @@ async function viewBowlHub20() {
   const A = bowlAvail20();
   app.innerHTML = `<section class="pg13 bw20"><h1>Build your own</h1><p class="lead">Pick a chain, then assemble your bowl, sub or pizza from that chain's own published nutrition for each ingredient. Totals and both scores update as you go.</p>
   <ul class="bwh20">${A.map(c => `<li><a href="#/bowl/${c.id}"><span class="bi20" aria-hidden="true">${c.kind === 'pizza' ? '🍕' : c.kind === 'sandwich' ? '🥪' : '🥗'}</span><span><b>${esc(c.title)}</b><small>${esc(c.chain)}</small></span><span aria-hidden="true">›</span></a></li>`).join('')}</ul>
-  <p class="foot">Only chains that publish nutrition for individual ingredients are here. Cava and Sweetgreen aren't included: Lumi has no allowed official ingredient-level source for them right now.</p></section>`;
+  <p class="foot">Only chains that publish nutrition for individual ingredients are here. Sweetgreen isn't included yet: Lumi has no allowed official ingredient-level source for it right now.</p></section>`;
 }
 const draft20 = id => store.get('bowl20:' + id, null);
 async function viewBowl20(id) {

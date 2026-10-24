@@ -9,8 +9,10 @@ function typeBarcode(msg) {
 }
 document.addEventListener('click', e => { if (e.target && e.target.id === 'scanType') { if (typeof stopScan === 'function') stopScan(); typeBarcode(''); } });
 const V7_NEWS = [
+  ['🫓', 'CAVA is here', 'All 113 items from CAVA\'s official Nutrition and Allergen Guide (September 2026): curated bowls and pitas, bases, mains, dips, toppings, dressings, sides, kids and drinks. Build your own CAVA bowl or pita with live totals and both scores.'],
+  ['🌯', 'Chipotle refreshed', 'Chipotle now uses its own current US nutrition facts (123 items, including kids and drinks) instead of the 2018 archive, and the Chipotle bowl builder uses the new values.'],
   ['🔁', 'Smart swaps', 'Every product page now suggests 2–3 real, lower-sugar or better-scoring alternatives from the same category (your stores or the same chain first), with per-serving sugar, carb and score differences. Swaps also show under search results and logged foods.'],
-  ['🥗', 'Build your own', 'Assemble a Chipotle, Moe\'s, Cafe Rio, Barberitos or Qdoba bowl, a Subway 6-inch, a Pancheros or Hot Head burrito bowl, a Blaze or MOD pizza, or a Pokeworks bowl from each chain\'s official ingredient nutrition, with live totals and both scores. Save it to My foods or log it.'],
+  ['🥗', 'Build your own', 'Assemble a Chipotle, CAVA, Moe\'s, Cafe Rio, Barberitos or Qdoba bowl, a Subway 6-inch, a Pancheros or Hot Head burrito bowl, a Blaze or MOD pizza, or a Pokeworks bowl from each chain\'s official ingredient nutrition, with live totals and both scores. Save it to My foods or log it.'],
   ['🗒️', 'Weekly report for your endo', 'Carbs and sugar per day, meal timing, post-meal time in range from your Clarity import, top foods and patterns. Print it, download a PDF or share it. Clearly marked: patterns, not medical advice.'],
   ['🍯', 'Honey and syrups scored consistently', 'Single-ingredient sugars (honey, maple syrup, agave, molasses, table sugar) now count all of their sugar as added sugar, whatever the label lists.'],
   ['🛒', 'More foods', '41 more restaurant chains with official nutrition (8,819 items, including menus hosted on Nutritionix by the chains themselves), 906 Whole Foods product pages (up from 242), and Costco Kirkland items checked against USDA data. 11 chains whose menu pages do not allow automated access were removed.'],
