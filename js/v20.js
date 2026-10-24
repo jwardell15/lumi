@@ -42,6 +42,22 @@ function kind20(d, cand) { const f = cand ? '_k20c' : '_k20'; if (d[f] !== undef
   const clean = t => String(t || '').replace(/\b(cookies?|cookie dough) ?(&|and|'?n'?) ?cream\b|\bcookie dough\b|\bprotein\b.*/gi, ' ');
   const pick = t => { for (const [n, r] of KIND20) if (r.test(t)) return n; return null; };
   let k = pick(clean(d.name)); if (!k && !cand) k = pick(d.cat); return (d[f] = k); }
+/* 21.0: finer "same kind of food" check from name + category keywords (a shake swaps to a lighter shake/smoothie, not a diet soda; Frosted Flakes to lower-sugar ready-to-eat cereals, not wheat bran or baby oatmeal) */
+const FINE20 = [['topping', /\b(toppings?|add-?ons?|add-?ins?|mix-?ins?|sprinkles|whipped cream|drizzle)\b|^add\b|,\s*add\b/i], ['baby', /\b(baby|babies|infants?|toddlers?|sitter|stage ?[1-3]|gerber|beech-?nut)\b/i],
+  ['shake', /\b(shakes?|milkshakes?|malts?(?!-o)|frappes?|frappuccinos?|blizzards?|concretes?|flurr(y|ies)|mcflurry)\b/i], ['smoothie', /\bsmoothies?\b/i],
+  ['coffee', /\b(coffee|latte|mocha|cappuccino|espresso|americano|macchiato|cold brew|flat white|cortado)\b/i], ['tea', /\b(teas?|chai|matcha)\b/i],
+  ['lemonade', /\b(lemonade|limeade|agua fresca)\b/i], ['juice', /\b(juices?|nectars?)\b/i],
+  ['soda', /\b(soda|cola|coke|pepsi|sprite|dr\.? ?pepper|mountain dew|mtn dew|root beer|fanta|ginger ale|7 ?up|sierra mist|starry|soft drinks?|seltzer|sparkling water|energy drinks?|red bull|monster)\b/i], ['water', /\bwater\b/i]];
+const CER20 = [['hotcereal', /\b(hot|porridge|oatmeal|grits|cream of wheat|farina)\b/i], ['bran', /\b(bran|wheat germ|fiber one|all-?bran)\b/i], ['hotcereal', /\b(oatmeal|oats|grits|cream of wheat|porridge|farina|hot cereal|cereals?,? hot)\b/i], ['granola', /\b(granola|muesli)\b/i],
+  ['rtecereal', /\b(cereals?|flakes|o'?s|loops|puffs|crunch|squares|chex|cheerios|krispies|pebbles|charms|puffed|clusters)\b/i]];
+const FINEOK20 = { shake: ['shake', 'smoothie'], smoothie: ['smoothie', 'shake'], coffee: ['coffee', 'tea'], tea: ['tea', 'coffee', 'water', 'lemonade'], lemonade: ['lemonade', 'tea', 'soda', 'water'], juice: ['juice', 'smoothie', 'water'],
+  soda: ['soda', 'water', 'tea', 'lemonade'], water: ['water', 'soda'], topping: ['topping'], bran: ['bran', 'rtecereal'], hotcereal: ['hotcereal'], granola: ['granola', 'rtecereal'], rtecereal: ['rtecereal'], baby: ['baby'] };
+function fine20(d) { if (d._f20 !== undefined) return d._f20; const n = String(d.name || '').replace(/^(shakes? (&|and) malts?|beverages?|drinks?)\s+/i, ''), nc = n + ' ' + (d.cat || ''); let k = null;
+  for (const [id, r] of FINE20) if (r.test(id === 'baby' ? nc : n)) { k = id; break; }
+  if (!k && /\b(cereals?|breakfast|flakes|granola|muesli|oatmeal|porridge|grits)\b/i.test(nc) && !/\b(bars?|bites|cookies?|snack mix|trail mix|yog(h)?urt|chicken|fish|shrimp|tenders?|breaded)\b/i.test(n)) for (const [id, r] of CER20) if (r.test(n) || (id === 'rtecereal' && /cereal/i.test(d.cat || '') && !/\b(almonds?|walnuts?|pecans?|cashews?|pistachios?|nuts|seeds|raisins|dates|flour|meal|gluten|starch|rice|barley|quinoa|pasta|noodles?)\b/i.test(n))) { k = id; break; }
+  return (d._f20 = k); }
+function fineOk20(a, d) { const b = fine20(d); if (!a) return b !== 'baby'; return !!b && FINEOK20[a].includes(b); }
+self.fine20 = fine20;
 function smartSwaps20(doc, cur, limit = 3) {
   if (!doc || typeof engine === 'undefined' || !engine.docs || !engine.docs.length) return [];
   const C = window.LumiCats, keys = doc.keys || [], rest = doc.src === 'rest' || keys.some(k => C && C.KEYS[k] === 'rest');
@@ -50,7 +66,7 @@ function smartSwaps20(doc, cur, limit = 3) {
   const cSug = cur && cur.sugar != null ? cur.sugar : ps.s, cCarb = cur && cur.carbs != null ? cur.carbs : ps.c;
   if (cS == null) return [];
   const kd = leaf == null ? kind20(doc) : null; if (!rest && leaf == null && !kd) return [];
-  const ty = type20(doc), myStores = stores20(doc.sm), toks = TOK20(doc.name), out = [];
+  const fk = fine20(doc), ty = type20(doc), myStores = stores20(doc.sm), toks = TOK20(doc.name), out = [];
   for (const d of engine.docs) {
     if (d.code === doc.code || d.score == null || d.net == null || d.fl || d.bad || d.zc || (d.src === 'local' && typeof usEnglish === 'function' && !usEnglish(d)) || d.src === 'world') continue;
     let same = false;
@@ -58,7 +74,7 @@ function smartSwaps20(doc, cur, limit = 3) {
     else { if (leaf != null ? !d.keys.includes(leaf) : (!kd || kind20(d, true) !== kd)) continue; if (ty === 'drink' ? type20(d) !== 'drink' : false) continue; same = myStores.length ? stores20(d.sm).some(i => myStores.includes(i)) : false; }
     const q = perServ20(d); if (!q || q.k === 1 && d.sg === 0 && ps.k !== 1) continue;
     const gain = d.score - cS, sRed = cSug != null && q.s != null ? cSug - q.s : 0, cRed = cCarb != null ? cCarb - q.c : 0;
-    if (gain < 5) continue; if (sRed < 1 && gain < 10) continue; if (cH != null && d.h != null && d.h < cH - 5) continue; if (d.h != null && d.h < 25) continue;
+    if (gain < 5) continue; if (sRed < 1 && gain < 10) continue; if (!fineOk20(fk, d)) continue; if (cH != null && d.h != null && d.h < cH - 5) continue; if (d.h != null && d.h < 25) continue;
     if (cRed < -3) continue; // never "swap" to more carbs per serving
     if (ty !== 'drink' && ty !== 'sauce' && cCarb >= 15 && q.c < cCarb * 0.2) continue; // not a like-for-like swap
     if (ty === 'drink' && !(q.s > 0) && !LOWDRINK20.test(d.name)) continue; // a 0 g sugar regular soda is a label/data error, not a swap

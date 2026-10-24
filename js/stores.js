@@ -4,7 +4,7 @@
 // [id, chip label, store name, own-brand regex (on normalized brand), OFF "stores" field regex]
 const STORES = [
   ['walmart', 'Great Value', 'Walmart', /^(great value|marketside|sam'?s choice|bettergoods|freshness guaranteed|parent'?s choice|prima della|spring valley|equate)\b/, /\bwal-?mart\b/],
-  ['costco', 'Kirkland', 'Costco', /^kirkland( signature)?\b/, /\bcostco\b/],
+  ['costco', 'Kirkland', 'Costco', /^kirkland( signature)?\b|\bkirc?kland('?s)?\b/, /\bcostco\b/],
   ['target', 'Good & Gather', 'Target', /^(good (&|and) gather|market pantry|favorite day|archer farms|simply balanced|up (&|and) up|dealworthy)\b/, /\btarget\b/],
   ['kroger', 'Kroger', 'Kroger', /^(kroger|simple truth|private selection|heritage farm|psst|smart way|home chef|bakery fresh goodness|big k|check this out)\b/, /\b(kroger|ralphs|fred meyer|king soopers|fry'?s|smith'?s|harris teeter|mariano'?s|dillons|qfc)\b/],
   ['wholefoods', '365', 'Whole Foods', /^(365|whole foods)\b/, /\bwhole foods\b/],
