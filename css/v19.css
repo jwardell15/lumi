@@ -64,3 +64,8 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,su
 .bl19.tr191 b{color:#b13a07}
 :root[data-theme=dark] .bl19.tr191 b{color:#ffb38a}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]) .bl19.tr191 b{color:#ffb38a}}
+/* 19.2 notes: condiments used in small amounts, 70%+ dark chocolate, whole meals */
+.bl19.sm192{margin-top:6px;padding:8px 10px;border-radius:10px;background:color-mix(in srgb,#2563eb 10%,transparent);color:inherit;line-height:1.4}
+.bl19.sm192 b{color:#1d4ed8}
+:root[data-theme=dark] .bl19.sm192 b{color:#9ec5ff}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .bl19.sm192 b{color:#9ec5ff}}

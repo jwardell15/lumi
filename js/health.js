@@ -59,7 +59,12 @@ function rate(p, opt = {}) {
       /* v19.1: portion floor. Ordinary foods follow the portion down to 0.3 × the reference; savory snacks stop at 0.5 ×; sweets & sugary
          drinks never go below 1 × (a small serving of a treat is still judged as a treat). */
       const snack = !tr && /\b(chips|crisps|puffs|cheese curls|pretzels|crackers|fries|tortilla chips|pork rinds|snack mix|jerky)\b/i.test((p.name || '') + ' ' + (p.cat || ''));
-      const fMin = tr ? 1 : snack ? 0.5 : 0.3; const f = Math.max(fMin, Math.min(2.5, gServ / (bevLike ? 250 : 100))); out.servF = Math.round(f * 100) / 100;
+      const dark = !tr && LS0 && LS0.darkChoc && LS0.darkChoc(p); const fMin = tr ? 1 : snack || dark ? 0.5 : 0.3; let f = Math.max(fMin, Math.min(2.5, gServ / (bevLike ? 250 : 100)));
+      /* v19.2: condiments & spreads (not capped) carry a sugar-density penalty below; whole meals use a meal-sized reference (~1/3 DV) */
+      const sm = !tr && LS0 && LS0.smallUse ? LS0.smallUse(p) : null; if (sm) { out.small = sm; const s1 = LS0.sugar100(p); if (s1 != null) out.small.s100 = Math.round(s1 * 10) / 10; }
+      const kServ = p.meta && p.meta.perItem ? ((p.n || {}).kcal == null ? null : p.n.kcal * sb.g / 100) : (n.kcal == null ? null : n.kcal * gServ / 100);
+      if (!tr && !sm && !snack && LS0 && LS0.mealItem && LS0.mealItem(p, kServ)) { f = Math.max(1, Math.min(2.5, kServ / LS0.MEAL_KCAL)); out.meal = { kcal: Math.round(kServ), ref: LS0.MEAL_KCAL }; }
+      out.servF = Math.round(f * 100) / 100;
       if (f !== 1) n = Object.fromEntries(Object.entries(n).map(([k, v]) => [k, v == null || k === '_itemG' ? v : v * f])); } }
   let kcal = n.kcal; const mac = [n.carbs, n.protein, n.fat];
   if (kcal == null && mac.some(v => v != null)) { kcal = (n.carbs || 0) * 4 + (n.protein || 0) * 4 + (n.fat || 0) * 9; out.est.push('energy'); }
@@ -72,7 +77,7 @@ function rate(p, opt = {}) {
   let fvl = opt.fvl; if (fvl == null) { fvl = FVL_G.test(grp) ? 100 : 0; if (!fvl && /fruit cup|fruit bowl|apple slices|side salad|garden salad|kale crunch|veggie tray|steamed (vegetables|broccoli)|green beans|carrot sticks/i.test(p.name || '')) { fvl = 85; out.est.push('fruit/veg share'); } }
   const adds = additives(p.additives, p.ing); out.adds = adds;
   const known = !!(p.ing && String(p.ing).trim().length > 3) || (p.additives && p.additives.length > 0);
-  const bev = !!p.liquid && (!grp || /juice|drink|milk|beverage|nectar|smoothie|soda|\btea\b|coffee|water|lemonade|shake|frost|chiller|latte|cola/i.test(p.name || '')) && !/yog|soup|broth|sauce|syrup|creamer|smoothie bowl/i.test(name);
+  const bev = !!p.liquid && !out.small && (!grp || /juice|drink|milk|beverage|nectar|smoothie|soda|\btea\b|coffee|water|lemonade|shake|frost|chiller|latte|cola/i.test(p.name || '')) && !/yog|soup|broth|sauce|syrup|creamer|smoothie bowl/i.test(name);
   const isWater = bev && kcal < 1 && su < 0.1 && /water/i.test(name);
   const cheese = !bev && CHEESE.test(name) && !NOTCHEESE.test(p.name || '');
   const fat = !bev && !cheese && (FATS.test(p.cat || '') || FATS.test(p.name || '') && !NOTFAT.test(name) || /Fats and Oils|Nut and Seed/.test(grp)) && (n.fat ?? 0) >= 20;
@@ -106,6 +111,7 @@ function rate(p, opt = {}) {
     let sc = Math.round(nut * 0.6 + asc * 0.3 + (organic ? 10 : 0)); if (high) sc = Math.min(sc, 49); if (cls === 'E') sc = Math.min(sc, 24); else if (cls === 'D') sc = Math.min(sc, 49); out.score = sc;
   }
   if (out.treat && out.score > 30) { out.score = 30; out.capped = 'Sweets & sugary drinks are capped at 30 at any serving size (' + out.treat.why + ', ' + out.treat.s100 + ' g sugar per 100 ' + (bevLike ? 'ml' : 'g') + ')'; }
+  if (out.small && out.small.s100 > 10 && out.score != null) { const dp = Math.round(Math.min(25, (out.small.s100 - 10) * 0.4)); if (dp >= 1) { out.score = Math.max(0, out.score - dp); out.small.pen = dp; } }
   out.band = out.score >= 75 ? 'excellent' : out.score >= 50 ? 'good' : out.score >= 25 ? 'poor' : 'bad';
   // negatives / positives (levels judged on the serving-scaled amounts; values shown per serving), Yuka-style
   const lvl = (x, a, b, c) => x <= a ? 0 : x <= b ? 1 : x <= c ? 2 : 3;

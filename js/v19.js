@@ -55,7 +55,10 @@ function basisLine19(s) {
   if (!s || s.servKind == null) return '';
   const u = ''; const t = s.servKind === 'per100' ? s.servLabel : s.servKind === 'item' ? 'per item (as published)' : s.servKind === 'default' ? `per typical serving (${s.servLabel}) · no serving size on the label` : `per serving (${s.servLabel})`;
   const cap = s.treat ? `<div class="bl19 tr191" role="note"><b>Sweet treat:</b> sweets and sugary drinks are capped at ${LumiScore.TREAT_CAP || 30} on both scores at any serving size (${esc(s.treat.why)}, ${s.treat.s100} g sugar per 100 ${s.treat.why === 'sweetened drink' ? 'ml' : 'g'}).</div>` : '';
-  return `<div class="bl19" role="note">Scores are ${esc(t)}${u}</div>` + cap;
+  const sm = s.small ? `<div class="bl19 sm192" role="note"><b>Used in small amounts:</b> ${esc(s.small.why)} is scored per labeled serving (usually 1–2 tbsp), not capped like sweets. A sugar-density penalty still applies, so check how much you actually use.</div>` : '';
+  const dk = s.dark ? `<div class="bl19 sm192" role="note"><b>Dark chocolate (70%+ cacao):</b> not capped like candy because it has 25 g sugar or less per 100 g. Its sugar and saturated fat still count.</div>` : '';
+  const ml = s.meal ? `<div class="bl19 sm192" role="note"><b>Whole meal:</b> Health is judged against a meal-sized reference (about 1/3 of daily values, ${LumiScore.MEAL_KCAL || 667} kcal) instead of a 100 g snack portion. Meals bigger than that count proportionally more.</div>` : '';
+  return `<div class="bl19" role="note">Scores are ${esc(t)}${u}</div>` + cap + sm + dk + ml;
 }
 if (typeof ratingLines === 'function') { const rl0 = ratingLines; ratingLines = function (s) { return rl0.apply(this, arguments) + basisLine19(s); }; }
 function servCtl19() {
@@ -70,9 +73,41 @@ function servCtl19() {
     <label class="sv19g"><span class="sr-only">Grams</span><input id="sv19in" type="number" inputmode="decimal" min="1" max="2000" step="1" value="${Math.round(cur.grams || base.g * (cur.mult || 1))}" aria-label="Serving in ${u}"> ${u}</label>
     <span class="sv19b">${base.kind === 'item' ? '1× = 1 item' : base.kind === 'per100' ? '1× = 100 ' + u + ' (no serving size)' : '1× = ' + esc(base.label)}</span>`;
   card.after(el);
-  const go = v => { SV19 = Object.assign({ id: p.id }, v); const y = scrollY; route(); setTimeout(() => { scrollTo(0, y); const b = document.querySelector(v.grams ? '#sv19in' : `[data-sv19="${v.mult}"]`); if (b) b.focus(); }, 60); };
+  const go = v => sv19Apply(p, v, v.grams ? '#sv19in' : `[data-sv19="${v.mult}"]`);
   el.querySelectorAll('[data-sv19]').forEach(b => b.onclick = () => go({ mult: +b.dataset.sv19 }));
   const inp = el.querySelector('#sv19in'); inp.onchange = () => { const g = +inp.value; if (g > 0 && g <= 2000) go(base.kind === 'item' ? { mult: g / 100 } : { grams: g }); };
+}
+/* v19.2: the "Carbs for your portion" box and the Serving control stay in sync both ways, and logging/plating use that amount. */
+function sv19Apply(p, v, focusSel) {
+  const same = SV19 && SV19.id === p.id && SV19.grams === v.grams && SV19.mult === v.mult; if (same) return;
+  SV19 = Object.assign({ id: p.id }, v); const y = scrollY; route();
+  setTimeout(() => { scrollTo(0, y); const b = focusSel && document.querySelector(focusSel); if (b) b.focus(); }, 60);
+}
+function sv19FromGrams(p, g) {
+  const base = LumiScore.servBasis(p, { mult: 1 });
+  if (base.kind === 'item') return { mult: Math.round(g / 100 * 100) / 100 };
+  for (const m of [0.5, 1, 2]) if (Math.abs(g - base.g * m) < 0.6) return { mult: m };
+  return { grams: Math.round(g) };
+}
+if (typeof bindPortion === 'function') { const bp0 = bindPortion; bindPortion = function (p) { bp0.apply(this, arguments); try { portionSync19(p); } catch (e) { console.warn(e); } }; }
+function portionSync19(p) {
+  const sel = document.getElementById('porSel'), qty = document.getElementById('porQty'), sl = document.getElementById('porSlider'); if (!sel || !qty || !sl || !p || !p.n || p.src === 'cos') return;
+  if (LumiScore.score(p).score == null) return;
+  const base = LumiScore.servBasis(p, { mult: 1 }), perItem = base.kind === 'item', r2 = x => Math.round(x * 100) / 100;
+  let opt = [...sel.options].find(o => Math.abs(+o.value - base.g) < 0.01);
+  if (!opt && !perItem) { opt = new Option((base.kind === 'default' ? 'Typical serving: ' : 'Serving: ') + base.label, base.g); sel.insertBefore(opt, sel.firstChild); }
+  const cur = SV19 && SV19.id === p.id ? SV19 : null, g = cur ? (cur.grams || base.g * (cur.mult || 1)) : base.g;
+  if (opt) sel.value = opt.value;
+  if (g > +sl.max) sl.max = Math.ceil(g * 2);
+  qty.value = r2(g / (+sel.value || 1)); qty.oninput();
+  const h2 = document.querySelector('#portion h2'); if (h2 && !document.querySelector('#portion .por192')) h2.insertAdjacentHTML('afterend', '<p class="small por192">Linked to <b>Serving</b> at the top of the page: changing either one updates both, and the scores, Blood sugar impact and log use this amount.</p>');
+  const grams = () => (+sel.value || 0) * (+qty.value || 0);
+  const push = sel2 => { const gg = grams(); if (gg > 0 && gg <= 4000) sv19Apply(p, sv19FromGrams(p, gg), sel2); };
+  let t = 0; const later = sel2 => { clearTimeout(t); t = setTimeout(() => push(sel2), 450); };
+  sel.addEventListener('change', () => push('#porSel'));
+  qty.addEventListener('change', () => push('#porQty'));
+  sl.addEventListener('change', () => push('#porSlider'));
+  document.querySelectorAll('#portion .qty button').forEach(b => b.addEventListener('click', () => later(`#portion .qty button[data-q="${b.dataset.q}"]`)));
 }
 addEventListener('hashchange', () => { const m = location.hash.match(/^#\/product\/(.+)$/); if (!m || !SV19 || decodeURIComponent(m[1]) !== SV19.id) SV19 = null; });
 (function () { let q = 0; const mo = new MutationObserver(() => { if (!q) q = requestAnimationFrame(() => { q = 0; try { servCtl19(); } catch (e) { console.warn(e); } }); }); const a = document.getElementById('app'); if (a) mo.observe(a, { childList: true, subtree: true }); })();

@@ -76,11 +76,38 @@ function netCarbs(p) {
 const TREAT_SOLID = /\b(cand(y|ies)|confection\w*|chocolates?|truffles?|fudge|caramels?|toffees?|gumm(y|ies)|jelly beans?|marshmallows?|lollipops?|licorice|liquorice|cookies?|biscuits?|brownies?|blondies?|pastr(y|ies)|danish|croissants?|cakes?|cupcakes?|cheesecakes?|donuts?|doughnuts?|muffins?|cinnamon rolls?|sweet rolls?|cinnabons?|pies?|tarts?|toaster pastr\w*|pop-?tarts?|ice creams?|gelato|frozen (desserts?|yogurt|custard|treats?)|sherbet|sorbet|popsicles?|ice pops?|sundaes?|blizzards?|concretes?|desserts?|sweets|wafers?|macarons?|frosting|icing|snickers|kit ?kat|twix|m&m'?s|reese'?s|oreos?|cobbler|churros?|funnel cake|kolache|scones?|pudding|custard|nougat|praline|bonbons?|mochi|baklava|eclairs?|cannoli|biscotti|shortbread|snack cakes?|honey buns?|cream puffs?)\b/i;
 const TREAT_DRINK = /\b(soda|sodas|soft drinks?|cola|pop|lemonade|limeade|sweet tea|iced tea|energy drinks?|sports drinks?|punch|fruit drinks?|juice drinks?|cocktail|milkshakes?|shakes?|frapp\w*|slush\w*|smoothies?|horchata|boba|bubble tea|milk tea|hot chocolate|hot cocoa|chocolate milk|sweetened|frosty|refresher|agua fresca|mocha|latte|macchiato|chiller|cooler|freeze|frozen (coffee|drink))\b/i;
 const CEREALW = /\b(cereals?|granola|frosted|loops|puffs|crunch|flakes|o's|pops)\b/i;
+/* v19.2 CONDIMENTS & SPREADS used in small amounts (honey, jam/jelly/preserves, syrups, ketchup, BBQ and other sauces, dressings…):
+   not capped as treats. They are scored per labeled serving (typically 1–2 tbsp; a USDA "1 cup" basis is replaced by 1 tbsp) and the
+   sugar-density penalty still applies, so they still score low when they're mostly sugar. Dishes that merely contain a sauce
+   ("BBQ chicken sandwich", "honey bun") are not condiments. */
+const SMALLUSE = /\b(honey|jams?|jell(y|ies)|preserves|marmalades?|fruit spreads?|spreads?|(maple|pancake|waffle|agave|table|corn|golden|date|simple|chocolate|caramel|fruit) syrups?|syrups?|agave( nectar)?|molasses|ketchup|catsup|sauces?|dressings?|vinaigrettes?|marinades?|glazes?|relish|chutneys?|salsas?|dips?|hoisin|teriyaki|sriracha|condiments?|toppings?)\b/i;
+const NOTSMALL = /\b(jelly beans?|jelly (rolls?|donuts?|doughnuts?|filled)|honey ?(buns?|roasted|nut|graham|wheat|oat|crisp|bunches|butter chicken|walnut shrimp|glazed (chicken|ham|salmon|donut|doughnut))|buns?|sandwich(es)?|sub|burgers?|wings?|ribs?|chicken|pork|beef|steak|shrimp|salmon|fish|tofu|meatballs?|pizza|bowls?|pasta|spaghetti|noodles|lasagna|rice|cereal|bars?|cookies?|cakes?|cupcakes?|donuts?|doughnuts?|pastr(y|ies)|pies?|tarts?|yog(h)?urts?|ice creams?|gelato|sundaes?|drinks?|teas?|lattes?|coffee|soda|lemonade|crackers?|chips|pretzels?|nuts|almonds|peanuts|cashews|pecans|granola|oats?|oatmeal|grahams?|candy|candies|gumm(y|ies)|filled|covered|dipped|coated|rolls?|toast|waffles?|pancakes?|biscuits?|fries|tots|tenders|nuggets|strips|salads?(?! dressing)|wraps?|burritos?|tacos?|quesadillas?|nachos|plate|platter|meal|combo|entree|dinner|dessert|shakes?|smoothies?|frozen|kit|pouch(es)?|baby|puree|beans|soup|chili|stew|curry|mac|cheese ?(sticks|curds|bites)|fruit snacks?|pops?|comb|popcorn|kettle corn|corn|cereals?|clusters|crisps?|bites)\b/i;
+function smallUse(p) {
+  if (!p) return null; const nm = (p.name || '') + ' ' + (p.cat || '');
+  if (!SMALLUSE.test(p.name || '') || NOTSMALL.test(p.name || '') || /cereal|snack|candy|confection|cookie|biscuit|dessert|beverage|drink/i.test(p.cat || '') || TREAT_SOLID.test((p.name || '').replace(/\b(chocolate|caramel|fudge|frosting|icing)\b/gi, ''))) return null;
+  const n = p.n || {};
+  if (p.meta && p.meta.perItem) { if ((n.kcal || 0) > 250) return null; } // restaurant cups/packets
+  else if (!(+p.servQ > 0 && +p.servQ <= 60) && !(p.portions || []).some(([l, g]) => g > 0 && g <= 45 && /tbsp|tablespoon|packet|tsp|teaspoon|portion cup|cup \(1 oz\)|pat/i.test(l)) && +p.servQ > 0) return null;
+  const why = /\bhoney\b/i.test(nm) ? 'honey' : /\b(jams?|jell(y|ies)|preserves|marmalades?|fruit spreads?)\b/i.test(nm) ? 'jam / fruit spread' : /\b(syrups?|agave|molasses)\b/i.test(nm) ? 'syrup' : /\b(dressings?|vinaigrettes?)\b/i.test(nm) ? 'dressing' : /\bspreads?\b/i.test(nm) ? 'spread' : 'sauce / condiment';
+  return { why };
+}
+/* v19.2: 70 %+ cacao dark chocolate isn't capped as a sweet when it has ≤ 25 g sugar per 100 g (it is still sugar-penalized normally). */
+function darkChoc(p) {
+  const nm = p.name || '', m = nm.match(/(\d{2,3})\s?%/); if (!m || +m[1] < 70 || +m[1] > 100) return false;
+  return /\b(cacao|cocoa|chocolate|chocolat)\b/i.test(nm) && !/\b(cookies?|cakes?|brownies?|wafers?|biscuits?|truffles?|bonbons?|caramel|filled|milk chocolate|white chocolate|cereal|drink|milk|beverage|cocoa powder|baking)\b/i.test(nm);
+}
+/* sugar per 100 g/ml; restaurant per-item values are spread over an estimated item weight (macro mass ÷ 0.5, drinks ÷ 0.2) */
+function sugar100(p) {
+  const n = p.n || {}, liq = !!p.liquid; if (n.sugars == null && n.carbs == null) return null;
+  let w = 100; if (p.meta && p.meta.perItem) { const m = (n.carbs || 0) + (n.protein || 0) + (n.fat || 0); w = Math.max(m / (liq ? 0.2 : 0.5), (n.kcal || 0) / (liq ? 1.2 : 4), 20); }
+  return (n.sugars == null ? n.carbs * 0.4 : n.sugars) * 100 / w; // sugar not listed: assume 40 % of carbs (typical for cookies/cakes)
+}
 function treat(p) {
   const n = p.n || {}; if (n.sugars == null && !(n.carbs >= 40 && !p.liquid && TREAT_SOLID.test((p.name || '') + ' ' + (p.cat || '')))) return null;
+  if (smallUse(p)) return null; // v19.2
   const nm = (p.name || '') + ' ' + (p.cat || '') + ' ' + (p.cats || ''), ing = String(p.ing || '').toLowerCase(), liq = !!p.liquid;
-  let w = 100; if (p.meta && p.meta.perItem) { const m = (n.carbs || 0) + (n.protein || 0) + (n.fat || 0); w = Math.max(m / (liq ? 0.2 : 0.5), (n.kcal || 0) / (liq ? 1.2 : 4), 20); }
-  const s100 = (n.sugars == null ? n.carbs * 0.4 : n.sugars) * 100 / w; // sugar not listed: assume 40 % of carbs (typical for cookies/cakes)
+  const s100 = sugar100(p);
+  if (s100 <= 25 && darkChoc(p)) return null; // v19.2
   const sugarIng = SUGAR_WORDS.test(ing) || SYRUPS.test(ing) || /\b(honey|syrup|molasses|fruit juice concentrate)\b/.test(ing);
   const addR = n.added != null && n.sugars > 0 ? n.added / n.sugars : null;
   const added = (addR != null && addR >= 0.4) || sugarIng || (addR == null && !ing); // no ingredient list (restaurant menus, bakery items): a sweets-named, sugar-dense food is assumed to have added sugar
@@ -96,6 +123,19 @@ function treat(p) {
   return why ? { why, s100: Math.round(s100 * 10) / 10 } : null;
 }
 const TREAT_CAP = 30;
+/* v19.2 WHOLE-MEAL items (restaurant entrées, bowls, burgers, sandwiches, plated/frozen meals) are judged for Health against a
+   meal-sized reference (about 1/3 of daily values, ~667 kcal) instead of the 100 g snack reference: a meal up to 667 kcal is judged on
+   its nutrient density (like Nutri-Score), bigger meals are scaled up in proportion (to 2.5×), smaller ones down to 0.75×. */
+const MEAL_KCAL = 667;
+const MEALW = /\b(bowls?|salads?|burritos?|sandwich(es)?|subs?|hoagies?|burgers?|cheeseburgers?|whoppers?|big mac|wraps?|plates?|platters?|entr[eé]es?|meals?|combos?|dinners?|lunch|pasta|spaghetti|lasagna|pizza|tacos?|quesadillas?|enchiladas?|fajitas?|omelet(te)?s?|breakfast|bento|poke|curry|stir[- ]fry|fried rice|teriyaki|pad thai|ramen|pho|gyros?|kebabs?|shawarma|casserole|pot pie|chicken|steak|salmon|grilled|baskets?)\b/i;
+const MEALCAT = /^(Entrees|Sandwiches|Pizza|Burgers|Salads|Fast Foods|Restaurant Foods)$|mixed dishes|frozen meals?|prepared meals?/i;
+const NOTMEAL = /\b(fries|tots|onion rings|chips|nachos? chips|side|sides|dressing|sauce|dip|soup|chowder|bisque|dessert|shake|drink|kids?|cookie|pie|cake|brownie|biscuit|muffin|cinnamon|toast sticks|hash ?browns?|pretzel|bread ?sticks|garlic (bread|knots|strips)|smoothies?|cereals?|\d+ ?(ounce|fl ?oz)|pretzels|snack|wings? \(\d+ ?pc\)|appetizer|sampler|add|extra|topping)\b/i;
+function mealItem(p, kServ) {
+  if (!p || p.liquid || kServ == null || kServ < 350) return false;
+  const nm = p.name || '', cat = p.cat || '';
+  if (NOTMEAL.test(nm) || TREAT_SOLID.test(nm) || smallUse(p)) return false;
+  return !!((p.meta && p.meta.perItem) || MEALCAT.test(cat) || MEALW.test(nm + ' ' + cat));
+}
 /* v19.0 serving basis. Scores are computed PER SERVING. Order of preference:
    1) the labeled serving size in grams/ml (servQ)  2) restaurant items: per item as published
    3) a documented category default serving (DEFSERV below)  4) per 100 g, flagged "per 100 g (no serving size)". */
@@ -118,7 +158,10 @@ function servBasis(p, opt) {
   if (opt.grams > 0) return { g: opt.grams, kind: 'custom', label: Math.round(opt.grams) + ((p && p.liquid) ? ' ml' : ' g') };
   const m = opt.mult > 0 ? opt.mult : 1, u = p.liquid ? 'ml' : 'g';
   if (p.meta && p.meta.perItem) return { g: 100 * m, kind: 'item', label: m === 1 ? '1 item' : m + ' items', perItem: true };
-  const q = +p.servQ; if (q >= 1 && q <= 1500) return { g: q * m, kind: 'label', label: (m === 1 ? '' : m + ' × ') + Math.round(q) + ' ' + u };
+  let q = +p.servQ;
+  if (q > 60 && smallUse(p)) { const sp = (p.portions || []).filter(([l, g]) => g > 0 && g <= 45 && /tbsp|tablespoon|packet|tsp|teaspoon|portion cup|pat/i.test(l)).sort((a, b) => /tbsp|tablespoon/i.test(b[0]) - /tbsp|tablespoon/i.test(a[0]))[0];
+    if (sp) return { g: sp[1] * m, kind: 'label', label: (m === 1 ? '' : m + ' × ') + sp[0].replace(/\s*\([^)]*\)\s*$/, '') + ' (' + Math.round(sp[1]) + ' ' + u + ')' }; q = 0; } // v19.2: condiments are judged per tbsp, not per cup
+  if (q >= 1 && q <= 1500) return { g: q * m, kind: 'label', label: (m === 1 ? '' : m + ' × ') + Math.round(q) + ' ' + u };
   const t = (p.name || '') + ' ' + (p.cat || '') + ' ' + (p.cats || '');
   for (const [re, g, lab] of DEFSERV) if (re.test(t)) { return { g: g * m, kind: 'default', label: (m === 1 ? '' : m + ' × ') + lab }; }
   return { g: 100 * m, kind: 'per100', label: 'per 100 ' + u + ' (no serving size)' };
@@ -152,12 +195,13 @@ function score(p, opt) {
     } else if (sugarIng) add('sugar', 'Sugar' + ps + ' (added sugar in ingredients)', -Math.min(58, sgS * 1.9), r1(sgS) + ' g');
     else add('sugar', 'Total sugar' + ps, -Math.min(50, sgS * 1.3), r1(sgS) + ' g');
   } else if (sugarIng) add('sugar', 'Sugar amount not listed (sugar in ingredients)', -8, 'unknown');
-  if (liquid && (sg || 0) > 2.5 && sgS > 3) add('liquid', 'Liquid sugar: rapid absorption', -Math.min(25, sgS * 0.8), r1(sgS) + ' g' + ps);
-  if (liquid && sgS != null && sgS >= 15) add('liquidDose', '15 g or more sugar per drink', -10, r1(sgS) + ' g');
+  const sm = smallUse(p), liqPen = liquid && !sm; // v19.2: a runny jam/syrup/sauce isn't a drink
+  if (liqPen && (sg || 0) > 2.5 && sgS > 3) add('liquid', 'Liquid sugar: rapid absorption', -Math.min(25, sgS * 0.8), r1(sgS) + ' g' + ps);
+  if (liqPen && sgS != null && sgS >= 15) add('liquidDose', '15 g or more sugar per drink', -10, r1(sgS) + ' g');
   // v19.1: per-100 g sugar density (added sugar only), so a tiny serving of a very sugary food can't escape
   const tr = treat(p);
-  if (sg != null && (sugarIng || (n.added || 0) > 0)) { const w = p.meta && p.meta.perItem ? null : 100; const s100 = tr ? tr.s100 : w ? sg : null;
-    if (s100 != null) { const dp = liquid ? Math.min(20, Math.max(0, s100 - 4) * 2) : Math.min(20, Math.max(0, s100 - 10) * 0.4); if (dp >= 0.5) add('density', 'Sugar density: ' + r1(s100) + ' g per 100 ' + (liquid ? 'ml' : 'g'), -dp, 'any serving size'); } }
+  if (sg != null && (sugarIng || (n.added || 0) > 0 || sm)) { const s100 = tr ? tr.s100 : sugar100(p);
+    if (s100 != null) { const dp = liqPen ? Math.min(20, Math.max(0, s100 - 4) * 2) : Math.min(20, Math.max(0, s100 - 10) * 0.4); if (dp >= 0.5) add('density', 'Sugar density: ' + r1(s100) + ' g per 100 ' + (liquid ? 'ml' : 'g'), -dp, 'any serving size'); } }
   // --- 2. total carbs per serving (secondary)
   add('carbsServ', 'Total carbs' + ps, -Math.min(35, ncS * 0.7), r1(ncS) + ' g');
   let gi = 0; const hits = [];
@@ -192,7 +236,7 @@ function score(p, opt) {
   if (tr && sc > TREAT_CAP) { items.push({ key: 'treat', label: 'Sweets & sugary drinks: capped at ' + TREAT_CAP + ' at any serving size', pts: TREAT_CAP - sc, detail: tr.why + ', ' + tr.s100 + ' g sugar per 100 ' + (liquid ? 'ml' : 'g') }); sc = TREAT_CAP; }
   items.sort((a, b) => a.pts - b.pts);
   const missing = [['fiber', 'fiber'], ['sugars', 'sugars'], ['sat', 'sat fat'], ['sodiumMg', 'sodium'], ['protein', 'protein']].filter(([k]) => n[k] == null).map(x => x[1]);
-  return Object.assign(base, { score: sc, band: band(sc), label: label(sc), items, missingFields: missing, treat: tr, assumedServing: sb.kind === 'default' || sb.kind === 'per100', netServ: ncS, carbsServ: ncS, sugarServ: sgS });
+  return Object.assign(base, { score: sc, band: band(sc), label: label(sc), items, missingFields: missing, treat: tr, small: sm, meal: !tr && !sm && n.kcal != null && mealItem(p, n.kcal * G / 100), dark: !tr && darkChoc(p) && (sg || 0) > 0, assumedServing: sb.kind === 'default' || sb.kind === 'per100', netServ: ncS, carbsServ: ncS, sugarServ: sgS });
 }
 /* v6.3 "filler": basics with ~no calories or carbs (water, plain tea/coffee, salt, spices, extracts, zero-cal sweeteners, gum).
    They still get a score, but they're kept out of "best of" rankings (home, stores, aisles, swaps, better options). */
@@ -252,5 +296,5 @@ function fromCompact(a) {
   return { id: code, code: /^\d+$/.test(code) ? code : '', src: meta ? (meta.src.includes('official') ? 'chain' : 'usda') : 'local', fdcId: /^fdc-/.test(code) ? code.slice(4) : undefined, name, brand, qty, img: img ? (img.startsWith('w:') ? (typeof dataURL === 'function' ? dataURL : String)('img/w/' + img.slice(2) + '-200.webp') : img.startsWith('http') ? img : 'https://images.openfoodfacts.org/images/products/' + img) : '', servQ, serv, nova, additives: adds ? adds.split(',') : [], ing, cat, cats: cat, naLabel: !!(fl & 1), liquid: notSolid(name, !!(fl & 2)), carby: fl & 16 ? !!(fl & 4) : undefined, dry: fl & 16 ? !!(fl & 8) : undefined, portions: portions || null, meta: meta || null, hx: a[15] || null, n };
 }
 const imgSize = (u, n) => u ? u.replace(/\.(100|200|400|full)\.jpg$/, '.' + n + '.jpg').replace(/-(200|400)\.webp$/, '-' + n + '.webp') : '';
-return { treat, TREAT_CAP, servBasis, DEFSERV, implausible, isFiller, DRY, CARBY, imgSize, score, quality, fromOFF, fromUSDA, fromCompact, band, label, netCarbs, addTags, isNA, isLiquid, DK, ADDITIVES };
+return { treat, smallUse, darkChoc, sugar100, mealItem, MEAL_KCAL, TREAT_CAP, servBasis, DEFSERV, implausible, isFiller, DRY, CARBY, imgSize, score, quality, fromOFF, fromUSDA, fromCompact, band, label, netCarbs, addTags, isNA, isLiquid, DK, ADDITIVES };
 });

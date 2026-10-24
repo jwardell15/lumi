@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '19.1';
+const VERSION = '19.2';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -462,7 +462,7 @@ function healthCard(hr, unit) {
   if (hr.score == null) return `<div class="card fxcard" id="hcard"><div class="fx-h"><h2>Health rating <span class="pill bg-na">?</span></h2></div><div class="small">${esc(hr.reason || 'Not enough data')}.</div></div>`;
   const li = r => `<li class="fx"><span class="fx-i">${icon(HIC[r.k] || 'fiber')}</span><span class="fx-t"><b>${esc(r.title)}</b><small>${esc(r.desc)}</small>${r.list ? `<span class="alist">${r.list.map(a => `<a class="ai" href="#/additive/${esc(a.e)}"><i class="adot bg-${['ex', 'gd', 'pr', 'bd'][a.tier]}"></i>${esc(a.name)} <small>· ${esc(a.risk)} ›</small></a>`).join('')}</span>` : ''}</span><span class="fx-v">${esc(r.val)}</span><span class="fx-d bg-${LV[r.l]}"></span></li>`;
   const basis = hr.basis === 'nutrition' ? 'Based on nutrition only — ingredients/additives not available.' : `Nutrition ${hr.nutrition}/100 (60%) · additives ${hr.additiveScore}/100 (30%) · organic ${hr.organic ? 'yes' : 'no'} (10%)${hr.adds.some(a => a.tier === 3) ? ' · capped at 49 by a high-risk additive' : ''}.`;
-  return `<div class="card fxcard" id="hcard"><div class="fx-h"><h2>Health rating <span class="pill bg-${HB(hr.score)}">${hr.score}</span> <small class="c-${HB(hr.score)}">${HL(hr.score)}</small></h2><span class="small">per 100${unit}</span></div>
+  return `<div class="card fxcard" id="hcard"><div class="fx-h"><h2>Health rating <span class="pill bg-${HB(hr.score)}">${hr.score}</span> <small class="c-${HB(hr.score)}">${HL(hr.score)}</small></h2><span class="small">${hr.servLabel && hr.servKind !== 'per100' ? (hr.servKind === 'item' ? esc(hr.servLabel === '1 item' ? 'per item' : 'per ' + hr.servLabel) : 'per serving (' + esc(hr.servLabel) + ')') : 'per 100' + unit}</span></div>
     <div class="small" style="margin:-4px 0 6px">${esc(basis)} Nutri-Score ${hr.grade}${hr.variant !== 'general' ? ' (' + hr.variant + ')' : ''}.${hr.est.length ? ' Estimated: ' + esc(hr.est.join(', ')) + '.' : ''}</div>
     ${(() => { const ng = hr.neg.filter(r => r.k !== 'add'), ps = hr.pos.filter(r => r.k !== 'add'); return (ng.length ? `<div class="fx-h"><h2>Negatives</h2></div><ul class="fxl">${ng.map(li).join('')}</ul>` : '') + (ps.length ? `<div class="fx-h"><h2>Positives</h2></div><ul class="fxl">${ps.map(li).join('')}</ul>` : ''); })()}</div>`;
 }
