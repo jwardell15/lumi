@@ -79,7 +79,7 @@ function servCtl19() {
 }
 /* v19.2: the "Carbs for your portion" box and the Serving control stay in sync both ways, and logging/plating use that amount. */
 function sv19Apply(p, v, focusSel) {
-  const same = SV19 && SV19.id === p.id && SV19.grams === v.grams && SV19.mult === v.mult; if (same) return;
+  const same = SV19 && SV19.id === p.id && SV19.grams === v.grams && SV19.mult === v.mult && SV19.unit === v.unit; if (same) return;
   SV19 = Object.assign({ id: p.id }, v); const y = scrollY; route();
   setTimeout(() => { scrollTo(0, y); const b = focusSel && document.querySelector(focusSel); if (b) b.focus(); }, 60);
 }
@@ -97,12 +97,13 @@ function portionSync19(p) {
   let opt = [...sel.options].find(o => Math.abs(+o.value - base.g) < 0.01);
   if (!opt && !perItem) { opt = new Option((base.kind === 'default' ? 'Typical serving: ' : 'Serving: ') + base.label, base.g); sel.insertBefore(opt, sel.firstChild); }
   const cur = SV19 && SV19.id === p.id ? SV19 : null, g = cur ? (cur.grams || base.g * (cur.mult || 1)) : base.g;
-  if (opt) sel.value = opt.value;
+  const uo = cur && cur.unit ? [...sel.options].find(o => Math.abs(+o.value - cur.unit) < 0.01) : null; // keep the portion the user picked
+  if (uo) sel.value = uo.value; else if (opt) sel.value = opt.value;
   if (g > +sl.max) sl.max = Math.ceil(g * 2);
   qty.value = r2(g / (+sel.value || 1)); qty.oninput();
   const h2 = document.querySelector('#portion h2'); if (h2 && !document.querySelector('#portion .por192')) h2.insertAdjacentHTML('afterend', '<p class="small por192">Linked to <b>Serving</b> at the top of the page: changing either one updates both, and the scores, Blood sugar impact and log use this amount.</p>');
   const grams = () => (+sel.value || 0) * (+qty.value || 0);
-  const push = sel2 => { const gg = grams(); if (gg > 0 && gg <= 4000) sv19Apply(p, sv19FromGrams(p, gg), sel2); };
+  const push = sel2 => { const gg = grams(); if (gg > 0 && gg <= 4000) sv19Apply(p, Object.assign(sv19FromGrams(p, gg), { unit: +sel.value }), sel2); };
   let t = 0; const later = sel2 => { clearTimeout(t); t = setTimeout(() => push(sel2), 450); };
   sel.addEventListener('change', () => push('#porSel'));
   qty.addEventListener('change', () => push('#porQty'));
