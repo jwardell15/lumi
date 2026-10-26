@@ -89,7 +89,7 @@
   function analyze(ing) {
     const raw = String(ing || '').trim();
     if (raw.replace(/[^a-z]/gi, '').length < 3) return { status: 'none', list: [], sugars: [], mask: -1 };
-    let s = ' ' + norm(raw) + ' ';
+    let s = ' ' + norm(raw) + ' '; const s0 = s;
     const en = (s.match(EN) || []).length, fo = (s.match(FOREIGN) || []).length;
     if (fo >= 3 && fo > en) return { status: 'lang', list: [], sugars: [], mask: -2 };
     const list = [], byId = new Map(), push = (id, bit, sev, label, note, term) => { let w = byId.get(id); if (!w) { w = { id, bit, sev: SEV[sev], lv: sev, label, note, terms: [] }; byId.set(id, w); list.push(w); } const t = term.replace(/\s+/g, ' '); if (!w.terms.includes(t)) w.terms.push(t); };
@@ -110,7 +110,7 @@
       else if (a >= 0 && list[a].terms.length > 1 || b >= 0 && list[b].terms.length > 1) list[a >= 0 ? a : b].label = 'Artificial colors'; }
     let mask = 1 << 21; mask |= Math.min(15, sugars.length); if (fast.length) mask |= 1 << 4; for (const w of list) if (w.id !== 'sugar') mask |= 1 << w.bit;
     list.sort((a, b) => b.lv - a.lv);
-    return { status: 'ok', list, sugars, fast, mask };
+    return { status: 'ok', list, sugars, fast, mask, tmask: termMask(sugars, list, s0) };
   }
   const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
   const listJoin = a => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1];
@@ -123,6 +123,43 @@
     return out;
   }
   const clean = mask => mask != null && mask >= 0 && !!(mask & (1 << 21)) && badges(mask).length === 0; // no caution/avoid flags (info notes don't count)
-  const api = { analyze, badges, clean, norm, SEV };
+
+  /* 22.1 watch-for: specific terms people pick to avoid. Bit i of tmask = TERMS[i] found (index-wide via data/f22 "t"). */
+  const T = (w, re) => (r, s0) => { const x = r.find(v => v.id === w || (Array.isArray(w) && w.includes(v.id))); return !!x && x.terms.some(t => re.test(t)); };
+  const SG = n => sug => sug.includes(n);
+  const TD = (w, re, full) => (r, s0) => { const x = r.find(v => v.id === w || (Array.isArray(w) && w.includes(v.id))); return !!x && (x.terms.some(t => re.test(t)) || (!!s0 && full.test(s0))); }; // dyes: also lists like "red 3 & 40"
+  const TERMS = [
+    ['hfcs', 'High-fructose corn syrup', 'sugar', SG('high-fructose corn syrup')], ['cornsyrup', 'Corn syrup', 'sugar', SG('corn syrup')],
+    ['malto', 'Maltodextrin', 'sugar', SG('maltodextrin')], ['dextrose', 'Dextrose', 'sugar', SG('dextrose')], ['glusyrup', 'Glucose syrup', 'sugar', SG('glucose syrup')],
+    ['ricesyrup', 'Rice syrup', 'sugar', SG('rice syrup')], ['tapsyrup', 'Tapioca syrup', 'sugar', SG('tapioca syrup')], ['sugar', 'Sugar / cane sugar', 'sugar', SG('sugar')],
+    ['honey', 'Honey', 'sugar', SG('honey')], ['agave', 'Agave', 'sugar', SG('agave')], ['fjc', 'Fruit juice concentrate', 'sugar', SG('fruit juice concentrate')],
+    ['molasses', 'Molasses', 'sugar', SG('molasses')], ['brownsugar', 'Brown sugar', 'sugar', SG('brown sugar')], ['invert', 'Invert sugar', 'sugar', SG('invert sugar')],
+    ['malt', 'Barley malt', 'sugar', SG('barley malt')],
+    ['soyoil', 'Soybean oil', 'oil', T('seed', /\bsoy/)], ['canola', 'Canola / rapeseed oil', 'oil', T('seed', /canola|rapeseed/)], ['sunoil', 'Sunflower oil', 'oil', T('seed', /sunflower/)],
+    ['cornoil', 'Corn oil', 'oil', T('seed', /\bcorn\b/)], ['cotton', 'Cottonseed oil', 'oil', T('seed', /cottonseed/)], ['palm', 'Palm oil', 'oil', null],
+    ['sucralose', 'Sucralose', 'sweet', T('sweet', /sucralose|e955/)], ['aspartame', 'Aspartame', 'sweet', T('sweet', /aspartame|e951/)], ['acek', 'Acesulfame K', 'sweet', T('sweet', /acesulfame|e950/)], ['stevia', 'Stevia', 'sweet', null],
+    ['red40', 'Red 40', 'color', TD('dyeE', /red\D{0,8}40|allura|e129/, /(?<![a-z])red\s*(?:no\.?\s*|#\s*|\.\s*)?(?:\d{1,2}\s*(?:&|,|and|\/)\s*(?:no\.?\s*|#\s*|\.\s*)?){0,4}40(?!\d)/)], ['yel5', 'Yellow 5', 'color', TD('dyeE', /yellow\D{0,8}5\b|tartrazine|e102/, /(?<![a-z])yellow\s*(?:no\.?\s*|#\s*|\.\s*)?(?:\d{1,2}\s*(?:&|,|and|\/)\s*(?:no\.?\s*|#\s*|\.\s*)?){0,4}5(?!\d)/)], ['yel6', 'Yellow 6', 'color', TD('dyeE', /yellow\D{0,8}6\b|sunset yellow|e110/, /(?<![a-z])yellow\s*(?:no\.?\s*|#\s*|\.\s*)?(?:\d{1,2}\s*(?:&|,|and|\/)\s*(?:no\.?\s*|#\s*|\.\s*)?){0,4}6(?!\d)/)], ['blue1', 'Blue 1', 'color', TD(['dye', 'dyeE'], /blue\D{0,8}1\b|brilliant blue|e133/, /(?<![a-z])blue\s*(?:no\.?\s*|#\s*|\.\s*)?(?:\d{1,2}\s*(?:&|,|and|\/)\s*(?:no\.?\s*|#\s*|\.\s*)?){0,4}1(?!\d)/)],
+    ['ery', 'Erythritol', 'sweet', (r) => r.some(v => v.id === 'ery')], ['xylitol', 'Xylitol', 'sweet', T('polyol', /xylitol/)],
+  ];
+  const PALM = /\bpalm (?:kernel |fruit )?(?:oils?|olein|stearin|fat)\b/, STEVIA = /\bstevia\b|\brebaudioside\b|\breb[- ]?a\b|\bsteviol\b/;
+  function termMask(sugars, list, s0) { let m = 0; TERMS.forEach((t, i) => { const hit = t[0] === 'palm' ? PALM.test(s0) : t[0] === 'stevia' ? STEVIA.test(s0) : t[2] === 'sugar' ? t[3](sugars) : t[3](list, s0); if (hit) m |= (1 << i); }); return m >>> 0; }
+  /* custom watch words: whole-word match on the normalized list (claims like "peanut-free" / "no sugar added" are already removed),
+     singular/plural forms, flexible spaces and hyphens; terms under 3 letters are ignored */
+  function wordRe(w) { let t = String(w || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 \-&']/g, ' ').replace(/\s+/g, ' ').trim();
+    if (t.replace(/[^a-z0-9]/g, '').length < 3) return null;
+    const parts = t.split(/[ -]+/), last = parts.pop(); let stem = last, tail = '(?:s|es)?';
+    if (/ies$/.test(last) && last.length > 4) { stem = last.slice(0, -3); tail = '(?:y|ies)'; } else if (/[^aeiou]y$/.test(last)) { stem = last.slice(0, -1); tail = '(?:y|ies)'; }
+    else if (/(?:ches|shes|sses|xes|oes)$/.test(last)) { stem = last.slice(0, -2); } else if (/[^s]s$/.test(last) && last.length > 3) { stem = last.slice(0, -1); }
+    const esc = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp('(?<![a-z0-9])' + parts.map(esc).map(x => x + '[ -]?').join('') + esc(stem) + tail + "(?![a-z0-9])", 'g'); }
+  /* a few compound forms of common words, so "soy" also finds soybean oil and "corn" finds cornstarch */
+  const WALIAS = { soy: ['soybean', 'soya'], corn: ['cornstarch', 'cornmeal', 'cornflour'], milk: ['buttermilk', 'milkfat'], peanut: ['groundnut'], wheat: ['wheatgrass'], egg: ['egg white', 'egg yolk'], coconut: ['coconut oil'], palm: ['palm oil', 'palm kernel oil', 'palmitate'] };
+  const WNOT = { milk: /\b(?:coconut|almond|oat|soy|rice|cashew|hemp|pea|macadamia) milks?\b|\bmilk thistle\b/g, butter: /\b(?:peanut|almond|cashew|cocoa|shea|nut|seed|sunflower) butter\b/g, cream: /\bcream of tartar\b/g, egg: /\beggplants?\b/g };
+  function matchWords(ing, words) { const raw = String(ing || '').trim(); if (raw.replace(/[^a-z]/gi, '').length < 3) return null;
+    const s = ' ' + norm(raw) + ' ', out = [];
+    for (const w of words || []) { const k = String(w || '').toLowerCase().trim(), al = WALIAS[k] || WALIAS[k.replace(/s$/, '')] || [];
+      const res = [wordRe(w), ...al.map(wordRe)].filter(Boolean); if (!res.length) continue; const sk = WNOT[k] || WNOT[k.replace(/s$/, '')], s1 = sk ? s.replace(sk, ' ') : s; const m = [].concat(...res.map(re => s1.match(re) || [])); if (!m.length) continue; out.push({ word: w, found: [...new Set(m.map(x => x.trim()))] }); }
+    return out; }
+  const api = { analyze, badges, clean, norm, SEV, TERMS: TERMS.map(t => t.slice(0, 3)), wordRe, matchWords };
   root.LumiWarn = api; if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);
