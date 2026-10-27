@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '23.0';
+const VERSION = '23.1';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -518,7 +518,7 @@ async function viewProduct(id) {
   ${n.carbs != null ? dataCheckCard(p, s) : ''}
   ${altCard(p)}
   ${p.ing ? `<div class="card"><h2>Ingredients</h2><div class="ing">${esc(p.ing)}</div></div>` : ''}
-  <p class="foot">${p.hx && p.hx.s ? '' : 'Source: ' + srcLink + '. '} Informational only — not medical advice. Dose from the physical label.</p>`;
+  <p class="foot">${p.hx && p.hx.s ? '' : 'Source: ' + srcLink + '. '} Informational only — not medical advice. Check the physical label.</p>`;
   fillCredits();
   $('#share').onclick = () => share(p, s);
   $('#save').onclick = () => { const on = toggleSave(p); $('#save').textContent = on ? '♥ Saved' : '♡ Save'; toast(on ? 'Saved — available offline' : 'Removed'); };
@@ -581,7 +581,7 @@ function viewSaved() {
 }
 function viewAbout() {
   document.title = 'About — Lumi';
-  app.innerHTML = `<div class="about-hero">${MASCOT(120, 'big')}<div><h1>About Lumi</h1><p class="small">Lumi is named after, and drawn from, Joe's white husky.</p></div></div><p class="lead">A carb-first food score, tuned for insulin dosing decisions. v${VERSION}</p>
+  app.innerHTML = `<div class="about-hero">${MASCOT(120, 'big')}<div><h1>About Lumi</h1><p class="small">Lumi is named after, and drawn from, Joe's white husky.</p></div></div><p class="lead">A food score for people watching their blood sugar, for information only. v${VERSION}</p>
   <div class="card" id="howRated"><h2>How this is rated</h2><p>Every item gets <b>two ratings</b>. Choose which one is primary in Settings.</p><ul class="bul"><li><b>Carb score (0–100)</b>: Lumi's diabetes score. Sugar is the main driver (added sugar counts more than natural sugar), then total carbs, refined starch and fast-acting carbs. Fiber is only a small bonus and is never subtracted from carbs (formula below).</li><li><b>Health rating (0–100)</b>: a general rating modelled on Yuka's published method. About <b>60% nutrition</b> (the Nutri-Score 2023 algorithm, using energy, sugars, saturated fat, salt, fiber, protein and fruit/vegetable/legume share; beverages, fats/nuts and cheese use their own variants). About <b>30% additives</b> (curated risk tiers; any high-risk additive caps the rating at 49). About <b>10% organic</b>. When ingredients aren't known, as with most restaurant items and whole foods, the rating uses nutrition only and is marked that way.</li><li>Bands: <span class="c-ex">Excellent 75–100</span> · <span class="c-gd">Good 50–74</span> · <span class="c-pr">Poor 25–49</span> · <span class="c-bd">Bad 0–24</span>. Missing values are estimated and flagged. You see <b>?</b> only when the numbers can't be used.</li></ul><p class="small">Lumi isn't affiliated with Yuka. Informational only, not medical advice.</p></div>
   <div class="card"><h2>Formula</h2><pre>score = clamp(0, 100, 100 + Σ terms)
 
