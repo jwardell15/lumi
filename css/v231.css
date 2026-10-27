@@ -1,0 +1,73 @@
+/* ===== Lumi 23.1: disclaimer / privacy pages, dose gate, first-run notice, footer, delete-all ===== */
+:root{--dang231:#B3261E;--dangFg231:#fff;--dangSoft231:#FBE4E1;--dangInk231:#7F1D16}
+:root[data-theme=dark]{--dang231:#FF8A80;--dangFg231:#2A0703;--dangSoft231:#3A1714;--dangInk231:#FFC2BB}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--dang231:#FF8A80;--dangFg231:#2A0703;--dangSoft231:#3A1714;--dangInk231:#FFC2BB}}
+html.icrlock231 .icr{display:none!important}
+html body #app .pg231{animation:rise23 .32s var(--ease,ease) both}
+html body #app .pg231>h1{font-family:var(--display);font-size:clamp(30px,4vw,44px);line-height:1.08;margin:8px 0 10px;letter-spacing:-.01em}
+html body #app .lead231{font-size:17px;color:var(--ink2);max-width:62ch;margin:0 0 18px}
+html body #app .pg231 .card h2{font-family:var(--display);font-size:20px;margin:0 0 8px;line-height:1.2}
+html body #app .pg231 .card p{margin:0 0 8px;color:var(--ink2);line-height:1.55;max-width:70ch}
+html body #app .pg231 .card p:last-child{margin-bottom:0}
+html body #app .g231{display:grid;gap:14px;grid-template-columns:1fr;margin-bottom:14px}
+@media (min-width:1024px){html body #app .g231{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}html body #app .pg231{max-width:1180px}}
+html body #app .g231>.card{margin:0}
+html body #app .card.em231{background:var(--dangSoft231);border-color:color-mix(in srgb,var(--dang231) 45%,transparent);margin:0 0 14px}
+html body #app .card.em231 h2,html body #app .card.em231 p{color:var(--dangInk231)}
+html body #app .ul231{margin:6px 0 0;padding-left:20px;color:var(--ink2);line-height:1.55}
+html body #app .ul231 li{margin:3px 0}
+html body #app .svc231{margin:0 0 14px}
+html body #app .svl231{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:10px;grid-template-columns:1fr}
+@media (min-width:1024px){html body #app .svl231{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (min-width:768px) and (max-width:1023px){html body #app .svl231{grid-template-columns:repeat(2,minmax(0,1fr))}}
+html body #app .svl231 li{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:12px 14px;min-width:0}
+html body #app .svh231{display:flex;flex-direction:column;gap:2px;margin-bottom:6px}
+html body #app .svh231 b{font-size:16px;color:var(--ink)}
+html body #app .svh231 code{font:12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--mut);overflow-wrap:anywhere;background:none;padding:0}
+html body #app .svl231 p{margin:0 0 4px}
+html body #app .wh231{font-weight:650;color:var(--ink)}
+html body #app .upd231{color:var(--mut);margin:6px 0 10px}
+html body #app .upd231 a,html body #app .pg231 .card a,html body #app .lk231 a,html body .ft231 a,html body .fr231 a{color:var(--accT);font-weight:600;text-decoration:underline;text-underline-offset:2px}
+html body #app .lk231 a,html body .ft231 a,html body .fr231 a,html body #app .upd231 a{display:inline-flex;align-items:center;min-height:44px}
+/* danger button */
+html body .btn.dbtn231{background:var(--dang231)!important;color:var(--dangFg231)!important;border:0!important;min-height:44px;font-weight:650}
+html body .btn.dbtn231:hover{filter:brightness(1.06)}
+html body .btn.dbtn231:disabled{opacity:.7}
+html body #app .del231{border-color:color-mix(in srgb,var(--dang231) 35%,var(--line))!important;margin:0 0 14px}
+html body #sheet .cf231 h2{font-family:var(--display);font-size:22px;margin:0 0 8px}
+html body #sheet .cf231 p{color:var(--ink2);line-height:1.5}
+html body #sheet .cf231 .actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+html body #sheet .cf231 .btn{min-height:44px}
+/* dose gate */
+html body .dw231{background:var(--warn20);color:var(--warni20);border:1px solid color-mix(in srgb,var(--warni20) 30%,transparent);border-left:4px solid var(--warni20);border-radius:14px;padding:12px 14px;margin:10px 0 12px;display:flex;flex-direction:column;gap:6px;text-align:left}
+html body .dw231 .dwh231{font-size:16px;color:var(--warni20)}
+html body .dw231 span{line-height:1.5;color:var(--warni20)}
+html body .dw231 .dack231{display:flex;align-items:center;gap:10px;min-height:44px;font-weight:650;color:var(--warni20);cursor:pointer}
+html body .dw231 .dack231 input{width:22px;height:22px;flex:0 0 22px;accent-color:var(--warni20);margin:0}
+html body .dw231 .dnote231,html body .dw231 .dok231{margin:0;color:var(--warni20)}
+html body .dw231 .dok231{font-weight:600}
+html body input:disabled{opacity:.75;cursor:not-allowed}
+/* settings card */
+html body #app .sp231 .hub231{list-style:none;margin:8px 0 8px;padding:0;display:grid;gap:8px;grid-template-columns:1fr}
+@media (min-width:768px){html body #app .sp231 .hub231{grid-template-columns:1fr 1fr}}
+html body #app .sp231 .hub231 a{display:flex;flex-direction:column;justify-content:center;min-height:56px;padding:8px 14px;border-radius:14px;background:var(--bg);border:1px solid var(--line);color:var(--ink);font-weight:650;text-decoration:none}
+html body #app .sp231 .hub231 a span{font-weight:400;font-size:13px;color:var(--mut)}
+html body #app .sp231 .hub231 a:hover{border-color:var(--acc)}
+html body #app #ab231{margin:0 0 14px}
+html body #app #ab231 p{margin:0}
+/* first-run notice */
+html body #app .fr231{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;background:var(--sunSoft);color:var(--ink);border:1px solid color-mix(in srgb,var(--sun) 55%,transparent);border-radius:20px;padding:14px 16px;margin:6px 0 14px;animation:rise23 .3s var(--ease,ease) both}
+html body #app .fr231 b{font-family:var(--display);font-size:18px;display:block;margin-bottom:2px}
+html body #app .fr231 p{margin:0;line-height:1.45;color:inherit;font-size:15px}
+html body #app .fr231 .frl231{margin-top:2px}
+html body #app .fr231 .frx231{flex:0 0 auto;min-height:44px;min-width:44px;white-space:nowrap}
+@media (max-width:520px){html body #app .fr231{flex-direction:column}html body #app .fr231 .frx231{align-self:flex-end}}
+/* footer */
+html body .ft231{max-width:720px;margin:0 auto;padding:4px 16px 18px;color:var(--mut);font-size:13px;line-height:1.5}
+html body .ft231 p{margin:0;border-top:1px solid var(--line);padding-top:6px}
+html body .ft231 .lk231{white-space:nowrap}
+html body .ft231 a{color:var(--accT)}
+@media (min-width:768px){html body .ft231{max-width:1280px;padding:4px 28px 24px}}
+@media (min-width:1024px){html body .ft231{max-width:1480px;padding:4px clamp(24px,3vw,48px) 28px}}
+@media (prefers-reduced-motion:reduce){html body #app .pg231,html body #app .fr231{animation:none!important}}
+html body #app .actions .btn.dbtn231{width:auto!important;flex:0 0 auto!important}
