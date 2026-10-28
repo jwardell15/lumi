@@ -1,6 +1,6 @@
 // ===== Lumi 23.1: "Not medical advice" page, Privacy page, dose-estimate acknowledgement, first-run notice, Delete all my data =====
 (() => {
-  const UPD = 'Oct 26, 2026', ISSUES = 'https://github.com/jwardell15/lumi/issues';
+  const UPD = 'Oct 26, 2026', UPDP = 'Oct 28, 2026' /* 23.2: privacy page updated (backup Overpass servers) */, ISSUES = 'https://github.com/jwardell15/lumi/issues';
   const K_ACK = 'doseAck231', K_FR = 'notice231';
   const acked = () => !!store.get(K_ACK, 0);
   const ext = (u, t) => `<a href="${u}" target="_blank" rel="noopener">${t}</a>`;
@@ -30,7 +30,7 @@
     ['Open Food Facts', 'world.openfoodfacts.org, us.openfoodfacts.org, images.openfoodfacts.org, static.openfoodfacts.org', 'When you search (your search words, unless Lumi\'s own index already has plenty of matches), when you open or scan a barcode (the barcode), and to show product photos', 'Product details and photos.'],
     ['USDA FoodData Central', 'api.nal.usda.gov (via api.data.gov)', 'When you search (your search words), when a scanned barcode isn\'t found elsewhere (the barcode), and when you open a USDA food', 'Nutrition data. Lumi uses the public demo key, not an account.'],
     ['Open Beauty Facts', 'world.openbeautyfacts.org', 'Only when a scanned barcode isn\'t a food anywhere else (the barcode)', 'Cosmetics ingredient data.'],
-    ['OpenStreetMap Overpass', 'overpass-api.de', 'Only when you tap Use my location in Restaurants near you', 'Your position rounded to about 1 km (0.6 mi) and the radius you picked. Distances are worked out on your phone.'],
+    ['OpenStreetMap Overpass', 'overpass-api.de; if it is busy, the public mirrors maps.mail.ru (VK Maps) and overpass.private.coffee, one at a time', 'Only when you tap Use my location in Restaurants near you, or change the distance after tapping', 'Your position rounded to about 1 km (0.6 mi) and the radius you picked. Distances are worked out on your phone.'],
     ['unpkg', 'unpkg.com', 'The first time you open the barcode scanner', 'Downloads the scanner code (html5-qrcode). The camera picture is read on your device and never uploaded.'],
     ['jsDelivr', 'cdn.jsdelivr.net', 'The first time you read a label or menu photo', 'Downloads Tesseract.js and its English language data. The photo is read on your device and never uploaded.'],
     ['Recipe websites', 'the link you paste', 'Only when you paste a recipe link into Score a recipe', 'Lumi opens that page straight from your device to read the ingredient list. No cookies are sent.'],
@@ -53,7 +53,7 @@
     <section class="card svc231"><h2>Outside services Lumi contacts</h2><p class="small">Each service has its own privacy policy and may log normal request details such as your IP address. Links you tap (sources, FDA, Wikidata, Dexcom Clarity and so on) open those sites, and their policies apply.</p>
       <ul class="svl231">${SVC.map(s => `<li><div class="svh231"><b>${s[0]}</b><code>${s[1]}</code></div><p><span class="wh231">When:</span> ${s[2]}</p><p class="small">${s[3]}</p></li>`).join('')}</ul></section>
     ${delCard()}
-    <p class="small upd231">Last updated ${UPD}. This page describes what the app's code does. Questions: ${ext(ISSUES, 'open an issue on GitHub')} (github.com/jwardell15/lumi/issues). See also <a href="#/disclaimer">Not medical advice</a>.</p></div>`;
+    <p class="small upd231">Last updated ${UPDP}. This page describes what the app's code does. Questions: ${ext(ISSUES, 'open an issue on GitHub')} (github.com/jwardell15/lumi/issues). See also <a href="#/disclaimer">Not medical advice</a>.</p></div>`;
   }
 
   /* ---------- delete all ---------- */
@@ -132,3 +132,5 @@ if (typeof V7_NEWS !== 'undefined') V7_NEWS.unshift(
   ['🛡️', 'Safety and privacy pages', 'New plain-English pages: Not medical advice (what Lumi is and isn\'t) and Privacy (what stays on your device and every outside service Lumi contacts). Find them in Settings and at the bottom of every page.'],
   ['🗑️', 'Delete all my Lumi data', 'Settings › Safety and privacy can now wipe everything Lumi saved on this device in one step, after you confirm.'],
   ['⚠️', 'A clear warning on the dose estimate', 'The optional carb ÷ ratio estimate stays off by default. Before you can turn it on, you read and tick a short warning once.']);
+if (typeof V7_NEWS !== 'undefined') V7_NEWS.unshift(
+  ['📍', 'Restaurants near you, fixed', 'A busy or overloaded map server could show "0 chains" and keep that for a day. Now Lumi says when the service is busy (with Try again), tries a backup server, and never saves a failed search. Changing the distance searches again, the default is 5 miles, and there is a 10-mile option. If your browser only knows roughly where you are, Lumi says how rough.']);
