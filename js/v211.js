@@ -108,61 +108,90 @@ function run211() { const st = $('#ms211s'), out = $('#ms211r'); if (!out) retur
 function bindSug211() { app.querySelectorAll('.sg211 [data-k]').forEach(b => b.onclick = () => { $('#ms211c').value = b.dataset.k; ms211.k = b.dataset.k; run211(); }); }
 
 /* ---------- 2. restaurants near you ---------- */
-const OVP211 = 'https://overpass-api.de/api/interpreter', TTL211 = 24 * 3600e3, MI211 = 1609.344;
+/* 23.2: main Overpass server first, then two public mirrors whose usage policy allows any project (OSM wiki, Oct 2026). One at a time, never in parallel. */
+const OVP211 = [['https://overpass-api.de/api/interpreter', 'overpass-api.de'], ['https://maps.mail.ru/osm/tools/overpass/api/interpreter', 'VK Maps mirror'], ['https://overpass.private.coffee/api/interpreter', 'private.coffee mirror']];
+let RETRY211 = 6000; const TTL211 = 24 * 3600e3, MI211 = 1609.344, RADS211 = [1, 3, 5, 10], DEFR211 = 5, CV211 = 232;
 const cell211 = (la, lo) => [Math.round(la * 100) / 100, Math.round(lo * 100) / 100]; // ~1 km grid: the only location that leaves the device
 function dist211(a, b, c, d) { const R = 6371e3, r = Math.PI / 180, x = Math.sin((c - a) * r / 2) ** 2 + Math.cos(a * r) * Math.cos(c * r) * Math.sin((d - b) * r / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(x)); }
-function cacheGet211(cl, rad) { const c = store.get('near211', null); return c && c.cl && c.cl[0] === cl[0] && c.cl[1] === cl[1] && c.rad >= rad && Date.now() - c.t < TTL211 ? c : null; }
-async function overpass211(cl, rad) {
+try { const o = JSON.parse(localStorage.getItem('lumi.near211') || 'null'); if (o && o.v !== CV211) localStorage.removeItem('lumi.near211'); } catch {} // 23.2: drop older saved searches; they could be a failed search saved as "nothing here"
+function cacheGet211(cl, rad) { const c = store.get('near211', null); return c && c.v === CV211 && c.cl && c.cl[0] === cl[0] && c.cl[1] === cl[1] && c.rad >= rad && Array.isArray(c.el) && c.el.length && Date.now() - c.t < TTL211 ? c : null; }
+const ovErr211 = (kind, msg) => Object.assign(new Error(msg || kind), { kind }); // kind: busy (server answered with an error) | net (no answer)
+async function ovOne211(url, q, ms) { const ac = typeof AbortController === 'function' ? new AbortController() : null, tm = ac && setTimeout(() => ac.abort(), ms);
+  try { let r; try { r = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, credentials: 'omit', referrerPolicy: 'origin', signal: ac ? ac.signal : undefined }); }
+    catch (e) { throw ovErr211(ac && ac.signal.aborted ? 'busy' : 'net', ac && ac.signal.aborted ? 'timed out' : 'network'); }
+    if (!r.ok) throw ovErr211(r.status === 429 || r.status === 406 || r.status >= 500 ? 'busy' : 'net', 'HTTP ' + r.status);
+    let j; try { j = await r.json(); } catch { throw ovErr211('busy', 'bad JSON'); }
+    if (j && j.remark && /error|timed? ?out|out of memory|abort/i.test(j.remark)) throw ovErr211('busy', String(j.remark).slice(0, 160)); // Overpass reports overload as HTTP 200 + remark, with no elements
+    if (!j || !Array.isArray(j.elements)) throw ovErr211('busy', 'no elements');
+    return j; } finally { if (tm) clearTimeout(tm); } }
+let ovLog211 = []; // what each server answered, for the status line and tests
+async function overpass211(cl, rad, onTry) {
   const R = Math.round(rad * MI211 + 1000); // +1 km covers the rounding
-  const q = `[out:json][timeout:20][maxsize:33554432];nwr["amenity"~"^(restaurant|fast_food|cafe|ice_cream)$"]["name"](around:${R},${cl[0]},${cl[1]});out center tags 3000;`;
-  const r = await fetch(OVP211, { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, credentials: 'omit', referrerPolicy: 'origin' });
-  if (r.status === 429 || r.status === 504) throw new Error('busy'); if (!r.ok) throw new Error('HTTP ' + r.status);
-  const j = await r.json(); // keep only what Lumi needs
-  const el = (j.elements || []).map(e => { const t = e.tags || {}, la = e.lat ?? (e.center && e.center.lat), lo = e.lon ?? (e.center && e.center.lon); return la == null ? null : [t.name || '', t.brand || '', +la.toFixed(5), +lo.toFixed(5), [t['addr:housenumber'], t['addr:street']].filter(Boolean).join(' '), t['addr:city'] || '']; }).filter(Boolean);
-  const v = { t: Date.now(), cl, rad, el, ts: (j.osm3s && j.osm3s.timestamp_osm_base) || '' }; store.set('near211', v); return v; }
-function matchChain211(name, brand, cs) { const xs = [brand, name].filter(Boolean).map(CMP211).filter(Boolean);
+  const q = `[out:json][timeout:25];nwr["amenity"~"^(restaurant|fast_food|cafe|ice_cream)$"]["name"](around:${R},${cl[0]},${cl[1]});out center tags 8000;`;
+  let busy = false, last = null; ovLog211 = []; const t0 = Date.now(), order = OVP211.map((_, i) => i);
+  for (let n = 0; n < order.length; n++) { const i = order[n]; if (onTry) onTry(i, n);
+    if (n === OVP211.length) await new Promise(r => setTimeout(r, RETRY211)); // every server said no quickly: wait a moment, then one more try on the main one
+    try { const j = await ovOne211(OVP211[i][0], q, 35000); // keep only what Lumi needs
+      const el = j.elements.map(e => { const t = e.tags || {}, la = e.lat ?? (e.center && e.center.lat), lo = e.lon ?? (e.center && e.center.lon); return la == null ? null : [t.name || '', t.brand || t['brand:en'] || '', +la.toFixed(5), +lo.toFixed(5), [t['addr:housenumber'], t['addr:street']].filter(Boolean).join(' '), t['addr:city'] || '', t['name:en'] || '']; }).filter(Boolean);
+      ovLog211.push([i, 'ok', el.length]);
+      const v = { v: CV211, t: Date.now(), cl, rad, el, src: i, ts: (j.osm3s && j.osm3s.timestamp_osm_base) || '' }; if (el.length) store.set('near211', v); return v; } // only real answers are saved; never a failure or an empty answer
+    catch (e) { last = e; ovLog211.push([i, e.kind, e.message]); if (e.kind === 'busy') busy = true; if (n === OVP211.length - 1 && Date.now() - t0 < 20000) order.push(0); } }
+  throw ovErr211(busy ? 'busy' : 'net', last && last.message); }
+function matchChain211(name, brand, cs, en) { const xs = [brand, name, en].filter(Boolean).map(CMP211).filter(Boolean);
   for (const c of cs) if (xs.some(x => x === c.cmp || (c.cmp.length >= 5 && x.startsWith(c.cmp)))) return c; return null; }
 function nearList211(v, me, rad) { const cs = chains211().sort((a, b) => b.cmp.length - a.cmp.length), by = new Map(); let other = 0;
-  for (const [name, brand, la, lo, addr, city] of v.el) { const m = dist211(me[0], me[1], la, lo); if (m > rad * MI211) continue; const c = matchChain211(name, brand, cs);
+  for (const [name, brand, la, lo, addr, city, en] of v.el) { const m = dist211(me[0], me[1], la, lo); if (m > rad * MI211) continue; const c = matchChain211(name, brand, cs, en);
     if (!c || !chainDocs211(c.k).length) { other++; continue; } const o = by.get(c.k); if (!o) by.set(c.k, { c, m, n: 1, addr, city, la, lo }); else { o.n++; if (m < o.m) Object.assign(o, { m, addr, city, la, lo }); } }
   return { list: [...by.values()].sort((a, b) => a.m - b.m), other }; }
 const mi211 = m => { const x = m / MI211; return x < 0.1 ? '< 0.1 mi' : (x < 10 ? x.toFixed(1) : Math.round(x)) + ' mi'; };
+let me211 = null, acc211 = 0; // the position from the last tap, kept in memory on this page only (never saved)
+const rad211 = () => { const x = +(($('#nr211r') || {}).value); return RADS211.includes(x) ? x : DEFR211; }; // the dropdown is the one source of truth
+const mis211 = r => `${r} mile${r > 1 ? 's' : ''}`;
 function viewNear211() {
-  document.title = 'Restaurants near you — Lumi'; const rad = store.get('near211r', 3), c = store.get('near211', null);
+  document.title = 'Restaurants near you — Lumi'; let rad = store.get('near211r', DEFR211); if (!RADS211.includes(rad)) rad = DEFR211; const c = store.get('near211', null); me211 = null; again211 = false;
   app.innerHTML = `<section class="nr211"><h1>Restaurants near you</h1>
   <p class="lead">Chains near you that Lumi has nutrition data for, closest first, with each one's top picks by both scores.</p>
   <div class="card"><div class="acts211"><button type="button" class="btn pri" id="nr211go">📍 Use my location</button>
-    <label class="field rad211"><span>Within</span><select id="nr211r">${[1, 3, 5].map(x => `<option value="${x}"${x === rad ? ' selected' : ''}>${x} mile${x > 1 ? 's' : ''}</option>`).join('')}</select></label></div>
-    <p class="small pv211" id="nr211pv"><b>Your location stays on this device.</b> Lumi asks for it only when you tap the button. To find restaurants, it sends a rounded position (to about 1 km, 0.6 mi) to OpenStreetMap's public Overpass service. Distances are worked out on your phone, and nothing goes to Lumi. Results are kept on this device for 24 hours. ${c ? '<button type="button" class="lk211" id="nr211x">Forget saved results</button>' : ''}</p>
+    <label class="field rad211"><span>Within</span><select id="nr211r">${RADS211.map(x => `<option value="${x}"${x === rad ? ' selected' : ''}>${mis211(x)}</option>`).join('')}</select></label></div>
+    <p class="small pv211" id="nr211pv"><b>Your location stays on this device.</b> Lumi asks for it only when you tap the button. To find restaurants, it sends a rounded position (to about 1 km, 0.6 mi) to OpenStreetMap's public Overpass service (a backup Overpass server if the main one is busy). Distances are worked out on your phone, and nothing goes to Lumi. Results are kept on this device for 24 hours. ${c ? '<button type="button" class="lk211" id="nr211x">Forget saved results</button>' : ''}</p>
     <div id="nr211s" class="small" role="status" aria-live="polite"></div></div>
   <div id="nr211o"></div>
   <p class="small">Restaurant locations: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a> (ODbL), via the Overpass API. Volunteers map these places, so a location may be missing or out of date.</p></section>`;
-  $('#nr211r').onchange = () => store.set('near211r', +$('#nr211r').value);
+  $('#nr211r').onchange = () => { store.set('near211r', rad211()); if (me211) search211(); }; // a new distance searches again; no stale "within N miles" left on screen
   if ($('#nr211x')) $('#nr211x').onclick = () => { try { localStorage.removeItem('lumi.near211'); } catch {} toast('Saved nearby results removed'); viewNear211(); };
   $('#nr211go').onclick = locate211;
   if (navigator.permissions && navigator.permissions.query) navigator.permissions.query({ name: 'geolocation' }).then(p => { if (p.state === 'denied' && $('#nr211s')) $('#nr211s').innerHTML = '<span class="er211">Location is blocked for this site. Turn it on in your browser\'s site settings to use this.</span>'; }).catch(() => {}); }
-let busy211 = false;
-function locate211() { if (busy211) return; const st = $('#nr211s'), b = $('#nr211go');
+let busy211 = false, asking211 = false, again211 = false;
+function locate211() { if (asking211) return; const st = $('#nr211s'), b = $('#nr211go');
   if (!('geolocation' in navigator)) { st.innerHTML = '<span class="er211">This browser can\'t share your location.</span>'; return; }
-  busy211 = true; b.disabled = true; st.textContent = 'Asking for your location…';
-  navigator.geolocation.getCurrentPosition(async p => { const me = [p.coords.latitude, p.coords.longitude], rad = +$('#nr211r').value || 3, cl = cell211(me[0], me[1]);
-    try { await loadIndex(); byChain211 = null; let v = cacheGet211(cl, rad), cached = !!v;
-      if (!v) { st.textContent = 'Finding restaurants near you…'; v = await overpass211(cl, rad); }
-      if (!/^#\/near/.test(location.hash)) return; drawNear211(v, me, rad, cached);
-    } catch (e) { st.innerHTML = `<span class="er211">${e && e.message === 'busy' ? 'The OpenStreetMap service is busy right now. Try again in a minute.' : "Couldn't reach the OpenStreetMap service. Check your connection and try again."}</span>`; }
-    finally { busy211 = false; if ($('#nr211go')) $('#nr211go').disabled = false; } },
-  e => { busy211 = false; b.disabled = false; st.innerHTML = `<span class="er211">${e.code === 1 ? 'Location permission was denied, so Lumi can\'t look for nearby restaurants. You can allow it in your browser\'s site settings.' : e.code === 3 ? 'Finding your location took too long. Try again.' : 'Your location isn\'t available right now.'}</span>`; },
+  asking211 = true; b.disabled = true; st.textContent = 'Asking for your location…';
+  navigator.geolocation.getCurrentPosition(p => { asking211 = false; if (!$('#nr211s')) return; me211 = [p.coords.latitude, p.coords.longitude]; acc211 = +p.coords.accuracy || 0; search211(); },
+  e => { asking211 = false; if (!$('#nr211s')) return; if ($('#nr211go')) $('#nr211go').disabled = false; $('#nr211s').innerHTML = `<span class="er211">${e.code === 1 ? 'Location permission was denied, so Lumi can\'t look for nearby restaurants. You can allow it in your browser\'s site settings.' : e.code === 3 ? 'Finding your location took too long. Try again.' : 'Your location isn\'t available right now.'}</span>`; },
   { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 }); }
+async function search211() { if (busy211) { again211 = true; return; } if (!me211 || !$('#nr211s')) return;
+  const rad = rad211(), cl = cell211(me211[0], me211[1]), st = $('#nr211s'); busy211 = true; if ($('#nr211go')) $('#nr211go').disabled = true; $('#nr211o').innerHTML = '';
+  try { await loadIndex(); byChain211 = null; let v = cacheGet211(cl, rad); const cached = !!v;
+    if (!v) { st.textContent = `Finding restaurants within ${mis211(rad)}…`; v = await overpass211(cl, rad, (i, n) => { const x = $('#nr211s'); if (!x || !n) return; x.textContent = n >= OVP211.length ? 'OpenStreetMap servers are busy. Trying once more…' : `The main OpenStreetMap server is busy. Trying a backup server (${i} of ${OVP211.length - 1})…`; }); }
+    if (!/^#\/near/.test(location.hash) || !$('#nr211s')) return;
+    if (rad211() !== rad) { again211 = true; return; } // the distance changed while searching: search again for the new one
+    drawNear211(v, me211, rad, cached);
+  } catch (e) { if (!$('#nr211s')) return; if (rad211() !== rad) { again211 = true; return; } fail211(e); }
+  finally { busy211 = false; if ($('#nr211go')) $('#nr211go').disabled = false; if (again211) { again211 = false; if (me211 && $('#nr211s')) search211(); } } }
+function fail211(e) { const st = $('#nr211s'); $('#nr211o').innerHTML = '';
+  st.innerHTML = `<span class="er211" id="nr211err">${e && e.kind === 'busy' ? `The OpenStreetMap service is busy right now, so Lumi couldn't search (it tried ${OVP211.length} servers). This doesn't mean there are no restaurants near you.` : "Couldn't reach the OpenStreetMap service. Check your connection."}</span> <button type="button" class="btn" id="nr211retry">Try again</button>`;
+  $('#nr211retry').onclick = () => me211 ? search211() : locate211(); }
+const acc211t = () => { if (!(acc211 > 1000)) return ''; const km = acc211 / 1000, mi = acc211 / MI211, f = x => x < 10 ? x.toFixed(1) : Math.round(x); return `Your browser gave an approximate location (about ${f(km)} km, ${f(mi)} mi accuracy), so distances may be off. A phone with location services on is more precise.`; };
 function drawNear211(v, me, rad, cached) { const st = $('#nr211s'), o = $('#nr211o'), R = nearList211(v, me, rad);
   { const pv = $('#nr211pv'); if (pv && !$('#nr211x')) { pv.insertAdjacentHTML('beforeend', '<button type="button" class="lk211" id="nr211x">Forget saved results</button>'); } const x = $('#nr211x'); if (x) x.onclick = () => { try { localStorage.removeItem('lumi.near211'); } catch {} toast('Saved nearby results removed'); viewNear211(); }; }
-  st.textContent = `${R.list.length} chain${R.list.length === 1 ? '' : 's'} with nutrition data within ${rad} mile${rad > 1 ? 's' : ''}${cached ? ` · saved search from ${new Date(v.t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}.`;
+  st.innerHTML = `<span id="nr211c">${R.list.length} chain${R.list.length === 1 ? '' : 's'} with nutrition data within ${mis211(rad)}${cached ? ` · saved search from ${new Date(v.t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}${!cached && v.src ? ` · via the ${OVP211[v.src][1]}` : ''}.</span>${acc211t() ? `<span class="ac232" id="nr211acc">${acc211t()}</span>` : ''}`;
   o.innerHTML = (R.list.length ? `<ol class="nl211" id="nr211l">${R.list.map(x => { const pk = picks211(x.c.k), nm = x.c.name;
     return `<li class="card ni211"><div class="nh211"><h2><a href="#/browse/${x.c.k}">${esc(nm)}</a></h2><span class="nd211d"><b>${mi211(x.m)}</b>${x.n > 1 ? ` <small>· ${x.n} locations</small>` : ''}</span></div>
       ${x.addr || x.city ? `<p class="small na211">Nearest: ${esc([x.addr, x.city].filter(Boolean).join(', '))}</p>` : ''}
       ${pk.length ? `<h3 class="pk211">Top picks</h3><ul class="ml211">${pk.map(d => row211(d)).join('')}</ul>` : '<p class="small">No scored menu items.</p>'}
       <p class="lnk211"><a href="#/browse/${x.c.k}">Full menu ›</a> <a href="#/menuscan/${x.c.k}">Scan this menu ›</a></p></li>`; }).join('')}</ol>`
-    : `<div class="card nd211" role="note"><b>No chains in Lumi within ${rad} mile${rad > 1 ? 's' : ''}.</b> Try a wider distance.</div>`)
-    + (R.other ? `<p class="small" id="nr211n">${R.other} other place${R.other === 1 ? '' : 's'} nearby ${R.other === 1 ? 'isn\'t a chain' : 'aren\'t chains'} in Lumi, so there's no nutrition data for ${R.other === 1 ? 'it' : 'them'}.</p>` : ''); }
+    : `<div class="card nd211" role="note" id="nr211zero"><b>No chains in Lumi within ${mis211(rad)}.</b> OpenStreetMap answered and found ${v.el.length ? 'places, but none of them are' : 'no restaurants mapped'} ${v.el.length ? 'chains Lumi has nutrition data for' : 'here'}.${rad < RADS211[RADS211.length - 1] ? ` <button type="button" class="btn" id="nr211wide" data-r="${RADS211[RADS211.indexOf(rad) + 1]}">Search within ${mis211(RADS211[RADS211.indexOf(rad) + 1])}</button>` : ''}</div>`)
+    + (R.other ? `<p class="small" id="nr211n">${R.other} other place${R.other === 1 ? '' : 's'} nearby ${R.other === 1 ? 'isn\'t a chain' : 'aren\'t chains'} in Lumi, so there's no nutrition data for ${R.other === 1 ? 'it' : 'them'}.</p>` : '');
+  const w = $('#nr211wide'); if (w) w.onclick = () => { $('#nr211r').value = w.dataset.r; store.set('near211r', rad211()); search211(); }; }
 
 /* ---------- 3. entry points + route ---------- */
 if (typeof SC74 !== 'undefined') SC74.push(['#/near', 'Near you'], ['#/menuscan', 'Scan a menu']);

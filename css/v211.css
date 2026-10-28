@@ -25,3 +25,8 @@
 @media (min-width:900px){.nl211{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .sg211 .chips{display:flex;flex-wrap:wrap;gap:8px;overflow:visible}
 .sg211 .chip small{color:inherit;font-weight:500}
+
+/* 23.2 */
+.nr211 .ac232{display:block;margin-top:.35rem}
+.nr211 #nr211retry,.nr211 #nr211wide{margin-left:.5rem;min-height:36px;padding:.35rem .8rem}
+.nr211 #nr211zero #nr211wide{margin:.6rem 0 0;display:inline-flex}
