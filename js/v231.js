@@ -1,6 +1,6 @@
 // ===== Lumi 23.1: "Not medical advice" page, Privacy page, dose-estimate acknowledgement, first-run notice, Delete all my data =====
 (() => {
-  const UPD = 'Oct 26, 2026', UPDP = 'Oct 28, 2026' /* 23.2: privacy page updated (backup Overpass servers) */, ISSUES = 'https://github.com/jwardell15/lumi/issues';
+  const UPD = 'Oct 26, 2026', UPDP = 'Nov 1, 2026' /* 24.0: privacy page updated (USDA relay with Lumi's own key) */, ISSUES = 'https://github.com/jwardell15/lumi/issues';
   const K_ACK = 'doseAck231', K_FR = 'notice231';
   const acked = () => !!store.get(K_ACK, 0);
   const ext = (u, t) => `<a href="${u}" target="_blank" rel="noopener">${t}</a>`;
@@ -28,7 +28,7 @@
     ['GitHub Pages', 'jwardell15.github.io', 'Every visit', 'Hosts the app itself (pages, code, styles, fonts). Your browser sends the usual request details, such as your IP address and browser type.'],
     ['Cloudflare Pages', 'lumi-data-cky.pages.dev', 'When you search, browse or open a product, and when you tap Save for offline', 'Lumi\'s food database files, food photos and the offline pack. Requests are for data files; nothing you saved is sent.'],
     ['Open Food Facts', 'world.openfoodfacts.org, us.openfoodfacts.org, images.openfoodfacts.org, static.openfoodfacts.org', 'When you search (your search words, unless Lumi\'s own index already has plenty of matches), when you open or scan a barcode (the barcode), and to show product photos', 'Product details and photos.'],
-    ['USDA FoodData Central', 'api.nal.usda.gov (via api.data.gov)', 'When you search (your search words), when a scanned barcode isn\'t found elsewhere (the barcode), and when you open a USDA food', 'Nutrition data. Lumi uses the public demo key, not an account.'],
+    ['USDA FoodData Central', 'lumi-data-cky.pages.dev/usda (Lumi\'s Cloudflare relay to api.nal.usda.gov); if the relay is down, api.nal.usda.gov directly (via api.data.gov)', 'When you search (your search words), when a scanned barcode isn\'t found elsewhere (the barcode), and when you open a USDA food', 'Nutrition data. The relay adds Lumi\'s own api.data.gov key on Cloudflare\'s side, so the key is never in the app; it forwards only your search words or the USDA food number, and sends USDA Cloudflare\'s address, not yours. Answers are cached at Cloudflare for up to a week. If the relay fails, Lumi asks USDA directly with the public demo key, which shares your IP address with USDA.'],
     ['Open Beauty Facts', 'world.openbeautyfacts.org', 'Only when a scanned barcode isn\'t a food anywhere else (the barcode)', 'Cosmetics ingredient data.'],
     ['OpenStreetMap Overpass', 'overpass-api.de; if it is busy, the public mirrors maps.mail.ru (VK Maps) and overpass.private.coffee, one at a time', 'Only when you tap Use my location in Restaurants near you, or change the distance after tapping', 'Your position rounded to about 1 km (0.6 mi) and the radius you picked. Distances are worked out on your phone.'],
     ['unpkg', 'unpkg.com', 'The first time you open the barcode scanner', 'Downloads the scanner code (html5-qrcode). The camera picture is read on your device and never uploaded.'],

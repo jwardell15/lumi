@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '23.3.1';
+const VERSION = '24.0';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -7,6 +7,10 @@ const r1 = v => v == null ? '—' : String(Math.round(v * 10) / 10);
 const S = window.LumiScore;
 const OFF_FIELDS = 'code,product_name,product_name_en,generic_name,brands,image_front_small_url,image_front_url,image_small_url,nutriments,serving_size,serving_quantity,nova_group,additives_tags,allergens_tags,traces_tags,ingredients_analysis_tags,labels_tags,ingredients_text,ingredients_text_en,categories_tags,countries_tags,quantity';
 const USDA_KEY = 'DEMO_KEY'; // api.data.gov demo key: per-IP limits (~30 req/hour, 50/day). Responses are cached locally.
+/* 24.0: Lumi's own api.data.gov key lives only on the lumi-data Cloudflare proxy (encrypted secret). If the proxy fails, fall back to the public demo key. */
+const USDA_PROXY = 'https://lumi-data-cky.pages.dev/usda/';
+async function usdaGet(path, qs, ms) { try { const r = await getJSON(USDA_PROXY + path + (qs ? '?' + qs : ''), ms); if (r && !r.error) return r; throw new Error('proxy'); }
+  catch (e) { return getJSON(`https://api.nal.usda.gov/fdc/v1/${path === 'search' ? 'foods/search' : path}?api_key=${USDA_KEY}${qs ? '&' + qs : ''}`, ms); } }
 const MIRRORS = ['world', 'us', 'ca', 'uk', 'fr'];
 const memo = new Map(); // id -> normalized product
 
@@ -89,7 +93,7 @@ async function localProduct(code) {
 
 /* ---------------- remote sources ---------------- */
 async function usdaSearch(q) {
-  const v = await cached('usda:' + q.toLowerCase(), 864e5, () => getJSON(`https://api.nal.usda.gov/fdc/v1/foods/search?api_key=${USDA_KEY}&query=${encodeURIComponent(q)}&pageSize=40&dataType=Branded,Foundation,SR%20Legacy`, 12000)
+  const v = await cached('usda:' + q.toLowerCase(), 864e5, () => usdaGet('search', `query=${encodeURIComponent(q)}&pageSize=40&dataType=Branded,Foundation,SR%20Legacy`, 12000)
     .then(j => (j.foods || []).map(f => ({ fdcId: f.fdcId, description: f.description, dataType: f.dataType, gtinUpc: f.gtinUpc, brandName: f.brandName, brandOwner: f.brandOwner, ingredients: (f.ingredients || '').slice(0, 600), servingSize: f.servingSize, servingSizeUnit: f.servingSizeUnit, householdServingFullText: f.householdServingFullText, brandedFoodCategory: f.brandedFoodCategory, foodCategory: f.foodCategory, packageWeight: f.packageWeight,
       foodNutrients: (f.foodNutrients || []).filter(n => ['205', '269', '539', '291', '203', '204', '606', '605', '307', '208', '299'].includes(String(n.nutrientNumber))).map(n => ({ nutrientNumber: n.nutrientNumber, value: n.value })) }))));
   return v.map(S.fromUSDA);
@@ -113,7 +117,7 @@ async function offProduct(code) {
   }
   throw new Error('OFF unreachable');
 }
-async function usdaFood(fdcId) { const f = await cached('fdc:' + fdcId, 7 * 864e5, () => getJSON(`https://api.nal.usda.gov/fdc/v1/food/${fdcId}?api_key=${USDA_KEY}`, 12000)); return S.fromUSDA(f); }
+async function usdaFood(fdcId) { const f = await cached('fdc:' + fdcId, 7 * 864e5, () => usdaGet('food/' + (+fdcId), '', 12000)); return S.fromUSDA(f); }
 async function usdaByGtin(code) { const r = await usdaSearch(gtinKey(code)); return r.find(p => gtinKey(p.code) === gtinKey(code)) || null; }
 
 /* ---------------- result items ---------------- */

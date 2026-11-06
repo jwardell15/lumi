@@ -15,7 +15,10 @@ cat > "$STAGE/_headers" <<'H'
 H
 N=$(find "$STAGE" -type f ! -name _headers | wc -l); echo "files: $N (Cloudflare Pages limit 20000, 25 MiB each)"
 find "$STAGE" -type f -size +25M -print | sed 's/^/TOO BIG: /' | grep . && exit 1 || true
-mkdir -p /tmp/lumi-wr && cd /tmp/lumi-wr && [ -f package.json ] || echo '{}' > package.json
+mkdir -p /tmp/lumi-wr && cd /tmp/lumi-wr && { [ -f package.json ] || echo '{}' > package.json; }
+# 24.0: Pages Functions (USDA proxy). The key is the encrypted Pages secret USDA_API_KEY, set once with:
+#   printf %s "$USDA_API_KEY" | npx wrangler pages secret put USDA_API_KEY --project-name lumi-data
+rm -rf /tmp/lumi-wr/functions && cp -a "$ROOT/tools/cf/functions" /tmp/lumi-wr/functions
 WRANGLER_CACHE_DIR=/tmp/lumi-wr/.wc npx -y wrangler pages deploy "$STAGE" --project-name lumi-data --branch main --commit-dirty=true
 if [ "${1:-}" = "--verify" ]; then
   cd "$STAGE" && find data img -type f | python3 -c '
