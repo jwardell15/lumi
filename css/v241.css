@@ -1,0 +1,22 @@
+/* Lumi 24.1: weekly meal planner, add sheet, bowl portions. Uses the 23.x tokens. */
+.pl241h{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:10px 20px}.pl241h .lead{max-width:70ch}
+.wn241{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.wn241 b{font-variant-numeric:tabular-nums;min-width:9em;text-align:center}
+.ws241{display:grid;gap:8px}.ws241 h2{margin:0}.ws241 .actions{margin-top:4px}
+.dg241{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px;align-items:start;margin-top:14px}
+.day241{margin:0}.tdy241{outline:2px solid var(--acc);outline-offset:-2px}.dh241{display:flex;flex-direction:column;gap:2px;margin-bottom:6px}.dh241 h2{margin:0;font-size:var(--t-t3)}
+.tag241{display:inline-block;font-size:12px;font-weight:700;padding:1px 8px;border-radius:999px;background:var(--accSoft);color:var(--ink);vertical-align:middle;margin-left:6px}
+.ms241,.gl241{list-style:none;margin:0;padding:0;display:grid;gap:8px}.m241{border-top:1px solid var(--line);padding-top:8px}.m241:first-child{border-top:0;padding-top:0}
+.mh241{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}.mh241>b{font-size:var(--t-sub);text-transform:uppercase;letter-spacing:.04em;color:var(--mut)}
+.gp241{background:var(--bg2);border:1px solid var(--line);border-radius:var(--r-s);padding:8px 10px;display:grid;gap:4px}
+.gh241{display:flex;align-items:center;gap:8px}.gt241{flex:1;min-width:0;overflow-wrap:anywhere}.gt241 b{font-weight:700}
+.pm241 select{min-height:36px;border:1px solid var(--line2);border-radius:var(--r-s);background:var(--card);color:var(--ink);padding:2px 6px;font:inherit;font-size:var(--t-sub)}
+.it241{color:var(--ink2)}.it241 span{color:var(--mut)}.gs241{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.ln241{font-size:var(--t-sub);color:var(--ink2);font-variant-numeric:tabular-nums}.ln241 b{color:var(--ink)}
+.mb241{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.mb241 .chip{min-height:36px}
+.as241{width:min(720px,100%)}.as241t{max-width:none;flex-wrap:wrap}.as241b{max-height:58vh;overflow:auto;margin:8px 0}
+.ar241l{list-style:none;margin:8px 0;padding:0;display:grid;gap:6px}.ar241{display:flex;align-items:center;gap:10px;padding:8px;border:1px solid var(--line);border-radius:var(--r-s);background:var(--bg2)}
+.ar241>span:first-child{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;overflow-wrap:anywhere}.ar241 small{color:var(--ink2)}.sc241 .sc20{flex-wrap:nowrap}
+.gi241{display:flex;flex-direction:column;padding:6px 0}.gi241 small{color:var(--ink2)}
+.bq241 select{min-height:40px;margin-top:4px;border:1px solid var(--line2);border-radius:var(--r-s);background:var(--bg2);color:var(--ink);padding:2px 8px;font:inherit;width:100%}
+.bil20 b{color:var(--ink)}
+@media (max-width:420px){.dg241{grid-template-columns:1fr}.ar241{flex-wrap:wrap}}
