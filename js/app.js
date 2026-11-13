@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '24.2';
+const VERSION = '25.0';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -361,7 +361,7 @@ function runQuery(q, typing) {
   document.title = `${q} — Lumi`;
   const prev = rs; const my = rs = { q, live: true, group: prev && prev.live ? prev.group : 'all', items: new Map(), src: { local: 'load', usda: 'load', off: 'load' }, counts: {} };
   loadCos().then(I => { if (rs !== my) return; const el = $('#cosHint'); if (!el) return; const qq = LumiSearch.norm(q).split(' ').filter(t => t.length > 1); const L = qq.length ? I.docs.filter(d => qq.every(t => d.key.includes(t))) : [];
-    el.innerHTML = L.length ? `<a class="cos-hint" href="#/cosmetics/all/${encodeURIComponent(q)}">🧴 <b>${L.length}</b> cosmetic${L.length > 1 ? 's' : ''} match "${esc(q)}" ›</a>` : ''; }).catch(() => {});
+    el.innerHTML = L.length ? `<a class="cos-hint" href="#/cosmetics/all/${encodeURIComponent(q)}">🧴 <b>${L.length}</b> Home &amp; Body product${L.length > 1 ? 's' : ''} match "${esc(q)}" ›</a>` : ''; }).catch(() => {});
   const done = (k, list, err) => { if (rs !== my) return; my.src[k] = err ? 'err' : 'ok'; if (list) { my.counts[k] = list.length; mergeItems(list); } renderResults(); };
   const runLocal = () => { if (rs !== my) return; const seen = new Set(), r = [];
     for (const d of engine.search(q, { limit: 160 }).concat(engine.search(q, { limit: 30, filter: d => d.src === 'rest' }), engine.search(q, { limit: 30, filter: d => d.src === 'whole' }))) if (!seen.has(d.code)) { seen.add(d.code); r.push(itemFromDoc(d)); } for (const id of (my.lids || [])) my.items.delete(id); for (const it of r) my.items.delete(it.id); my.lids = r.map(it => it.id); my.keyIdx = null; done('local', r); /* v18: drop the previous local pass's rows so a later shard's better representative can't be blocked as a duplicate */
@@ -479,7 +479,7 @@ async function viewProduct(id) {
   }
   if (location.hash.replace(/^#\/product\//, '') !== id && !location.hash.endsWith(encodeURIComponent(id))) return;
   if (!p && /^\d{8,14}$/.test(id)) { const cp = await cosProduct(id).catch(() => null); if (cp) { const sc = sessionStorage.getItem('lumi.scanned') === id; if (sc) sessionStorage.removeItem('lumi.scanned'); return viewCosProduct(id, cp, sc); } }
-  if (!p) { app.innerHTML = `${searchBox()}<div class="card empty" style="margin-top:14px"><b>Barcode ${esc(id)} not found</b>It isn't in Lumi's index, Open Food Facts, USDA or Open Beauty Facts. Try searching by name, or <a style="color:var(--acc)" href="https://world.openfoodfacts.org/cgi/product.pl?type=add&code=${esc(id)}" target="_blank" rel="noopener">add it to Open Food Facts</a>.<div class="actions"><a class="btn pri" href="#/label/${esc(id)}">📷 Scan its Nutrition Facts label</a></div></div>`; bindSearch(); return; }
+  if (!p) { app.innerHTML = `${searchBox()}<div class="card empty" style="margin-top:14px"><b>Barcode ${esc(id)} not found</b>It isn't in Lumi's index, Open Food Facts, USDA, Open Beauty Facts or Open Products Facts. Try searching by name, or <a style="color:var(--acc)" href="https://world.openfoodfacts.org/cgi/product.pl?type=add&code=${esc(id)}" target="_blank" rel="noopener">add it to Open Food Facts</a>.<div class="actions"><a class="btn pri" href="#/label/${esc(id)}">📷 Scan its Nutrition Facts label</a></div></div>`; bindSearch(); return; }
   memo.set(p.id, p); pushHist('viewed', p);
   const scanned = sessionStorage.getItem('lumi.scanned') === id; if (scanned) { sessionStorage.removeItem('lumi.scanned'); pushHist('scans', p, 50); }
   const s = S.score(p), n = p.n, unit = p.liquid ? 'ml' : 'g'; const hr = HR(p), hp = PRIM() === 'health';
