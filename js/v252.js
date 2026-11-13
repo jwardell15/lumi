@@ -136,7 +136,7 @@ async function viewOTC(sh, sid) { document.title = 'Medicine — Lumi'; const H0
 /* =====================  SUPPLEMENTS (NIH DSLD)  ===================== */
 const dsld = (path, ms) => getJSON(DSLD + path, ms || 15000);
 const fmtUPC = c => c.length === 12 ? `${c[0]} ${c.slice(1, 6)} ${c.slice(6, 11)} ${c[11]}` : c.length === 13 && c[0] === '0' ? fmtUPC(c.slice(1)) : c;
-async function dsldByUPC(code) { code = String(code).replace(/\D/g, ''); if (code.length < 8) return null; const want = code.replace(/^0+/, ''); const forms = [...new Set([fmtUPC(code), code])];
+async function dsldByUPC(code) { code = String(code).replace(/\D/g, ''); const want = code.replace(/^0+/, ''); if (want.length < 8) return null; const forms = [...new Set([fmtUPC(code), code])];
   for (const f of forms) { let j; try { j = await dsld('search-filter?q=' + enc('"' + f + '"') + '&size=4', 8000); } catch { continue; }
     for (const h of (j.hits || []).slice(0, 4)) { try { const l = await dsld('label/' + h._id, 8000); if (String(l.upcSku || '').replace(/\D/g, '').replace(/^0+/, '') === want) return String(h._id); } catch { } } }
   return null; }
@@ -208,7 +208,7 @@ async function viewSupp(id) { document.title = 'Supplement — Lumi'; const H0 =
 UI.browse = (UI.browse || []).concat(['<a href="#/water"><b>Local water quality</b><span>Violations, lead and PFAS for your ZIP</span></a>', '<a href="#/supp"><b>Supplements</b><span>Sugar and carbs per serving (NIH)</span></a>', '<a href="#/otc"><b>Medicines</b><span>Ingredients, sweeteners and recalls</span></a>']);
 UI.tools = (UI.tools || []).concat(['<a href="#/water"><b>Local water quality</b><span>EPA records for your ZIP</span></a>', '<a href="#/supp"><b>Supplements</b><span>NIH label database</span></a>', '<a href="#/otc"><b>Medicines</b><span>Over-the-counter, with recalls</span></a>']);
 const cp0 = self.cosProduct;
-self.cosProduct = async function (code) { const r = await cp0.apply(this, arguments); if (r) return r; code = String(code).replace(/\D/g, ''); if (code.length < 8) return null;
+self.cosProduct = async function (code) { const r = await cp0.apply(this, arguments); if (r) return r; code = String(code).replace(/\D/g, ''); if (code.replace(/^0+/, '').length < 8) return null;
   try { const I = await oIdx(); const h = I.u[code.replace(/^0+/, '')]; if (h) return { id: code, code, src: 'otc25', hb: 1, sh: h[0], sid: h[1] }; } catch { }
   try { const id = await dsldByUPC(code); if (id) return { id: code, code, src: 'dsld', hb: 1, did: id }; } catch { }
   return null; };
