@@ -19,8 +19,8 @@ with sync_playwright() as p:
     swt = pg.evaluate("fetch('sw.js',{cache:'no-store'}).then(r=>r.text())")
     ok('sw cache lumi-v%s lists v25 + core + earlier files' % VER, ("'lumi-v%s'" % VER) in swt and all(f in swt for f in ('js/v25.js', 'css/v25.css', 'js/hb25core.js', 'js/v242.js')))
     scr = pg.evaluate("[...document.scripts].map(s=>s.getAttribute('src')).filter(Boolean)")
-    ok('index loads hb25core then v25 after v242', scr[-4:-1] == ['js/v242.js', 'js/hb25core.js', 'js/v25.js'], scr[-4:])
-    ok("What's new lists 25.0 (after 25.1)", pg.evaluate("V7_NEWS[1][1]") == 'Home & Body (25.0)')
+    ok('index loads hb25core then v25 after v242', scr[-5:-2] == ['js/v242.js', 'js/hb25core.js', 'js/v25.js'], scr[-4:])
+    ok("What's new lists 25.0 (after 25.2 and 25.1)", pg.evaluate("V7_NEWS[2][1]") == 'Home & Body (25.0)')
     # ---- Browse ----
     go(pg, '#/browse', '.fg181', 1200)
     r = pg.evaluate("()=>({feat:[...document.querySelectorAll('.fg181 .st181 .m181')].map(a=>a.getAttribute('href')), hb:[...document.querySelectorAll('.hbbr25 a')].map(a=>a.getAttribute('href')), first:(document.querySelector('.browse74 > *:nth-child(2)')||{}).className||'', order:[...document.querySelectorAll('.browse74 .sec-h h2')].map(h=>h.innerText)})")
