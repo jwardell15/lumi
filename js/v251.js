@@ -23,7 +23,7 @@ const SRCS = { c: 'CPSC', f: 'FDA', d: 'FDA', v: 'FDA' };
 const CLS = { 1: 'Class I: most serious', 2: 'Class II', 3: 'Class III', 0: '' };
 const L = {}; const lazy = (k, f) => L[k] || (L[k] = f().catch(e => { delete L[k]; throw e; }));
 const recAll = () => lazy('r', () => UI.load('rr', BASE + 'r.json', 60000).then(j => { j.items.forEach(a => { a._k = ' ' + norm(a[4] + ' ' + a[5]) + ' '; a._s = ' ' + norm(a[3] + ' ' + a[4] + ' ' + a[5] + ' ' + a[6]) + ' '; a._t = new Set(norm(a[4]).split(' ').filter(w => w.length >= 4)); }); return j; }));
-const recUPC = () => lazy('u', () => UI.load('ru', BASE + 'u.json', 30000).then(j => { const m = new Map(); for (const [k, v] of Object.entries(j.u)) if (!/^N/.test(k)) m.set(k.replace(/^0+/, ''), v); return { asof: j.asof, m }; }));
+const recUPC = () => lazy('u', () => UI.load('ru', BASE + 'u.json', 30000).then(j => { const m = new Map(); for (const [k, v] of Object.entries(j.u)) m.set(/^N/.test(k) ? k : k.replace(/^0+/, ''), v); return { asof: j.asof, m }; }));
 const STOP = new Set('original classic fresh natural organic flavor flavored flavour style with free light lite large small medium size pack count ounce ounces whole mild sweet salted unsalted plain regular family value brand product this that from made food foods each case bottle container'.split(' '));
 const url = a => a[1] === 'c' ? (/^https:\/\/(www\.)?cpsc\.gov\//.test(a[8]) ? a[8] : 'https://www.cpsc.gov/Recalls') : 'https://www.accessdata.fda.gov/scripts/ires/index.cfm?Event=' + encodeURIComponent(a[8]);
 const fd = d => { d = String(d); return d.length === 8 ? new Date(+d.slice(0, 4), +d.slice(4, 6) - 1, +d.slice(6)).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : d; };
@@ -42,7 +42,7 @@ function recallCard(m, where) { if (!m.strong.length && !m.possible.length) retu
   return `<div class="card rcall251" role="note">${m.strong.length ? `<h2>⚠ Recall: this barcode is on a recall notice</h2><ul class="rcl251">${m.strong.slice(0, 3).map(item).join('')}</ul>` : ''}
    ${m.possible.length ? `<h2 class="${m.strong.length ? 'h2b' : ''}">⚠ Possible recall match</h2><p class="small">Matched by brand and product words only, so it may be a different product. Compare the name, size and lot or date codes on the official notice before deciding anything.</p><ul class="rcl251">${m.possible.slice(0, 3).map(item).join('')}</ul>${m.possible.length > 3 ? `<p class="small"><a href="#/recalls/all/${q}">See ${m.possible.length - 3}+ more like this</a></p>` : ''}` : ''}
    <p class="small">Recall data: CPSC and FDA, as of ${esc(m.asof)}. <a href="#/recalls">All recalls</a></p></div>`; }
-UI.recallsFor = recallsFor; UI.recAll = recAll; UI.recUPC = recUPC;
+UI.recallsFor = recallsFor; UI.recallCard = recallCard; UI.recItem = item; UI.recAll = recAll; UI.recUPC = recUPC;
 UI.EXTRAS.push(async rec => { const m = await recallsFor({ code: rec.c, name: rec.n, brand: rec.b }); if (m.strong.length || m.possible.length) return recallCard(m);
   return m.asof ? `<div class="card rcnone251"><p class="small">No recall found for this product in Lumi's recall data (CPSC and FDA, as of ${esc(m.asof)}). That doesn't mean there isn't one: check ${ext('https://www.cpsc.gov/Recalls', 'cpsc.gov')} and ${ext('https://www.fda.gov/safety/recalls-market-withdrawals-safety-alerts', 'fda.gov')}. <a href="#/recalls">All recalls</a></p></div>` : ''; });
 /* food product pages */
