@@ -19,8 +19,8 @@ with sync_playwright() as p:
     swt = pg.evaluate("fetch('sw.js',{cache:'no-store'}).then(r=>r.text())")
     ok('sw cache lumi-v%s lists v25 + core + earlier files' % VER, ("'lumi-v%s'" % VER) in swt and all(f in swt for f in ('js/v25.js', 'css/v25.css', 'js/hb25core.js', 'js/v242.js')))
     scr = pg.evaluate("[...document.scripts].map(s=>s.getAttribute('src')).filter(Boolean)")
-    ok('index loads hb25core then v25 after v242', scr[-3:] == ['js/v242.js', 'js/hb25core.js', 'js/v25.js'], scr[-4:])
-    ok("What's new lists 25.0 first", pg.evaluate("V7_NEWS[0][1]") == 'Home & Body (25.0)')
+    ok('index loads hb25core then v25 after v242', scr[-4:-1] == ['js/v242.js', 'js/hb25core.js', 'js/v25.js'], scr[-4:])
+    ok("What's new lists 25.0 (after 25.1)", pg.evaluate("V7_NEWS[1][1]") == 'Home & Body (25.0)')
     # ---- Browse ----
     go(pg, '#/browse', '.fg181', 1200)
     r = pg.evaluate("()=>({feat:[...document.querySelectorAll('.fg181 .st181 .m181')].map(a=>a.getAttribute('href')), hb:[...document.querySelectorAll('.hbbr25 a')].map(a=>a.getAttribute('href')), first:(document.querySelector('.browse74 > *:nth-child(2)')||{}).className||'', order:[...document.querySelectorAll('.browse74 .sec-h h2')].map(h=>h.innerText)})")
@@ -29,12 +29,11 @@ with sync_playwright() as p:
     # ---- hub ----
     go(pg, '#/hb', '#hbl25 .row', 1500)
     n = int(re.sub(r'\D', '', pg.evaluate("document.getElementById('hbn25').innerText")))
-    pcn = sum(1 for d in DOCS if d[7] == 'b')
-    ok('[hub] lists all indexed personal-care products', n == pcn and n > 30000, (n, pcn))
-    ok('[hub] category chips + filters + sort', pg.evaluate("document.querySelectorAll('.hbc25 .chip').length") == 10 and pg.evaluate("document.querySelectorAll('.fb25').length") == 6 and pg.evaluate("!!document.getElementById('hbsort25')"))
-    ok('[hub] no cleaning categories yet (25.1)', 'Laundry' not in txt(pg))
+    pcn = len(DOCS) + len(json.load(open(REPO + '/data/hb25/index-c.json'))['docs'])
+    ok('[hub] lists all indexed products (personal care; 25.1 adds cleaning)', n == pcn and n > 30000, (n, pcn))
+    ok('[hub] category chips + filters + sort', pg.evaluate("document.querySelectorAll('.hbc25 .chip').length") == 15 and pg.evaluate("document.querySelectorAll('.fb25').length") == 7 and pg.evaluate("!!document.getElementById('hbsort25')"))
     rows = pg.evaluate("[...document.querySelectorAll('#hbl25 .row')].map(a=>({h:a.getAttribute('href'),s:a.querySelector('.hbp25').innerText}))")
-    byc = {d[0]: d for d in DOCS}
+    byc = {d[0]: d for d in DOCS + json.load(open(REPO + '/data/hb25/index-c.json'))['docs']}
     ok('[hub] row scores = index scores, rows link to #/cos/<barcode>', all(x['h'].startswith('#/cos/') and (x['s'] == '?' if byc[x['h'][6:]][3] < 0 else x['s'] == str(byc[x['h'][6:]][3])) for x in rows), rows[:3])
     pg.click('.fb25[data-f=clean]'); pg.wait_for_timeout(300)
     sc = pg.evaluate("[...document.querySelectorAll('#hbl25 .hbp25')].map(e=>e.innerText)")
@@ -49,7 +48,7 @@ with sync_playwright() as p:
     pg.select_option('#hbsort25', 'best'); pg.wait_for_timeout(300)
     ss = [int(x) for x in pg.evaluate("[...document.querySelectorAll('#hbl25 .hbp25')].map(e=>e.innerText)") if x != '?']
     ok('[hub] sort by highest score', ss == sorted(ss, reverse=True) and ss[0] == 100, ss[:8])
-    go(pg, '#/hb/sun', '#hbl25 .row', 800)
+    pg.evaluate("localStorage.removeItem('lumi.hbf25')"); go(pg, '#/hb/sun', '#hbl25 .row', 800)
     ok('[hub] category route #/hb/sun', pg.evaluate("document.querySelector('.hbc25 .chip.on').dataset.c") == 'sun' and int(re.sub(r'\D', '', pg.evaluate("document.getElementById('hbn25').innerText"))) == sum(1 for d in DOCS if d[7] == 'b' and CATS[d[4]] == 'sun'))
     # ---- product pages: real products with each kind of flag ----
     def pick(bit, noother=False, need_ing=True):

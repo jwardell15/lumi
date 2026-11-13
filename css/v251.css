@@ -1,0 +1,11 @@
+/* Lumi 25.1: laundry/cleaning (Safer Choice) and recalls. Uses the 23.x tokens. */
+.sc251{border-left:5px solid var(--ex)}.sc251 h2{color:var(--accT)}
+.rcall251{border-left:5px solid var(--bd);background:color-mix(in srgb,var(--bd) 8%,var(--card))}.rcall251 h2{margin:0 0 6px;font-size:var(--t-t3);color:var(--bdT)}.rcall251 h2.h2b{margin-top:14px}
+.rcnone251{border-left:5px solid var(--na)}
+.rcl251{list-style:none;margin:8px 0;padding:0;display:grid;gap:10px}.rcl251.rcp{grid-template-columns:repeat(auto-fill,minmax(420px,1fr))}
+.rc251{border:1px solid var(--line);border-left:5px solid var(--pr);border-radius:var(--r-s);padding:10px 12px;background:var(--bg2)}.rc251.s-c{border-left-color:var(--bs14)}.rc251.s-f{border-left-color:var(--ex)}.rc251.s-d{border-left-color:var(--lag)}.rc251.s-v{border-left-color:var(--na)}
+.rh251{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.rh251 b{overflow-wrap:anywhere}
+.cl251{font-size:12px;font-weight:700;padding:1px 8px;border-radius:99px;background:var(--chip);color:var(--ink2);white-space:nowrap}.cl251.c1{background:var(--avo22);color:var(--avoi22)}
+.rm251{font-size:var(--t-fn);color:var(--ink2);font-weight:600;margin:2px 0 4px}.rc251 p{margin:4px 0;color:var(--ink2)}.rc251 a{display:inline-flex;align-items:center;min-height:36px;font-weight:600}
+.rcp251 #lv251{min-height:40px;cursor:pointer}
+@media (max-width:520px){.rcl251.rcp{grid-template-columns:1fr}}

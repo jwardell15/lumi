@@ -38,12 +38,14 @@ const PC = [['sun', 'Sun care', /sunscreen|\bspf\b|sun ?block|suncare|sun-protec
 const CL = [['laundry', 'Laundry', /laundry|lessive|detergent|fabric-?soft|softener|stain|pre-?treat|dryer|waschmittel/], ['dish', 'Dish soap', /dish|vaisselle|dishwash|lave-vaisselle|geschirr/], ['surface', 'Surface cleaners', /all-purpose|surface|multi-?purpose|bathroom|toilet|glass|window|floor|kitchen|bleach|disinfect|degreas|hard-surface|cleaner|nettoy|reiniger/], ['air', 'Air & odor', /air-fresh|odor|odou?r|deodoriz|freshener/], ['otherc', 'Other cleaning', /./]];
 const CATS = PC.map(c => [c[0], c[1]]).concat([['other', 'Other personal care']]).concat(CL.map(c => [c[0], c[1]]));
 const ci = id => CATS.findIndex(c => c[0] === id);
+const PCX = /skin|face|facial|hair|shampoo|cosmetic|hygiene|toothpaste|deodorant|lotion|beauty|make-?up|shower|\bbody\b|hand-?wash|hand soap|moistur|sunscreen|toilet-paper|diaper|baby-wipes?|intimate/;
 const FOOD = /plant-based-foods|beverages|snacks|en:foods|dairies|meals|sweeteners|cereals/;
 const CLEANOK = /clean|detergent|laundry|dish|soap|bleach|disinfect|degreas|softener|wipes?|household-chemicals|hard-surface|lessive|vaisselle|nettoy|stain|odor|freshener|reiniger|waschmittel/;
 function imgPath(p, host) {
   const c = String(p.code), im = p.images || {}; let best = null;
   const keys = Object.keys(im).filter(k => /^front_/.test(k) && im[k] && im[k].rev); const pref = ['front_en', 'front_' + (p.lang || ''), ...keys];
   for (const k of pref) if (im[k] && im[k].rev) { best = k + '.' + im[k].rev; break; }
+  if (!best) { const sf = (im.selected && im.selected.front) || {}; const lk = ['en', p.lang || '', ...Object.keys(sf)].find(k => k && sf[k] && sf[k].rev); if (lk) best = 'front_' + lk + '.' + sf[lk].rev; }
   if (!best) return '';
   const dir = c.length <= 8 ? c : c.padStart(13, '0').replace(/^(\d{3})(\d{3})(\d{3})(\d*)$/, '$1/$2/$3/$4');
   return dir + '/' + best;
@@ -60,7 +62,7 @@ function addRec(p, kind) {
   const brand = String(p.brands || '').split(',')[0].trim().slice(0, 60);
   let cat;
   if (kind === 'b') { if (FOOD.test(cats) && !/cosmetic|hygiene|toothpaste|shampoo|soap/.test(cats)) return; const i = PC.findIndex(c => c[2].test(hay)); cat = i < 0 ? 'other' : PC[i][0]; }
-  else { if (!CLEANOK.test(hay)) return; const i = CL.findIndex(c => c[2].test(hay)); cat = CL[i][0]; }
+  else { if (!CLEANOK.test(hay) || PCX.test(hay)) return; const i = CL.findIndex(c => c[2].test(hay)); cat = CL[i][0]; }
   const us = (p.countries_tags || []).includes('en:united-states'), upc = code.length === 12 || (code.length === 13 && code[0] === '0');
   if (!ing && !us && !upc) { /* name-only foreign items stay out of the browse index but are still found by barcode */ }
   seenCodes.add(code);

@@ -76,6 +76,11 @@ with open(R+'ucmr/UCMR5_All.txt',encoding='latin-1',newline='') as f:
                 if dt>a[3]: a[3]=dt
         nuc+=len(ch)
 print('ucmr rows kept',nuc,'systems',len(uc))
+def clean(x):
+    if isinstance(x,float) and x!=x: return ''
+    if isinstance(x,dict): return {k:clean(v) for k,v in x.items()}
+    if isinstance(x,(list,tuple)): return [clean(v) for v in x]
+    return x
 # write per-state shards
 by=collections.defaultdict(dict)
 for pid,d in sysd.items():
@@ -91,27 +96,27 @@ for pid,d in sysd.items():
         if (pid,code) in lcr:
             dd,m,u,sg=lcr[(pid,code)]; o[key]=[dd.strftime('%Y-%m-%d'),m,u,sg or '']
     if pid in uc:
-        o['pf']={k:[x[0],x[1],round(x[2],4),x[3]] for k,x in uc[pid].items()}
-    by[d['st'] if d['st'] else pid[:2]][pid]=o
+        o['pfn']=max(x[0] for x in uc[pid].values()); o['pf']={k:[x[0],x[1],round(x[2],4),x[3]] for k,x in uc[pid].items() if x[1]>0}
+    by[d['st'] if d['st'] else pid[:2]][pid]=clean(o)
 tot=0
 for st,m in by.items():
     s=json.dumps(m,separators=(',',':'),ensure_ascii=False); tot+=len(s)
-    open(O+'s-%s.json'%st,'w').write(s)
+    open(O+'s-%s.json'%st,'w').write(s); assert 'NaN' not in s
 print('states',len(by),'bytes',tot)
 # zip -> pwsid shards (first 3 digits)
 zs=collections.defaultdict(dict)
 for pid,zz in zips.items():
     if pid not in sysd: continue
-    for z in zz: zs[z[:3]].setdefault(z,{'s':[],'o':[]})['s'].append(pid)
+    for z in zz: zs[z[:3]].setdefault(z,{'s':[],'o':[]})['s'].append(sysd[pid]['st']+'/'+pid)
 for pid,d in sysd.items():
     z=d['oz']
-    if re.fullmatch(r'\d{5}',z) and z not in zips.get(pid,()): zs[z[:3]].setdefault(z,{'s':[],'o':[]})['o'].append(pid)
+    if re.fullmatch(r'\d{5}',z) and z not in zips.get(pid,()): zs[z[:3]].setdefault(z,{'s':[],'o':[]})['o'].append(sysd[pid]['st']+'/'+pid)
 for k,m in zs.items():
     for z in m:
-        m[z]['s'].sort(key=lambda p: -sysd[p]['p']); m[z]['o'].sort(key=lambda p: -sysd[p]['p'])
+        m[z]['s'].sort(key=lambda p: -sysd[p.split('/')[1]]['p']); m[z]['o'].sort(key=lambda p: -sysd[p.split('/')[1]]['p'])
         if not m[z]['o']: del m[z]['o']
         if not m[z]['s']: del m[z]['s']
     open(O+'z-%s.json'%k,'w').write(json.dumps(m,separators=(',',':')))
 json.dump({'contaminants':{k:v for k,v in cont.items()},'violCodes':vcode},open(O+'codes.json','w'),separators=(',',':'))
-json.dump({'built':datetime.date.today().isoformat(),'systems':len(sysd),'zipShards':len(zs)},open(O+'info.json','w'))
+json.dump({'built':datetime.date.today().isoformat(),'systems':len(sysd),'zipShards':len(zs),'states':sorted(by)},open(O+'info.json','w'))
 print('done')

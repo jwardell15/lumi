@@ -20,8 +20,10 @@ const cache = {};
 const load = (k, url, ms) => cache[k] || (cache[k] = getJSON(url, ms || 30000).catch(e => { delete cache[k]; throw e; }));
 let DOCS = null, DOCSP = null;
 function hbIndex() { if (DOCS) return Promise.resolve(DOCS); if (DOCSP) return DOCSP;
-  DOCSP = load('idx', BASE + 'index.json').then(j => { const cats = j.cats.map(c => ({ id: c[0], name: c[1] }));
-    DOCS = { cats, cov: j.cov, built: j.built, docs: j.docs.map(d => ({ code: d[0], name: d[1], brand: d[2], score: d[3] < 0 ? null : d[3], cat: cats[d[4]].id, img: d[5], bits: d[6], kind: d[7], key: norm(d[1] + ' ' + d[2]) })) };
+  DOCSP = Promise.all([load('idx', BASE + 'index.json'), window.HB25UI.withClean ? load('idxc', BASE + 'index-c.json') : null]).then(([j, jc]) => { const cats = j.cats.map(c => ({ id: c[0], name: c[1] }));
+    const mk = d => ({ code: d[0], name: d[1], brand: d[2], score: d[3] < 0 ? null : d[3], cat: cats[d[4]].id, img: d[5], bits: d[6], kind: d[7], key: norm(d[1] + ' ' + d[2]) }), tier = d => (d.bits & 512 ? 2 : 0) + (d.bits & 256 ? 1 : 0);
+    let docs = j.docs.map(mk); if (jc) docs = docs.concat(jc.docs.map(mk)).sort((x, y) => tier(y) - tier(x));
+    DOCS = { cats, cov: j.cov, built: j.built, docs };
     return DOCS; }).catch(e => { DOCSP = null; throw e; }); return DOCSP; }
 const hbRef = () => load('ref', BASE + 'ref.json', 60000);
 const hbMN = () => load('mn', BASE + 'pfasmn.json', 60000);
@@ -104,13 +106,13 @@ async function viewHBHub(arg) {
   const cats = I.cats.filter(c => CATSET.pc.includes(c.id) || (window.HB25UI.cats || []).includes(c.id));
   const cov = I.cov || {};
   app.innerHTML = `<section class="hbhub25 pg13"><h1>Home &amp; Body</h1>
-   <p class="lead">Shampoo, sunscreen, toothpaste${window.HB25UI.cats && window.HB25UI.cats.length ? ', laundry and cleaners' : ''}: checked against EPA's PFAS list, California Prop 65 and other official lists. Lumi never calls a product “safe”: it shows what it found, or says it couldn't verify.</p>
+   <p class="lead">Shampoo, sunscreen, toothpaste${window.HB25UI.cats && window.HB25UI.cats.length ? ', laundry detergent and cleaners' : ''}: checked against EPA's PFAS list, California Prop 65 and other official lists. Lumi never calls a product “safe”: it shows what it found, or says it couldn't verify.</p>
    <div class="hbt25b"><a href="#/hb-check"><b>Check an ingredient list</b><span>Paste one from a package</span></a><a href="#/pfas"><b>PFAS in products</b><span>What EPA and Minnesota publish</span></a><a href="#/prop65"><b>Prop 65 ingredients</b><span>Look up a chemical</span></a><a href="#/hb-about"><b>How scoring works</b><span>Sources and licenses</span></a>${(window.HB25UI.tools || []).join('')}</div>
    <form class="hbq25" role="search" onsubmit="return false"><input id="hbq25" type="search" autocomplete="off" placeholder="Search Home &amp; Body: product or brand" aria-label="Search Home and Body products" value="${esc(q)}"></form>
    <div class="chips hbc25" role="group" aria-label="Category"><a class="chip${cat === 'all' ? ' on' : ''}" data-c="all" href="#/hb">All</a>${cats.map(c => `<a class="chip${cat === c.id ? ' on' : ''}" data-c="${c.id}" href="#/hb/${c.id}">${CAT_ICON[c.id] || ''} ${esc(c.name)}</a>`).join('')}</div>
    <div class="hbf25" role="group" aria-label="Filters">${Object.entries(FILT).map(([k, v]) => `<button type="button" class="chip fb25${st.f.has(k) ? ' on' : ''}" data-f="${k}" aria-pressed="${st.f.has(k)}">${v[0]}</button>`).join('')}<label class="srt25">Sort <select id="hbsort25"><option value="pop"${st.sort === 'pop' ? ' selected' : ''}>Most complete</option><option value="best"${st.sort === 'best' ? ' selected' : ''}>Highest score</option><option value="az"${st.sort === 'az' ? ' selected' : ''}>A to Z</option></select></label></div>
    <p class="small hbn25" id="hbn25" aria-live="polite"></p><div class="list" id="hbl25"></div><div class="actions"><button class="btn" id="hbm25" hidden>Show more</button></div>
-   <p class="small hbcov25">${cov.indexed ? NF(cov.indexed) + ' personal-care and cleaning products' : ''}${cov.scored ? ', ' + NF(cov.scored) + ' with an ingredient list Lumi could check' : ''}. Data built ${esc(I.built)}.</p>${attrib()}</section>`;
+   <p class="small hbcov25">${cov.indexed ? NF(I.docs.length) + (window.HB25UI.withClean ? ' personal-care, laundry and cleaning products' : ' personal-care products') : ''}${cov.scored ? ', ' + NF(cov.scored) + ' with an ingredient list Lumi could check' : ''}. Data built ${esc(I.built)}.</p>${attrib()}</section>`;
   const pool = () => I.docs.filter(d => (d.kind === 'b' || (window.HB25UI.cats || []).includes(d.cat)) && (cat === 'all' ? (d.kind === 'b' || (window.HB25UI.cats || []).length) : d.cat === cat));
   const ps = () => { const t = norm(st.q).split(' ').filter(Boolean); let L = pool().filter(d => t.every(x => d.key.includes(x))); for (const k of st.f) if (FILT[k]) L = L.filter(FILT[k][1]);
     if (st.sort === 'best') L = L.slice().sort((a, b) => (b.score ?? -1) - (a.score ?? -1)); else if (st.sort === 'az') L = L.slice().sort((a, b) => a.name.localeCompare(b.name));
@@ -192,11 +194,11 @@ function viewHBAbout() {
 }
 
 /* ---------- integration ---------- */
-window.HB25UI = Object.assign(window.HB25UI || {}, { EXTRAS, cats: [], tools: [], hbIndex, hbRec, hbRef, hbMN, rowHB, pill, attrib, flagCard, flagsOf, scoreCtx, markIng, imgU, srcName, bandOf, viewHBProduct, load, ext, NF, CAT_ICON });
+window.HB25UI = Object.assign(window.HB25UI || {}, { FILT, EXTRAS, cats: [], tools: [], hbIndex, hbRec, hbRef, hbMN, rowHB, pill, attrib, flagCard, flagsOf, scoreCtx, markIng, imgU, srcName, bandOf, viewHBProduct, load, ext, NF, CAT_ICON });
 self.viewCosProduct = function (id, pre, scanned) { return viewHBProduct(String(id), scanned); };
 self.viewCosmetics = function (arg) { return viewHBHub(arg); };
 self.cosProduct = async function (code) { code = String(code).replace(/\D/g, ''); if (code.length < 8) return null; const r = await hbRec(code).catch(() => null); return r ? { id: r.c, code: r.c, src: 'hb25', name: r.n, brand: r.b, hb: 1 } : null; };
-self.loadCos = function () { return hbIndex().then(I => ({ docs: I.docs.filter(d => d.kind === 'b'), cats: I.cats })); };
+self.loadCos = function () { return hbIndex().then(I => ({ docs: I.docs.filter(d => d.kind === 'b' || window.HB25UI.withClean), cats: I.cats })); };
 if (typeof tab19 === 'function') { const t0 = tab19; self.tab19 = function (view) { if (/^(hb|hb-check|hb-about|pfas|prop65)$/.test(view)) return 'browse'; return t0.apply(this, arguments); }; }
 const RT = { hb: viewHBHub, 'hb-check': viewHBCheck, 'hb-about': viewHBAbout, pfas: viewPFAS, prop65: viewProp65 };
 if (typeof viewHome === 'function') { const vh = viewHome; self.viewHome = function () { const h = location.hash.replace(/^#\/?/, ''), i = h.indexOf('/'), v = i < 0 ? h : h.slice(0, i);
