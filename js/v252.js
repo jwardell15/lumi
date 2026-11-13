@@ -112,9 +112,9 @@ async function viewOTCHome(arg) { document.title = 'Medicines — Lumi'; arg = d
   $('#oq252').oninput = () => { clearTimeout(tm); st.n = 30; tm = setTimeout(run, 200); }; $('#om252').onclick = () => { st.n += 50; $('#ol252').innerHTML = st.res.slice(0, st.n).map(fa).join(''); $('#om252').hidden = st.res.length <= st.n; };
   if (q) run(); }
 const INACT_RX = /sugar|sucrose|dextrose|glucose|fructose|syrup|sorbitol|xylitol|maltitol|mannitol|isomalt|erythritol|sucralose|aspartame|saccharin|acesulfame|stevia|lactose|honey|molasses|maltodextrin|sweetener/i;
-async function viewOTC(sh, sid) { document.title = 'Medicine — Lumi'; shell('opg252', `<a class="back25" href="#/otc">‹ Medicines</a>${skel(3)}`);
+async function viewOTC(sh, sid) { document.title = 'Medicine — Lumi'; const H0 = location.hash; shell('opg252', `<a class="back25" href="#/otc">‹ Medicines</a>${skel(3)}`);
   let rec = null, idx = {}; try { const S = await oShard(sh); const r = S.find(x => x[0] === sid); rec = r ? rec2o(r) : null; idx = await oIdx().catch(() => ({})); } catch (e) { app.innerHTML = errCard(e.message, '<a class="btn" href="#/otc">Medicines</a>'); return; }
-  if (location.hash.indexOf(sid) < 0) return;
+  if (location.hash !== H0) return;
   if (!rec) { shell('opg252', `<a class="back25" href="#/otc">‹ Medicines</a><div class="card empty"><b>Not in Lumi's medicine list</b>It may no longer be marketed.<div class="actions"><a class="btn pri" href="#/otc">Search medicines</a></div></div>`); return; }
   const head = `<a class="back25" href="#/otc">‹ Medicines</a><div class="card"><h1>${esc(rec.b)}</h1><p class="small">${esc(rec.l)} · ${esc(rec.f)}${rec.u.length ? ' · UPC ' + esc(rec.u[0]) : ''}${rec.n.length ? ' · NDC ' + esc(rec.n.join(', ')) : ''}</p><p class="small">Over-the-counter drug as listed in FDA's NDC directory. Active ingredients on the directory: ${esc(rec.g || 'not listed')}.</p></div>`;
   shell('opg252', head + `<div id="olab252">${skel(2)}</div><div id="orec252"></div>${OTCNOTE}<p class="small">${ext('https://dailymed.nlm.nih.gov/dailymed/lookup.cfm?setid=' + enc(sid), 'Full label on DailyMed')} · ${ext('https://open.fda.gov/apis/drug/label/', 'openFDA drug label')} (CC0) · FDA NDC directory as of ${esc(idx.ndcAsof || '')}.</p>`);
@@ -122,10 +122,10 @@ async function viewOTC(sh, sid) { document.title = 'Medicine — Lumi'; shell('o
   (async () => { try { const [U, R] = await Promise.all([UI.recUPC(), UI.recAll()]); const strong = new Map(); const add = k => { (U.m.get(k) || []).forEach(i => { const a = R.items[i]; if (a) strong.set(a[0], a); }); };
       rec.n.forEach(n => add('N' + n)); rec.u.forEach(u => add(u.replace(/^0+/, '')));
       const m = await UI.recallsFor({ code: '', name: rec.b + ' ' + rec.g, brand: rec.l.split(/[ ,]/)[0] }); m.possible = m.possible.filter(a => !strong.has(a[0])); m.strong = [...strong.values()]; m.asof = m.asof || U.asof;
-      if (location.hash.indexOf(sid) < 0) return; const box = $('#orec252'); if (!box) return;
+      if (location.hash !== H0) return; const box = $('#orec252'); if (!box) return;
       box.innerHTML = (m.strong.length || m.possible.length) ? UI.recallCard(m) : `<div class="card rcnone251"><p class="small">No recall found for this product's NDC or barcode in Lumi's recall data (CPSC and FDA, as of ${esc(m.asof)}). That doesn't mean there isn't one: check ${ext('https://www.fda.gov/drugs/drug-safety-and-availability/drug-recalls', 'fda.gov drug recalls')}. <a href="#/recalls/d">Drug recalls</a></p></div>`; } catch (e) { console.warn('otc recall', e); } })();
   let lab = null; try { const j = await getJSON(FDA + '?search=' + enc('openfda.spl_set_id:"' + sid + '"') + '&limit=1', 15000); lab = (j.results || [])[0] || null; } catch (e) { lab = false; }
-  if (location.hash.indexOf(sid) < 0) return; const box = $('#olab252'); if (!box) return;
+  if (location.hash !== H0) return; const box = $('#olab252'); if (!box) return;
   if (!lab) { box.innerHTML = `<div class="card cv25"><h2>Couldn't load the label ingredients</h2><p>${lab === false ? "openFDA didn't answer" : 'openFDA has no label text for this product'}. Read the Drug Facts on the package, or see the label on DailyMed below.</p>${lab === false ? '<div class="actions"><button class="btn" onclick="route()">Try again</button></div>' : ''}</div>`; return; }
   const t1 = x => (Array.isArray(x) ? x.join(' ') : String(x || '')).replace(/\s+/g, ' ').trim();
   const act = t1(lab.active_ingredient).replace(/^active ingredients?( \([^)]*\))?:?\s*/i, ''), pur = t1(lab.purpose).replace(/^purposes?:?\s*/i, ''), ina = t1(lab.inactive_ingredient).replace(/^inactive ingredients?:?\s*/i, '');
@@ -175,9 +175,9 @@ function suppScore(m, name, brand) { const n = m.nut; if (n.kcal.v == null && n.
   const nn = { kcal: n.kcal.v, carbs: n.carbs.v, sugars: n.sugars.v, added: n.added.v, fiber: n.fiber.v, fat: n.fat.v, sat: n.sat.v, protein: n.protein.v, sodiumMg: n.sodium.v };
   const p = { id: 'dsld', code: '', src: 'dsld', name, brand, servQ: 100, serv: '1 serving', nova: null, additives: [], ing: m.ing, cat: 'Supplement', cats: '', naLabel: true, liquid: false, portions: [['1 serving', 100]], meta: { src: 'NIH DSLD', perItem: true }, n: nn };
   try { const s = S.score(p), h = HR(p); return { c: s.score, h: h.score, p }; } catch (e) { console.warn('supp score', e); return null; } }
-async function viewSupp(id) { document.title = 'Supplement — Lumi'; shell('spg252', `<a class="back25" href="#/supp">‹ Supplements</a>${skel(3)}`);
+async function viewSupp(id) { document.title = 'Supplement — Lumi'; const H0 = location.hash; shell('spg252', `<a class="back25" href="#/supp">‹ Supplements</a>${skel(3)}`);
   let Lb; try { Lb = await dsld('label/' + enc(id), 15000); } catch (e) { app.innerHTML = errCard("The NIH supplement database didn't answer (" + e.message + ')', '<a class="btn" href="#/supp">Supplements</a>'); return; }
-  if (location.hash.indexOf(id) < 0) return;
+  if (location.hash !== H0) return;
   if (!Lb || !Lb.id) { shell('spg252', `<a class="back25" href="#/supp">‹ Supplements</a><div class="card empty"><b>No supplement label ${esc(id)}</b><div class="actions"><a class="btn pri" href="#/supp">Search supplements</a></div></div>`); return; }
   const m = suppModel(Lb), n = m.nut, sc = suppScore(m, Lb.fullName, Lb.brandName); const nm = Lb.fullName || 'Supplement';
   const val = (x, d, unit) => x.v == null ? '<span class="na252">not listed</span>' : `${x.lt ? 'less than ' : ''}${num(x.v, d)} ${unit}`;
@@ -201,7 +201,7 @@ async function viewSupp(id) { document.title = 'Supplement — Lumi'; shell('spg
     ${m.other.length ? `<h3 class="h3s252">Other ingredients</h3><p class="ing25">${esc(m.other.join(', '))}</p>` : ''}</div>
    ${OTCNOTE}
    <p class="small">${ext('https://dsld.od.nih.gov/label/' + enc(Lb.id), 'This label on DSLD')} · entered ${esc(dateFmt(Lb.entryDate))}. Source: NIH Office of Dietary Supplements (U.S. government public data). Formulas change; check your package.</p>`);
-  (async () => { try { const mm = await UI.recallsFor({ code: Lb.upcSku || '', name: nm, brand: Lb.brandName || '' }); if (location.hash.indexOf(id) < 0) return; const box = $('#srec252'); if (!box) return;
+  (async () => { try { const mm = await UI.recallsFor({ code: Lb.upcSku || '', name: nm, brand: Lb.brandName || '' }); if (location.hash !== H0) return; const box = $('#srec252'); if (!box) return;
       box.innerHTML = (mm.strong.length || mm.possible.length) ? UI.recallCard(mm) : (mm.asof ? `<div class="card rcnone251"><p class="small">No recall found for this product in Lumi's recall data (CPSC and FDA, as of ${esc(mm.asof)}). That doesn't mean there isn't one: check ${ext('https://www.fda.gov/safety/recalls-market-withdrawals-safety-alerts', 'fda.gov')}. <a href="#/recalls">All recalls</a></p></div>` : ''); } catch (e) { console.warn('supp recall', e); } })(); }
 
 /* =====================  integration  ===================== */
