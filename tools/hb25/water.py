@@ -110,7 +110,7 @@ for pid,zz in zips.items():
     for z in zz: zs[z[:3]].setdefault(z,{'s':[],'o':[]})['s'].append(sysd[pid]['st']+'/'+pid)
 for pid,d in sysd.items():
     z=d['oz']
-    if re.fullmatch(r'\d{5}',z) and z not in zips.get(pid,()): zs[z[:3]].setdefault(z,{'s':[],'o':[]})['o'].append(sysd[pid]['st']+'/'+pid)
+    if re.fullmatch(r'\d{5}',z) and z!='00000' and z not in zips.get(pid,()): zs[z[:3]].setdefault(z,{'s':[],'o':[]})['o'].append(sysd[pid]['st']+'/'+pid)
 for k,m in zs.items():
     for z in m:
         m[z]['s'].sort(key=lambda p: -sysd[p.split('/')[1]]['p']); m[z]['o'].sort(key=lambda p: -sysd[p.split('/')[1]]['p'])

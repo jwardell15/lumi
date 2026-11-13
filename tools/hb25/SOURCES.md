@@ -15,7 +15,7 @@
 | 11 | EPA Safer Choice product list | epa.gov/saferchoice/products | US government: public domain | Official product list (JSON behind the page) | 1,471 certified products (name, partner, type, UPC when listed) | USE (25.1) as a positive badge. Not a safety guarantee |
 | 12 | CPSC Recalls API | saferproducts.gov/RestWebServices/Recall | US government. API flaky: timeouts on large windows | Keyless REST | Recent recall records | see recalls build notes (25.1) |
 | 13 | openFDA enforcement (food, drug, device) + NDC | open.fda.gov/terms | CC0 1.0 | Bulk downloads, keyless | Recalls; OTC label (NDC) index | USE (25.1 / 25.2) |
-| 14 | NIH DSLD (Dietary Supplement Label Database) | dsld.od.nih.gov | US government, public | Keyless API (live from the browser, disclosed in Privacy) | Supplement facts, other ingredients | USE (25.2) |
+| 14 | NIH DSLD (Dietary Supplement Label Database) | api.ods.od.nih.gov/dsld/v9 (docs: dsld.od.nih.gov/api-guide) | US government, public. No key; CORS open (access-control-allow-origin: *) | Keyless API (live from the browser, disclosed in Privacy) | Supplement facts, other ingredients | USE (25.2) |
 | 15 | EPA SDWIS + UCMR 5 (Envirofacts / ECHO bulk) | epa.gov/ground-water-and-drinking-water ; epa.gov/dwucmr | US government | Bulk CSV zips, built into static state shards | Water systems, violations, lead/copper, UCMR 5 PFAS results | USE (25.2), static shards: the ZIP never leaves the device |
 | 16 | Manufacturer ingredient disclosures | various | Terms vary | n/a | none | NOT GATHERED. OBF/OPF already carry label ingredients; scraping brand sites risks terms/robots |
 
@@ -23,3 +23,8 @@ Notes
 - Real or official data only. No invented scores. Home & Body score is Lumi's own transparent arithmetic over the cited flags above, never a safety rating.
 - Every flag in the app links to its source. Missing ingredient data reads "couldn't verify".
 - Refresh: tools/ scripts (see tools/README-hb25.md); the monthly nutrition routine is untouched.
+
+25.2 notes
+- openFDA drug label (api.fda.gov/drug/label.json, CC0, keyless, CORS open) is called live for one product's set id when a medicine page opens; the OTC product list itself is the static NDC copy.
+- Water: EPA PFOA/PFOS limit 4.0 ppt is final; the 2031 compliance extension and the rescission of PFHxS / PFNA / GenX limits (10 ppt) are proposals, not final, as of Oct 18, 2026 (EPA). Lead action level 15 ug/L, copper 1.3 mg/L (EPA LCR). UCMR 5 results are entry-point screening samples, not tap water and not compliance.
+- Dropped in 25.2: nothing new. Still link-only: Maine DEP, independent lab tests. Not gathered: manufacturer disclosures.
