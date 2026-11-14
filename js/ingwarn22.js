@@ -73,6 +73,7 @@
   const FOREIGN = /\b(sucre|sel|lait|huile|farine|eau|sirop|amidon|azucar|az\u00facar|leche|aceite|harina|agua|zucker|milch|wasser|mehl|zucchero|latte|olio|farina|acqua|suiker|melk|olie|cukier|mleko|acucar|a\u00e7\u00facar|agua|et|de|du|des|und|mit|con|di|del|y|em|ou|oder|ingr[e\u00e9]dients|zutaten|ingredientes|ingredienti)\b/g;
   function norm(ing) {
     let s = String(ing || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[\u2018\u2019`\u00b4]/g, "'").replace(/[\u2013\u2014]/g, '-').replace(/\s+/g, ' ');
+    s = s.replace(/\b(red|yellow|blue|green|citrus red)\s*(?:no\.?|#)\s*(?=\d)/g, '$1 '); /* 26.0: "Red No. 40" / "Red #3" must not read as a "no ..." claim */
     s = s.replace(/^\s*ingredients?\s*:?/, ' ').replace(/[\[{]/g, '(').replace(/[\]}]/g, ')').replace(/\s*\*+/g, ' ');
     s = s.replace(/\band\s*\/\s*or\b/g, ' or ').replace(/\b(?:contains )?no more than\b/g, 'less than');
     // claims are not ingredients: "sugar-free", "no sugar added", "no artificial colors", "without nitrites", "free of ..."
