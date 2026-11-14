@@ -19,3 +19,9 @@
 - `js/perf27.js`: tiny `perf27` marks (picks, search ready, product ready) used by the perf-budget tests.
 - Tests: `tests27/t264.py` (worker parity vs the full main-thread index for search rows, Better choice and sidecar fields; page heap; fallback; budgets).
 
+## 26.5 "Shell-only service worker"
+- `sw.js` precaches only the app shell (HTML, CSS, JS, fonts, icons, two small ref files; ~1.8 MB raw, ~0.5 MB gz) under hashed keys `file?h=<sha256[:12]>` in cache `lumi-v26.5`.
+  Hash manifest (`SHELL_H`) is written by `python3 tools/build_shell.py` (run it after changing ANY shell file; `--check` fails when stale; t265 runs the check).
+  Install fetches via the HTTP cache first (the page just loaded those files: no second download), then forces the network if the hash differs; a mismatch aborts the install (old SW keeps serving). Entries unchanged since the previous version are copied, not downloaded.
+- Shell is cache-first (no network on warm start). Data (`lumi-data-cky.pages.dev`) is NOT precached: cached on first use, served stale-while-revalidate (revalidated in the background when older than 24 h by its `Date`); `DATA_EPOCH` bumps drop the data cache. Small launch files (home.json, meta) are pre-warmed at install.
+- Update path: `skipWaiting` + `clients.claim`; the page reloads once on `controllerchange` (guarded) so a user never runs new HTML against old JS.
