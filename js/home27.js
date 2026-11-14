@@ -6,7 +6,7 @@ const HOME27 = { p: null, docs: null, codes: null, wrapped: false };
 const HOME27_PICKERS = ['homePicks', 'healthPicks14', 'homeCols141', 'restPicks74', 'topPicks', 'bestAtRestaurants'];
 function home27Wrap() { /* idempotent: wrap every picker defined so far (later scripts define more), and let byCode see home docs */
   HOME27_PICKERS.forEach(n => { const f = self[n]; if (typeof f !== 'function' || f.h27) return; const w = function () { return withHome27(f, this, arguments); }; w.h27 = 1; self[n] = w; });
-  if (!HOME27.wrapped && typeof engine !== 'undefined') { HOME27.wrapped = true; const bc = engine.byCode.bind(engine); engine.byCode = code => bc(code) || (HOME27.codes && HOME27.codes.get(code)) || undefined; }
+  if (!HOME27.wrapped && typeof engine !== 'undefined') { HOME27.wrapped = true; const bc = engine.byCode.bind(engine); engine.byCode = code => bc(code) || (HOME27.codes && HOME27.codes.get(code)) || (typeof SW27 !== 'undefined' && SW27.docs.get(code)) || undefined; }
 }
 function homeLite() {
   if (HOME27.docs) { home27Wrap(); return Promise.resolve(HOME27.docs); }

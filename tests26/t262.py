@@ -82,7 +82,7 @@ with sync_playwright() as p:
     swt = pg.evaluate("fetch('sw.js',{cache:'no-store'}).then(r=>r.text())")
     ok('sw cache lumi-v%s lists the 26.2 files' % VER, ("'lumi-v%s'" % VER) in swt and all(x in swt for x in ('js/v262.js', 'css/v262.css', 'js/core262.js')))
     scr = pg.evaluate("[...document.scripts].map(s=>s.getAttribute('src')).filter(Boolean)")
-    ok('index loads core262 then v262 last, after v261', scr[-3:] == ['js/v261.js', 'js/core262.js', 'js/v262.js'], scr[-4:])
+    ok('index loads core262 then v262 last, after v261', [x for x in scr if x != 'js/perf27.js'][-3:] == ['js/v261.js', 'js/core262.js', 'js/v262.js'], scr[-4:])  # 26.4+: perf27.js (test marks) may follow
     ok("What's new lists 26.2 first, then 26.1", pg.evaluate("V7_NEWS[0][1]").endswith('(26.2)') and pg.evaluate("V7_NEWS[1][1]") == 'Pets (26.1)')
     # ---- fish page ----
     go(pg, '#/fish', '#fq262', 1500); t = txt(pg)

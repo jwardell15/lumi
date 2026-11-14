@@ -84,7 +84,7 @@ function better24(doc, cur, limit = 3) {
     if (ty !== 'drink' && ty !== 'sauce' && cCarb >= 15 && q.c < cCarb * (ty === 'side' ? 0.08 : 0.2)) continue; /* not like-for-like */
     if (ty === 'drink' && !(q.s > 0) && !LOWDRINK20.test(d.name)) continue;
     let ov = 0; for (const t of TOK20(d.name)) if (toks.has(t)) ov++;
-    out.push({ d, q, gain, hd, sRed, cRed, where, same: where === 'chain' || where === 'brand', rank: gain + 1.2 * Math.max(0, sRed) + 0.4 * Math.max(0, cRed) + 0.15 * hd + Math.min(3, ov) * 3 + (where === 'brand' ? 8 : where === 'pin' ? 3 : 0) - (d.rank || 0) / Math.max(1, engine.docs.length) * 3 });
+    out.push({ d, q, gain, hd, sRed, cRed, where, same: where === 'chain' || where === 'brand', rank: gain + 1.2 * Math.max(0, sRed) + 0.4 * Math.max(0, cRed) + 0.15 * hd + Math.min(3, ov) * 3 + (where === 'brand' ? 8 : where === 'pin' ? 3 : 0) - (d.rank || 0) / Math.max(1, engine.N27 || engine.docs.length) * 3 });
   }
   out.sort((a, b) => b.rank - a.rank); const seen = new Set(), res = [];
   for (const x of out) { const k = base24(x.d.name) + '|' + bfam24(x.d.brand); if (seen.has(k)) continue; seen.add(k); res.push(x); if (res.length >= limit) break; }
@@ -108,22 +108,39 @@ async function bcBind24(p) { const root = $('#bc24'); if (!root) return;
   root.querySelectorAll('[data-bcc]').forEach(b => b.onclick = async () => { b.disabled = true; try { const q = await resolveProduct(b.dataset.bcc); if (!q) throw 0; if (!cmpIds().includes(p.id)) toggleCompare(p); if (!cmpIds().includes(q.id)) toggleCompare(q); b.textContent = '✓ Comparing'; toast('Added to compare. Tap Compare at the bottom'); } catch { toast("Couldn't load that item. Check your connection."); } b.disabled = false; });
   root.querySelectorAll('[data-bcg]').forEach(b => b.onclick = async () => { if (b.getAttribute('aria-pressed') === 'true') { location.hash = '#/grocery'; return; } b.disabled = true; try { const it = await itemFor21(b.dataset.bcg, 'swap'); if (it && addG21(it)) { b.textContent = '✓ On grocery list'; b.setAttribute('aria-pressed', 'true'); toast('Added to your grocery list'); } else toast('Already on your grocery list'); } catch { toast("Couldn't add it"); } b.disabled = false; }); }
 productSwaps20 = async function (p) {
-  if (!p || p.src === 'cos') return; try { await loadIndex(); } catch { return; }
-  const code = p.code || p.id; const doc = engine.byCode(code) || { code, name: p.name, brand: p.brand, cat: p.cat || '', keys: [], src: /^(r-|ms-)/.test(code) ? 'rest' : 'local', sg: p.servQ || 0, sb: p.meta && p.meta.perItem ? 1 : p.servQ ? 0 : 3 };
+  if (!p || p.src === 'cos') return; const code = p.code || p.id;
+  const k0 = servK24(p), n0 = p.n || {}; let sc0 = null; try { sc0 = LumiScore.score(p, { mult: 1 }).score; } catch {}
+  /* 26.4: candidates come from the search worker (same category or same chain, only docs that could beat this one), so the page never builds the 167k-doc index */
+  let doc = null, pool = null;
+  if (SW27.ok && n0.carbs != null && sc0 != null) { try { doc = await SW27.doc(code); const rest0 = (doc && doc.src === 'rest') || /^(r-|ms-)/.test(code), leaf0 = doc && (doc.keys || []).filter(k => typeof k === 'number' && !['whole', 'rest', 'rest-other'].includes(C.KEYS[k])).slice(-1)[0];
+      if (doc && (rest0 || leaf0 != null)) pool = await SW27.pool({ leaf: rest0 ? null : C.KEYS[leaf0], rest: rest0, brand: doc.brand, minScore: sc0 }); } catch { pool = null; } }
+  if (!pool) { try { await loadIndex(); } catch { return; } doc = engine.byCode(code); }
+  doc = doc || { code, name: p.name, brand: p.brand, cat: p.cat || '', keys: [], src: /^(r-|ms-)/.test(code) ? 'rest' : 'local', sg: p.servQ || 0, sb: p.meta && p.meta.perItem ? 1 : p.servQ ? 0 : 3 };
+  const run = (cur) => { if (!pool) return better24(doc, cur, 3); const d0 = engine.docs, c0 = engine._codes, n0 = engine.N27; engine.docs = pool; engine._codes = null; engine.N27 = SW27.total || d0.length; try { return better24(doc, cur, 3); } finally { engine.docs = d0; engine._codes = c0; engine.N27 = n0; } };
   const draw = () => { if (!location.hash.includes(encodeURIComponent(code)) && !location.hash.includes(code)) return;
     const k = servK24(p), n = p.n || {}; let sc = null, h = null; try { sc = LumiScore.score(p, { mult: 1 }).score; } catch {} try { h = LumiHealth.rate(p, { mult: 1 }).score; } catch {}
     if (n.carbs == null || sc == null) return;
     const cur = { score: sc, h: doc.h != null ? doc.h : h, sugar: n.sugars == null ? null : n.sugars * k, carbs: n.carbs * k, basis: servLabel24(p).replace(/<[^>]+>/g, '') };
-    const L = better24(doc, cur, 3), html = bcBlock24(doc, cur, L); const old = $('#bc24'); if (old) old.remove();
+    const L = run(cur), html = bcBlock24(doc, cur, L); const old = $('#bc24'); if (old) old.remove();
     const anchor = $('#hcard') || $('#bg8') || app.querySelector('.card'); if (!anchor) return; anchor.insertAdjacentHTML('afterend', html); bcBind24(p); };
-  draw(); try { await loadIndexFull(); draw(); } catch {}
+  draw(); if (!pool) { try { await loadIndexFull(); draw(); } catch {} }
 };
+function swapRow27(d, x) { const sv = saves24(x); return `<a class="srs20 bch24" href="#/product/${esc(x.d.code)}" aria-label="Better choice for ${esc(d.name)}: ${esc(x.d.name)}, ${esc(sv)} per serving, Blood sugar ${x.d.score}, Health ${x.d.h ?? 'unknown'}"><span aria-hidden="true">↘</span> <span>Better: <b>${esc(x.d.name)}</b>${x.d.brand ? ` <small>${esc(x.d.brand)}</small>` : ''}</span><span class="w20">${esc(sv)}/serving · H ${x.d.h ?? '?'} · BS ${x.d.score}</span></a>`; }
+/* 26.4: with the worker engine the page has no docs; run Better choice per row over a small candidate pool from the worker (same ranking, same text) */
+async function searchSwapsW27() {
+  const res = $('#res'); if (!res || !SW27.ok) return; let n = 0;
+  for (const a of [...res.querySelectorAll('a.row')]) { if (n >= 8) break; if (a.dataset.sw20) continue; a.dataset.sw20 = '1'; n++;
+    try { const code = decodeURIComponent((a.getAttribute('href') || '').replace('#/product/', '')); const d = await SW27.doc(code); if (!d || d.score == null || d.score >= 80) continue;
+      const q = perServ20(d); if (!q) continue; const rest0 = d.src === 'rest' || /^(r-|ms-)/.test(code), leaf0 = (d.keys || []).filter(k => typeof k === 'number' && !['whole', 'rest', 'rest-other'].includes(C.KEYS[k])).slice(-1)[0];
+      if (!rest0 && leaf0 == null) continue; const pool = await SW27.pool({ leaf: rest0 ? null : C.KEYS[leaf0], rest: rest0, brand: d.brand, minScore: d.score });
+      if (!a.isConnected) continue; const d0 = engine.docs, c0 = engine._codes, n0 = engine.N27; engine.docs = pool; engine._codes = null; engine.N27 = SW27.total || d0.length; let L; try { L = better24(d, { score: d.score, h: d.h, sugar: q.s, carbs: q.c }, 1); } finally { engine.docs = d0; engine._codes = c0; engine.N27 = n0; }
+      if (L.length) a.insertAdjacentHTML('afterend', swapRow27(d, L[0])); } catch (e) { console.warn(e); } } }
 searchSwaps20 = function () {
-  const res = $('#res'); if (!res || typeof engine === 'undefined' || !engine.docs.length) return; let n = 0;
+  const res = $('#res'); if (!res || typeof engine === 'undefined') return; if (!engine.docs.length) { searchSwapsW27(); return; } let n = 0;
   for (const a of res.querySelectorAll('a.row')) { if (n >= 8) break; if (a.dataset.sw20) continue; a.dataset.sw20 = '1'; n++;
     const code = decodeURIComponent((a.getAttribute('href') || '').replace('#/product/', '')); const d = engine.byCode(code); if (!d || d.score == null || d.score >= 80) continue;
-    const q = perServ20(d); if (!q) continue; const L = better24(d, { score: d.score, h: d.h, sugar: q.s, carbs: q.c }, 1); if (!L.length) continue; const x = L[0], sv = saves24(x);
-    a.insertAdjacentHTML('afterend', `<a class="srs20 bch24" href="#/product/${esc(x.d.code)}" aria-label="Better choice for ${esc(d.name)}: ${esc(x.d.name)}, ${esc(sv)} per serving, Blood sugar ${x.d.score}, Health ${x.d.h ?? 'unknown'}"><span aria-hidden="true">↘</span> <span>Better: <b>${esc(x.d.name)}</b>${x.d.brand ? ` <small>${esc(x.d.brand)}</small>` : ''}</span><span class="w20">${esc(sv)}/serving · H ${x.d.h ?? '?'} · BS ${x.d.score}</span></a>`); }
+    const q = perServ20(d); if (!q) continue; const L = better24(d, { score: d.score, h: d.h, sugar: q.s, carbs: q.c }, 1); if (!L.length) continue; const x = L[0];
+    a.insertAdjacentHTML('afterend', swapRow27(d, x)); }
 };
 
 /* ---------- 3. product page: hide the older suggestion blocks, per-serving table, new share card ---------- */

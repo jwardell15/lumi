@@ -121,11 +121,16 @@ function imgURL(code, v) {
 }
 class Engine {
   constructor() { this.bc = new Map(); this.docs = []; this.post = new Map(); this.buckets = new Map(); this.cats = []; this.tiers = 0; }
-  add(data) {
+  _begin(data) { /* 26.4: add() is split in three so big tiers can be added in time slices (addAsync) without blocking the UI */
     if (data.cats && !data.generic && !data.world) this.cats = data.cats;
     const cats = data.generic || data.world ? data.cats : this.cats; const KC = root.LumiCats;
     if (data.chains) { this.chainN = (this.chainN || []).concat(data.chains.map(([k, l]) => ({ k, n: norm(l).replace(/^the /, '').replace(/ (scratch kitchen|restaurant|restaurants|food court)$/, '') })).filter(c => c.n.length >= 3)); } // v9.1.1: chain names from data, apostrophes normalized
-    for (const d of data.docs) {
+    return { cats, KC };
+  }
+  _slice(data, s, from, to) {
+    const { cats, KC } = s;
+    for (let n = from; n < to; n++) {
+      const d = data.docs[n];
       const i = this.docs.length;
       const doc = { code: d[0], name: fixName(d[1]), brand: fixBrand(d[2], d[1]), score: d[3] < 0 ? null : d[3], net: d[4] < 0 ? null : d[4], cat: cats[d[5]] || '', img: imgURL(d[0], d[6]), keys: d[7] ? d[7].split('.').map(k => /^\d+$/.test(k) ? +k : (KC ? KC.KEYS.indexOf(k) : -1)).filter(k => k >= 0) : [], sugar: d[8] == null || d[8] < 0 ? null : d[8], zc: d[4] === 0 && d[8] >= 3 && !/\b(keto|sugar[- ]?free|zero|no sugar)\b/i.test(d[1] || ''), h: d[9] == null || d[9] < 0 ? null : d[9], hn: !!(d[10] & 1), al: d[11] || 0, df: d[12] == null ? null : d[12], src: data.generic ? (d[7] && d[7].startsWith('rest') ? 'rest' : /^wfm-/.test(d[0]) ? 'local' : 'whole') : data.world ? 'world' : 'local', rank: data.world ? 1e6 + (this.wN = (this.wN || 0) + 1) - 1 : data.generic ? T0 + (this.gN = (this.gN || 0) + 1) - 1 : ((this.lN = (this.lN || 0) + 1) - 1 < T0 ? this.lN - 1 : this.lN - 1 + (this.gN || 0)) /* 12.0: load-order independent, same order as index-0 → index-g → later tiers (11.1.1 put generic docs at 1e6+, which broke the rank boost for restaurants/whole foods) */, sm: d[13] || 0, sg: d[16] || 0, sb: d[17] == null ? -1 : d[17], ai: d[14] == null ? -1 : d[14], wf: d[15] || 0, bad: !!(d[10] & 8), fl: !!(d[10] & 4) || (water().includes(d[14]) && d[4] >= 0 && d[4] <= 0.5) };
       doc.nn = norm(doc.name + ' ' + doc.brand);
@@ -139,8 +144,20 @@ class Engine {
         p.push(i * 4 + f);
       }
     }
+  }
+  _end(data) {
     for (const d of data.docs) { const k = bnorm(d[2]); if (k) this.bc.set(k, (this.bc.get(k) || 0) + 1); }
     this.tiers++;
+  }
+  add(data) { const s = this._begin(data); this._slice(data, s, 0, data.docs.length); this._end(data); }
+  /* 26.4: same result as add(), in ~8 ms slices that yield to the event loop (no long tasks on the main thread) */
+  async addAsync(data, sliceMs = 8) {
+    const s = this._begin(data), N = data.docs.length; let i = 0;
+    const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    const yieldNow = () => new Promise(r => { if (typeof MessageChannel === 'function') { const c = new MessageChannel(); c.port1.onmessage = () => { c.port1.close(); r(); }; c.port2.postMessage(0); } else setTimeout(r, 0); });
+    let t0 = now();
+    while (i < N) { const step = Math.min(N, i + 100); this._slice(data, s, i, step); i = step; if (now() - t0 >= sliceMs) { await yieldNow(); t0 = now(); } }
+    this._end(data);
   }
   terms(q, prefix) {
     const out = new Map(); const fw = (t, w) => { if ((out.get(t) || 0) < w) out.set(t, w); };

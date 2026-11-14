@@ -240,7 +240,7 @@ async function offLoad221() { if (OFF221.p) return OFF221.p; if (!('caches' in w
 /* offline: add the pack's Costco + Whole Foods rows (beyond the cached tier 0) to the search index, with their 22.0 filter values */
 async function offDocs221() { if (OFF221.docsAdded) return; const j = await offLoad221(); if (!j || OFF221.docsAdded || !j.rows) return; await loadIndex().catch(() => {});
   const have = new Set(engine.docs.map(d => d.code)); const keep = [], fi = []; j.rows.forEach((r, i) => { if (!have.has(r[0])) { keep.push(r); fi.push(i); } }); if (!keep.length) { OFF221.docsAdded = true; return; }
-  const st = engine.docs.length; engine.add({ docs: keep }); OFF221.docsAdded = true; const tm = new Map(); for (let k = 0; k < (j.t || []).length; k += 2) tm.set(j.t[k], j.t[k + 1]);
+  const st = engine.docs.length; engine.add({ docs: keep }); try { SW27.addRows(keep); } catch {} OFF221.docsAdded = true; const tm = new Map(); for (let k = 0; k < (j.t || []).length; k += 2) tm.set(j.t[k], j.t[k + 1]);
   const q = v => v < 0 ? null : v / 10; fi.forEach((i, k) => { const d = engine.docs[st + k]; if (!d) return; d.p22 = q(j.f[i * 4]); d.f22 = q(j.f[i * 4 + 1]); d.s22 = q(j.f[i * 4 + 2]); d.w22 = j.f[i * 4 + 3]; if (tm.has(i)) d.t22 = tm.get(i) >>> 0; d.off221 = 1; });
   try { byChain211 = null; } catch {} try { F22.seen = 0; F22.byCode = new Map(); } catch {} notifyTier(); }
 /* product lookups fall back to (and, offline, start from) the saved data */

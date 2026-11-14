@@ -29,7 +29,8 @@ const url = a => a[1] === 'c' ? (/^https:\/\/(www\.)?cpsc\.gov\//.test(a[8]) ? a
 const fd = d => { d = String(d); return d.length === 8 ? new Date(+d.slice(0, 4), +d.slice(4, 6) - 1, +d.slice(6)).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : d; };
 function nameTokens(name, brand) { const b = new Set(norm(brand).split(' ')); return [...new Set(norm(name).split(' ').filter(w => w.length >= 4 && !STOP.has(w) && !b.has(w) && !/^\d+$/.test(w)))]; }
 /* strong: barcode on a recall. possible: brand words + at least 2 distinctive product words in a recall's product text */
-async function recallsFor(p) { const out = { strong: [], possible: [], asof: '' };
+async function recallsFor(p) { if (typeof SW27 !== 'undefined' && SW27.ok) { try { return await SW27.recalls(p); } catch { /* worker failed: match here */ } } return recallsHere(p); } /* 26.4: matching runs in the search worker (7 MB of notices never parsed on the page) */
+async function recallsHere(p) { const out = { strong: [], possible: [], asof: '' };
   const code = String(p.code || '').replace(/\D/g, '').replace(/^0+/, '');
   try { const U = await recUPC(); out.asof = U.asof; if (code.length >= 8 && U.m.has(code)) { const R = await recAll(); out.strong = U.m.get(code).map(i => R.items[i]).filter(Boolean); } } catch { return out; }
   const bn = norm(p.brand || ''), tk = nameTokens(p.name || '', p.brand || '');

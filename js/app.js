@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '26.3';
+const VERSION = '26.4';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -51,29 +51,29 @@ const engine = new LumiSearch.Engine();
 let tier0 = null, tier1 = null, tier2 = null; const tierWaiters = [];
 const getData = u => fetch(u).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
 function loadIndex() {
-  if (!tier0) tier0 = Promise.all([getData('data/index-g.json').catch(() => null), getData('data/index-0.json')]).then(([g, d]) => {
-    if (g) { (g.chains || []).forEach(([k, l]) => C.register(k, l, 'rest')); engine.add(g); }
-    engine.add(d); notifyTier(); });
+  if (!tier0) tier0 = Promise.all([getData('data/index-g.json').catch(() => null), getData('data/index-0.json')]).then(async ([g, d]) => {
+    if (g) { (g.chains || []).forEach(([k, l]) => C.register(k, l, 'rest')); await engine.addAsync(g); } /* 26.4: time-sliced so the UI never freezes while a tier is indexed */
+    await engine.addAsync(d); notifyTier(); });
   return tier0;
 }
 function loadIndexFull() {
-  if (!tier1) tier1 = loadIndex().then(() => getData('data/index-1.json')).then(d => { engine.add(d); notifyTier(); });
+  if (!tier1) tier1 = loadIndex().then(() => getData('data/index-1.json')).then(async d => { await engine.addAsync(d); notifyTier(); });
   return tier1;
 }
 function loadIndexAll() {
-  if (!tier2) tier2 = loadIndexFull().then(() => getData('data/index-2.json')).then(d => { engine.add(d); notifyTier(); });
+  if (!tier2) tier2 = loadIndexFull().then(() => getData('data/index-2.json')).then(async d => { await engine.addAsync(d); notifyTier(); });
   return tier2;
 }
 let tierX = null;
 function loadIndexX() { // USDA Branded extras (tiers 3+), only fetched when the user searches
-  if (!tierX) tierX = Promise.all([loadIndexAll(), loadMeta()]).then(async ([, m]) => { for (let i = 3; i < ((m && m.tiers) || 3); i++) { engine.add(await getData(`data/index-${i}.json`)); notifyTier(); } });
+  if (!tierX) tierX = Promise.all([loadIndexAll(), loadMeta()]).then(async ([, m]) => { for (let i = 3; i < ((m && m.tiers) || 3); i++) { await engine.addAsync(await getData(`data/index-${i}.json`)); notifyTier(); } });
   return tierX;
 }
 let tierW = null; // v12.1: international OFF layer (index-w-*), loaded only on demand (setting, few US hits, or "include international")
 const wantWorld = () => { try { return localStorage.getItem('lumi_world') === '1'; } catch { return false; } };
-function loadIndexW() { if (!tierW) tierW = Promise.all([loadIndexX(), loadMeta()]).then(async ([, m]) => { const W = (m && m.world) || {}; for (let i = 0; i < (W.core || W.tiers || 0); i++) { engine.add(await getData(`data/index-w-${i}.json`)); notifyTier(); } }); return tierW; }
+function loadIndexW() { if (!tierW) tierW = Promise.all([loadIndexX(), loadMeta()]).then(async ([, m]) => { const W = (m && m.world) || {}; for (let i = 0; i < (W.core || W.tiers || 0); i++) { await engine.addAsync(await getData(`data/index-w-${i}.json`)); notifyTier(); } }); return tierW; }
 let tierW2 = null; /* v18: extended international tiers (beyond the core set), only when a search still has few hits */
-function loadIndexW2() { if (!tierW2) tierW2 = Promise.all([loadIndexW(), loadMeta()]).then(async ([, m]) => { const W = (m && m.world) || {}; for (let i = W.core || W.tiers || 0; i < (W.tiers || 0); i++) { engine.add(await getData(`data/index-w-${i}.json`)); notifyTier(); } }); return tierW2; }
+function loadIndexW2() { if (!tierW2) tierW2 = Promise.all([loadIndexW(), loadMeta()]).then(async ([, m]) => { const W = (m && m.world) || {}; for (let i = W.core || W.tiers || 0; i < (W.tiers || 0); i++) { await engine.addAsync(await getData(`data/index-w-${i}.json`)); notifyTier(); } }); return tierW2; }
 const ghash = id => { let h = 0; for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h % 40; };
 const gshardCache = new Map();
 async function genericProduct(id) { const k = ghash(id); if (!gshardCache.has(k)) gshardCache.set(k, getData(`data/g/${k}.json`).catch(() => ({}))); const sh = await gshardCache.get(k); return sh[id] ? S.fromCompact(sh[id]) : null; }
@@ -166,15 +166,15 @@ function searchBox(q = '') {
 function bindSearch() {
   const f = $('#sform'), q = $('#q'), sg = $('#sugg'), clr = $('#qclear'); let act = -1, timer;
   const close = () => { sg.classList.remove('on'); act = -1; };
+  q.addEventListener('focus', () => SW27.warm(), { once: true }); /* 26.4: start the search worker when the user shows intent */
   const show = () => {
     const v = q.value.trim(); clr.hidden = !v;
     if (!v) { const rec = store.get('recent', []); sg.innerHTML = rec.map(r => `<a href="#/search/${encodeURIComponent(r)}"><span>🕘</span><span class="k">${esc(r)}</span></a>`).join(''); sg.classList.toggle('on', rec.length > 0 && document.activeElement === q); return; }
-    loadIndex().then(() => {
+    SW27.search(v, [{ limit: 6, prefix: true }]).then(([res]) => { /* 26.4: worker */
       if (q.value.trim() !== v) return;
-      const res = engine.search(v, { limit: 6, prefix: true });
       sg.innerHTML = `<a href="#/search/${encodeURIComponent(v)}"><span>${ICON_SEARCH}</span><span class="k">Search “${esc(v)}”</span></a>` + res.map(d => `<a href="#/product/${esc(d.code)}"><span class="pills">${pills(d)}</span><span class="k">${esc(d.name)} <small>${esc(d.brand)}</small></span></a>`).join('');
       sg.classList.toggle('on', document.activeElement === q);
-    });
+    }).catch(() => {});
   };
   q.addEventListener('input', () => { clearTimeout(timer);
     if (rs && rs.live) { const v = q.value.trim(); clr.hidden = !v; timer = setTimeout(() => { if (v.length >= 2) { history.replaceState(null, '', '#/search/' + encodeURIComponent(v)); runQuery(v, true); } }, 140); return; }
@@ -350,7 +350,10 @@ function mergeItems(list) {
   for (const it of list) {
     const g = gtinKey(it.code), nk = 'n' + LumiSearch.groupKey(it.name, it.brand);
     const dup = (g && rs.keyIdx.get('g' + g)) || rs.keyIdx.get(nk);
-    if (dup && dup.id !== it.id) { if (!dup.img && it.img) dup.img = it.img; dup.sizes = (dup.sizes || 1) + 1; continue; }
+    if (dup && dup.id !== it.id) {
+      /* 26.4: catalog rows can arrive after a USDA/Open Food Facts row for the same product (the catalog's later tiers load on "Search all"); the catalog row has the fuller data, so it takes the place */
+      if ((it.src === 'local' || it.src === 'whole' || it.src === 'rest') && (dup.src === 'usda' || dup.src === 'off') && rs.items.has(dup.id)) { if (!it.img && dup.img) it.img = dup.img; it.sizes = (dup.sizes || 1) + 1; rs.items.delete(dup.id); rs.items.set(it.id, it); for (const [k, v] of rs.keyIdx) if (v === dup) rs.keyIdx.set(k, it); if (g) rs.keyIdx.set('g' + g, it); rs.keyIdx.set(nk, it); continue; }
+      if (!dup.img && it.img) dup.img = it.img; dup.sizes = (dup.sizes || 1) + 1; continue; }
     rs.items.set(it.id, it); if (g) rs.keyIdx.set('g' + g, it); rs.keyIdx.set(nk, it);
   }
 }
@@ -363,17 +366,27 @@ function runQuery(q, typing) {
   loadCos().then(I => { if (rs !== my) return; const el = $('#cosHint'); if (!el) return; const qq = LumiSearch.norm(q).split(' ').filter(t => t.length > 1); const L = qq.length ? I.docs.filter(d => qq.every(t => d.key.includes(t))) : [];
     el.innerHTML = L.length ? `<a class="cos-hint" href="#/cosmetics/all/${encodeURIComponent(q)}">🧴 <b>${L.length}</b> Home &amp; Body product${L.length > 1 ? 's' : ''} match "${esc(q)}" ›</a>` : ''; }).catch(() => {});
   const done = (k, list, err) => { if (rs !== my) return; my.src[k] = err ? 'err' : 'ok'; if (list) { my.counts[k] = list.length; mergeItems(list); } renderResults(); };
-  const runLocal = () => { if (rs !== my) return; const seen = new Set(), r = [];
-    for (const d of engine.search(q, { limit: 160 }).concat(engine.search(q, { limit: 30, filter: d => d.src === 'rest' }), engine.search(q, { limit: 30, filter: d => d.src === 'whole' }))) if (!seen.has(d.code)) { seen.add(d.code); r.push(itemFromDoc(d)); } for (const id of (my.lids || [])) my.items.delete(id); for (const it of r) my.items.delete(it.id); my.lids = r.map(it => it.id); my.keyIdx = null; done('local', r); /* v18: drop the previous local pass's rows so a later shard's better representative can't be blocked as a duplicate */
-    const d = $('#dym'); if (d) { const sug = didYouMean(q); d.innerHTML = (sug ? `<div class="dym">Did you mean <a href="#/search/${encodeURIComponent(sug)}">${esc(sug)}</a>?</div>` : '') + (my.worldOn ? `<div class="dym">🌍 Including international products (Open Food Facts, country shown).</div>` : `<div class="dym"><button class="linkbtn" id="worldBtn">🌍 Also search 2 million+ international products</button></div>`); const wb = $('#worldBtn'); if (wb) wb.onclick = () => { my.worldOn = true; wb.textContent = 'Loading international products…'; loadIndexW().then(runLocal).catch(runLocal); }; } };
+  const worldLoad = () => SW27.ok ? SW27.world() : loadIndexW(), world2Load = () => SW27.ok ? SW27.world2() : loadIndexW2();
+  const allLoad = () => (SW27.ok ? SW27.all() : loadIndexAll().then(loadIndexX)).then(() => { SW27.allDone = true; });
+  const runLocal = () => { if (rs !== my) return; /* 26.4: the engine lives in a worker; the three passes and "did you mean" come back asynchronously */
+    return Promise.all([SW27.searchSet(q), SW27.dym(q)]).then(([docs, sug]) => { if (rs !== my) return; const seen = new Set(), r = [];
+    for (const d of docs) if (!seen.has(d.code)) { seen.add(d.code); r.push(itemFromDoc(d)); } for (const id of (my.lids || [])) my.items.delete(id); for (const it of r) my.items.delete(it.id); my.lids = r.map(it => it.id); my.keyIdx = null; done('local', r); /* v18: drop the previous local pass's rows so a later shard's better representative can't be blocked as a duplicate */
+    const d = $('#dym'); if (d) { const few = (my.counts.local || 0) < 12, mp = typeof META !== 'undefined' && META && META.products;
+      d.innerHTML = (sug ? `<div class="dym">Did you mean <a href="#/search/${encodeURIComponent(sug)}">${esc(sug)}</a>?</div>` : '')
+        + (SW27.allDone ? '' : `<div class="dym"><button class="linkbtn" id="allBtn"${my.allOn ? ' disabled' : ''}>${my.allOn ? 'Loading more products…' : `Search all ${mp ? fmtK(mp) + ' ' : ''}products`}</button><span class="small"> ${few && !my.allOn ? 'Few matches in the main catalog. ' : 'Searching the main catalog (about 167,000 products). '}</span></div>`)
+        + (my.worldOn ? `<div class="dym">🌍 Including international products (Open Food Facts, country shown).</div>` : `<div class="dym"><button class="linkbtn" id="worldBtn">🌍 Also search 2 million+ international products</button></div>`);
+      const ab = $('#allBtn'); if (ab) ab.onclick = () => { my.allOn = true; SW27.allWanted = true; ab.disabled = true; ab.textContent = 'Loading more products…'; allLoad().then(runLocal).catch(runLocal); };
+      const wb = $('#worldBtn'); if (wb) wb.onclick = () => { my.worldOn = true; wb.textContent = 'Loading international products…'; worldLoad().then(runLocal).catch(runLocal); }; } }); };
   tierHook18 = () => { if (rs !== my) { tierHook18 = null; return; } clearTimeout(my.tt); my.tt = setTimeout(runLocal, 250); }; /* v18: refresh results as each shard arrives */
-  loadIndex().then(() => { runLocal(); return loadIndexFull(); }).then(() => { runLocal(); return loadIndexAll(); }).then(() => { runLocal(); return loadIndexX(); }).then(() => { runLocal(); if (rs === my && (wantWorld() || my.worldOn || (my.counts.local || 0) < 12)) { my.worldOn = true; return loadIndexW().then(() => { runLocal(); if (rs === my && (my.counts.local || 0) < 12) return loadIndexW2().then(() => runLocal()); }); } }).catch(e => { if (!engine.docs.length) done('local', null, e); else runLocal(); });
+  const legacyFlow = () => loadIndex().then(() => { runLocal(); return loadIndexFull(); }).then(() => { runLocal(); if (SW27.allWanted) return allLoad(); }).then(() => { runLocal(); if (rs === my && (wantWorld() || my.worldOn)) { my.worldOn = true; return worldLoad().then(() => runLocal()); } }).catch(e => { if (!engine.docs.length) done('local', null, e); else runLocal(); });
+  if (SW27.ok) SW27.base().then(() => { runLocal(); if (SW27.allWanted && !SW27.allDone) return allLoad(); }).then(() => { runLocal(); if (rs === my && (wantWorld() || my.worldOn)) { my.worldOn = true; return worldLoad().then(() => { runLocal(); if (rs === my && (my.counts.local || 0) < 12) return world2Load().then(() => runLocal()); }); } }).catch(e => { if (!SW27.ok) return legacyFlow(); if (!SW27.docs.size) done('local', null, e); else runLocal(); });
+  else legacyFlow();
   const cf = customFoods().filter(c => textRel(q, c.name, c.brand) >= 50).map(c => itemFromProduct(c, textRel(q, c.name, c.brand) + 30)); if (cf.length) mergeItems(cf);
   // remote sources: wait until typing pauses
   clearTimeout(runQuery.t); runQuery.t = setTimeout(() => { if (rs !== my) return;
     usdaSearch(q).then(ps => done('usda', ps.map(p => itemFromProduct(p, textRel(q, p.name, p.brand) - 6 + LumiSearch.relAdj(q, p) - (/^usda\b/i.test(p.brand || '') && /\b(soda|yogurt|cereal|bread|chips|cheese|milk|crackers?|cookies?|bars?)\b/.test(q) ? 20 : 0))))).catch(e => done('usda', null, e));
     // v12: skip the live Open Food Facts search when the local index already answers well (many hits, or a restaurant chain query): fewer blocked/rate-limited requests and less console noise
-    loadIndex().catch(() => {}).then(() => { if (rs !== my) return; const nq12 = ' ' + LumiSearch.norm(q) + ' ', chainQ = (engine.chainN || []).some(c => nq12.includes(' ' + c.n + ' '));
+    (SW27.ok ? SW27.base() : loadIndex()).catch(() => {}).then(() => { if (rs !== my) return; const nq12 = ' ' + LumiSearch.norm(q) + ' ', chainQ = SW27.chainNames().some(c => nq12.includes(' ' + c.n + ' '));
       if (chainQ || (my.counts.local || 0) >= 60) { done('off', []); return; }
       offSearch(q).then(ps => done('off', ps.map(p => itemFromProduct(p, textRel(q, p.name, p.brand) - 3 + LumiSearch.relAdj(q, p))))).catch(e => done('off', null, e)); }); }, typing ? 700 : 0);
   renderResults();

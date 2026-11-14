@@ -10,3 +10,12 @@
   Docs are copied unchanged; category keys are stored by name. Rebuild after any catalog rebuild: `python3 tools/home27/build_home.py && tools/sync_data.sh --verify`.
 - `js/v14.js`: `homeCols141` split into `homePool141` (candidates) + picker so the builder can see candidates.
 - Tests: `tests27/t263.py` (data checks, no catalog fetch on Home, lazy engine, fallback, 14-day equivalence vs the full engine, perf budget from `tests27/perf_budget.json`).
+
+## 26.4 "Search off the main thread"
+- `js/sworker.js`: the search engine (parse + index of the catalog tiers) runs in a Web Worker. `js/search27.js` is the page-side client (`SW27`): hydrates the worker's docs (category keys travel by NAME, mapped to the page's `C.KEYS`),
+  ops: search / dym / doc / pool / recalls / load. Tier load order stays 0, g, 1, so ranks are identical to the old single engine. The f22/aw26 ingredient sidecars are attached in the worker with the same rules as v22/v26.
+- Search defaults to the first two tiers (about 167k products); "Search all" (`#allBtn`) loads tiers 2+ in the worker. Product page: "Better choice" (`better24`) runs over a candidate pool from the worker; recalls (`v251`) are matched in the worker.
+- Fallback: no Worker, `?noworker`, or a worker error -> the old main-thread engine, now time-sliced (`search.js` `_begin/_slice/_end`, `addAsync`) so it can't freeze the page.
+- `js/perf27.js`: tiny `perf27` marks (picks, search ready, product ready) used by the perf-budget tests.
+- Tests: `tests27/t264.py` (worker parity vs the full main-thread index for search rows, Better choice and sidecar fields; page heap; fallback; budgets).
+
