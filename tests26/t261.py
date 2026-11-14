@@ -7,6 +7,11 @@ def ok(name, cond, info=''):
     RES.append((name, bool(cond))); print(('PASS ' if cond else 'FAIL ') + name + ('' if cond else '  :: ' + str(info)[:700]), flush=True)
 VER = os.environ.get('VER', '26.1'); OUT = '/workspace/m26/shots/'; os.makedirs(OUT, exist_ok=True)
 def txt(pg): return pg.evaluate("document.getElementById('app').innerText")
+# 26.7: the extra product checks (pesticide residue, dog-toxic, label check ...) live in a collapsed "More checks" group; these suites read card text, so open it whenever it appears (t267 checks it is collapsed by default)
+_go267 = go
+def go(pg, h, sel='#app h1', extra=0):
+    _go267(pg, h, sel, extra)
+    pg.evaluate("(()=>{const o=()=>{const d=document.getElementById('more27');if(d&&!d.open)d.open=true};o();if(!window.__mo267){window.__mo267=1;new MutationObserver(o).observe(document.body,{childList:true,subtree:true})}})()"); pg.wait_for_timeout(150)
 SAFE = re.compile(r'\b(is|are|it\'s) (completely |totally )?safe\b|safe to (eat|drink|use|buy|feed)|\bsafe food\b|\bsafe for (your |a )?(dog|pet)', re.I)
 D = REPO + '/data/pet26/'
 def J(p): return json.load(open(p))
@@ -99,7 +104,7 @@ with sync_playwright() as p:
     go(pg, '#/product/' + XYL, '#dog261', 3000); t = pg.evaluate("document.getElementById('dog261').innerText")
     ok('[dog] xylitol gum: flagged as named toxic to dogs with ASPCA/FDA sources', 'Xylitol' in t and 'Named as toxic to dogs' in t and 'xylitol' in t and not SAFE.search(t), t[:400])
     ok('[dog] sources: ASPCA and FDA links open in a new tab safely', pg.evaluate("[...document.querySelectorAll('#dog261 .sr261 a')].length>=2 && [...document.querySelectorAll('#dog261 .sr261 a')].every(a=>/^https:\\/\\/www\\.(aspca\\.org|fda\\.gov)\\//.test(a.href)&&a.target=='_blank'&&/noopener/.test(a.rel))"))
-    ok('[dog] jump button at the top and the card sits after the additive watch card', pg.evaluate("!!document.getElementById('dogj261')") and pg.evaluate("(()=>{const a=document.getElementById('aw26'),d=document.getElementById('dog261');return !!(a.compareDocumentPosition(d)&4)})()"))
+    ok('[dog] jump button at the top; the card sits inside the collapsed More checks group (26.7) and the button opens it and scrolls to the card', pg.evaluate("!!document.getElementById('dogj261')") and pg.evaluate("!!document.querySelector('#more27 #dog261')") and pg.evaluate("(()=>{const m=document.getElementById('more27');m.open=false;scrollTo(0,0);return !m.open})()") and (pg.click('#dogj261') or True) and pg.wait_for_timeout(1200) is None and pg.evaluate("(()=>{const m=document.getElementById('more27'),r=document.getElementById('dog261').getBoundingClientRect();return m.open&&r.top<innerHeight&&r.bottom>0})()"))
     go(pg, '#/product/' + CHOCR, '#dog261', 3000); t = pg.evaluate("document.getElementById('dog261').innerText")
     ok('[dog] chocolate with raisins: both chocolate and grapes/raisins flagged, cocoa butter handled separately', 'Chocolate and cocoa' in t and 'Grapes, raisins and sultanas' in t, t[:500])
     go(pg, '#/product/' + CLEANH, '#dog261', 3000); t = pg.evaluate("document.getElementById('dog261').innerText")
@@ -126,7 +131,7 @@ with sync_playwright() as p:
     # ---- browse + nav ----
     go(pg, '#/browse', '.petbr261', 800); ok('[browse] Pets tiles on Browse (pet food, dog-toxic list)', pg.evaluate("!!document.querySelector('.petbr261 [href=\"#/pet\"]') && !!document.querySelector('.petbr261 [href=\"#/pet/toxic\"]')"))
     for hh in ('#/pet', '#/pet/toxic', '#/pet/recalls'):
-        go(pg, hh, '.pg13', 300); ok(f'[nav] Browse tab stays highlighted on {hh}', pg.evaluate("(document.querySelector('.tabbar a.on')||{dataset:{}}).dataset.v") == 'browse')
+        go(pg, hh, '.pg13', 300); ok(f'[nav] More tab (tools live under More since 26.7) stays highlighted on {hh}', pg.evaluate("(document.querySelector('.tabbar a.on')||{dataset:{}}).dataset.v") == 'more')
     ok('no page errors (desktop)', not errs, errs); c.close()
     # ---- layouts ----
     for th in ('light', 'dark'):

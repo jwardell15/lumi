@@ -40,3 +40,15 @@
 - `vendor/html5-qrcode-2.3.8.min.js` (unmodified, Apache-2.0, sha256 in `vendor/README.md`) replaces the `unpkg.com` script: `loadScanLib` loads `vendor/html5-qrcode-2.3.8.min.js`, which is in the service worker's shell precache (`EXTRA` in `tools/build_shell.py`), so the scanner works offline and can never fail on a CDN/tunnel error.
   The unpkg row is gone from the privacy data-sources list (nothing is fetched from it). Tesseract (jsDelivr) is unchanged.
 - Test: `tests27/t2661.py` (file hash, manifest, no unpkg in code, scanner opens with unpkg blocked / with the SW / offline, privacy list).
+
+## 26.7 "Simple UI"
+- `js/ui27.js` (last script; also does the first `route()`) installs the new screens on top of the old route chain: it answers `#/` (new Home), `#/places`, `#/more` and hands every other route to the previous handler, so all old `#/` routes work unchanged.
+  `#/classic` is the old Home, `#/browse` the old Browse hub. `tab19` is re-mapped: Home, Search (search + product pages), Places (browse, stores, aisles, restaurants), everything else lights More.
+- Bottom bar (`index.src.html`): Home, Search, Scan (centre button), Places, More; the desktop sidebar mirrors it.
+- Home ~1400 px tall on a phone: scan + search card, four shortcuts, Top picks (Health left, Blood sugar right, 3 each + See all), one collapsed "Good picks at restaurants" row. Uses class `home27` only (v10.js decorates `.home74 .hs74`, which we must not match).
+- Places: Whole Foods + Costco pinned, Restaurants (chains, meal builder, order builder, build your own), aisles, categories, then every other store under a collapsed "More stores" row.
+- More: 8 collapsible groups linking every other feature (47 links).
+- Product page: scores, blood-sugar factors, portion, better choice, additive watch, ingredient warnings and nutrition stay in place; pesticide residue, dog-toxic, label check and other add-on cards fold into a collapsed "More checks" row (`#more27`); the dog-toxic/other jump buttons open it first.
+- Settings: insulin ratio, offline and data sections are collapsed `details.col27`.
+- Existing suites: t261/t262 read card text, so their `go()` opens More checks; tool pages now light the More tab.
+- Test: `tests27/t267.py` (35 checks).

@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '26.6.1';
+const VERSION = '26.7';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -703,7 +703,8 @@ function route() {
   viewHome();
 }
 window.addEventListener('hashchange', route);
-route();
+/* 26.7: the first route() runs once, after every script has loaded (js/ui27.js, the last one, does it), so Home isn't built twice; this timer is only a safety net */
+setTimeout(() => { if (!window.__routed27) { window.__routed27 = 1; route(); } }, 4000);
 setTimeout(() => onboarding(false), 400);
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
   const hadController = !!navigator.serviceWorker.controller;

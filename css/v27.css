@@ -1,0 +1,42 @@
+/* Lumi 26.7 simple UI: five-slot bottom bar, short Home, Places, More, "More checks", collapsed Settings sections */
+html body .tabbar>a.side13{display:none!important}
+.tabbar{justify-content:space-around}
+/* Home */
+.home27{max-width:880px;margin:0 auto;padding-top:12px;min-width:0;overflow-x:clip}.home27 h1{font-size:30px;letter-spacing:-.02em;margin:2px 0 10px}@media (max-width:640px){.home27 h1{font-size:25px}}
+.hero27{display:flex;flex-direction:column;gap:10px;padding:14px;margin:0 0 12px}
+.hero27 .sbox{margin:0}.hero27 .scan27{display:flex;align-items:center;justify-content:center;gap:10px;min-height:56px;border:0;border-radius:16px;background:var(--acc);color:#fff;font:inherit;font-weight:700;font-size:17px;cursor:pointer;box-shadow:0 6px 18px rgb(255 120 40/.25)}
+.hero27 .scan27 span{display:inline!important}
+.hero27 .lk27{margin:0;text-align:center;font-size:14px}
+.sh27{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0 0 6px}
+.sh27 a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:76px;padding:8px 4px;border-radius:14px;background:var(--card);border:1px solid var(--line);text-align:center;color:var(--ink);text-decoration:none;font-weight:600;font-size:12.5px;line-height:1.15}
+.sh27 a b{font-size:22px;font-weight:400}
+.home27 .sec-h{margin-top:18px}.home27 .sh27h{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.home27 .sh141 small.xs{display:none}
+.home27 #picks .x27{display:none}.home27 #picks.all27 .x27{display:list-item}
+.home27 #allPicks27{margin:10px auto 0;display:block}.home27 #allPicks27[hidden]{display:none}
+.home27 .td27{display:block;margin:14px 0 0;padding:12px 14px;border-radius:14px;background:var(--card);border:1px solid var(--line);color:var(--ink);font-weight:600;text-decoration:none}
+.home27 .rest74{margin-top:14px}
+/* Places and More */
+.pg27{max-width:880px;margin:0 auto;padding-top:14px}
+.rest27{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rest27 a{display:flex;flex-direction:column;gap:2px;padding:12px 14px;border-radius:14px;background:var(--card);border:1px solid var(--line);color:var(--ink);text-decoration:none}
+.rest27 a b{font-size:15px}.rest27 a span{font-size:12.5px;color:var(--mut)}
+.rest27 a.rb27{grid-column:1/-1;border-color:var(--acc)}
+.ms27,.mg27{margin:14px 0;border-radius:14px;background:var(--card);border:1px solid var(--line)}
+.ms27>summary,.mg27>summary{cursor:pointer;list-style:none;padding:14px 16px;font-weight:600;display:flex;justify-content:space-between;align-items:center;min-height:48px}
+.ms27>summary::-webkit-details-marker,.mg27>summary::-webkit-details-marker{display:none}
+.mg27>summary span{color:var(--mut);font-size:13px}
+.ms27>*:not(summary){margin-left:14px;margin-right:14px}.ms27[open]{padding-bottom:12px}
+.ml27{display:grid;grid-template-columns:1fr;gap:0;padding:0 6px 8px}
+.ml27 a{display:flex;flex-direction:column;gap:1px;padding:11px 10px;border-top:1px solid var(--line);color:var(--ink);text-decoration:none;min-height:48px}
+.ml27 a b{font-size:15px}.ml27 a span{font-size:12.5px;color:var(--mut)}
+@media (min-width:700px){.ml27{grid-template-columns:1fr 1fr}}
+/* product page: More checks */
+.more27>summary{cursor:pointer;list-style:none;display:flex;flex-direction:column;gap:2px;min-height:44px;justify-content:center}
+.more27>summary::-webkit-details-marker{display:none}
+.more27>summary b{font-size:16px}.more27 .mc27{font-size:12.5px;color:var(--mut)}
+.more27 .mb27{display:flex;flex-direction:column;gap:12px;margin-top:12px}.more27 .mb27>.card{margin:0}
+.more27[open]>summary b::after{content:" ▾"}.more27:not([open])>summary b::after{content:" ▸"}
+/* settings: optional sections */
+.col27>summary{cursor:pointer;list-style:none;font-weight:700;font-size:17px;min-height:44px;display:flex;align-items:center}
+.col27>summary::-webkit-details-marker{display:none}.col27>summary::after{content:"▸";margin-left:auto;color:var(--mut)}.col27[open]>summary::after{content:"▾"}

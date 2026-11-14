@@ -7,6 +7,11 @@ def ok(name, cond, info=''):
     RES.append((name, bool(cond))); print(('PASS ' if cond else 'FAIL ') + name + ('' if cond else '  :: ' + str(info)[:700]), flush=True)
 VER = os.environ.get('VER', '26.2'); OUT = '/workspace/m26/shots/'; os.makedirs(OUT, exist_ok=True)
 def txt(pg): return pg.evaluate("document.getElementById('app').innerText")
+# 26.7: the extra product checks (pesticide residue, dog-toxic, label check ...) live in a collapsed "More checks" group; these suites read card text, so open it whenever it appears (t267 checks it is collapsed by default)
+_go267 = go
+def go(pg, h, sel='#app h1', extra=0):
+    _go267(pg, h, sel, extra)
+    pg.evaluate("(()=>{const o=()=>{const d=document.getElementById('more27');if(d&&!d.open)d.open=true};o();if(!window.__mo267){window.__mo267=1;new MutationObserver(o).observe(document.body,{childList:true,subtree:true})}})()"); pg.wait_for_timeout(150)
 SAFE = re.compile(r'\b(is|are|it\'s) (completely |totally )?safe\b|safe to (eat|drink|use|buy|feed)|\bsafe food\b|\bsafely\b|\bsafe for\b', re.I)
 def J(p): return json.load(open(p))
 FD, PD, AD = REPO + '/data/fish26/', REPO + '/data/pdp26/', REPO + '/data/air26/'
@@ -82,8 +87,8 @@ with sync_playwright() as p:
     swt = pg.evaluate("Promise.all([fetch('sw.js',{cache:'no-store'}).then(r=>r.text()),fetch('dist/manifest.json').then(r=>r.ok?r.text():'').catch(()=>'')]).then(a=>a.join(' '))")
     ok('sw cache lumi-v%s lists the 26.2 files' % VER, ("'lumi-v%s'" % VER) in swt and all(x in swt for x in ('js/v262.js', 'css/v262.css', 'js/core262.js')))
     scr = pg.evaluate("fetch('dist/manifest.json').then(r=>r.ok?r.json().then(m=>m.jsFiles):[...document.scripts].map(s=>s.getAttribute('src')).filter(Boolean)).catch(()=>[...document.scripts].map(s=>s.getAttribute('src')).filter(Boolean))")
-    ok('index loads core262 then v262 last, after v261', [x for x in scr if x != 'js/perf27.js'][-3:] == ['js/v261.js', 'js/core262.js', 'js/v262.js'], scr[-4:])  # 26.4+: perf27.js (test marks) may follow
-    ok("What's new lists 26.2 first, then 26.1", pg.evaluate("V7_NEWS[0][1]").endswith('(26.2)') and pg.evaluate("V7_NEWS[1][1]") == 'Pets (26.1)')
+    ok('index loads core262 then v262 last, after v261', [x for x in scr if x not in ('js/perf27.js', 'js/ui27.js')][-3:] == ['js/v261.js', 'js/core262.js', 'js/v262.js'], scr[-4:])  # 26.4+: perf27.js (test marks) may follow
+    ok("What's new lists 26.2 first, then 26.1", pg.evaluate("(()=>{const n=V7_NEWS.filter(x=>!/\\(26\\.[3-9]/.test(x[1]));return n[0][1].endsWith('(26.2)')&&n[1][1]==='Pets (26.1)'})()"))  # 26.7 adds its own entry in front
     # ---- fish page ----
     go(pg, '#/fish', '#fq262', 1500); t = txt(pg)
     ok('[fish] page: counts, FDA/EPA serving guidance (4 oz, 2-3 servings Best, 1 Good, children by age, caught-by-friends), EPA contacts link, no "safe"', all(x in t for x in ('Best Choices (36)', 'Good Choices (19)', 'Choices to Avoid (7)', '4 ounces', '2 to 3 servings', '1 ounce at age 1 to 3', 'caught by family or friends', 'only one serving')) and not SAFE.search(t) and pg.evaluate("[...document.querySelectorAll('#app a')].some(a=>a.href.includes('state-territorial-tribal-and-epa-fish-program-contacts'))"), t[:400])
@@ -160,7 +165,7 @@ with sync_playwright() as p:
     pg.click('#as262'); pg.wait_for_timeout(200); ok('[air] "Forget this ZIP" removes it', pg.evaluate("localStorage.getItem('lumi.zip262')") is None)
     # ---- nav / browse / privacy ----
     for hh in ('#/kitchen', '#/fish', '#/pesticides', '#/air'):
-        go(pg, hh, '.pg13', 300); ok(f'[nav] Browse tab stays highlighted on {hh}', pg.evaluate("(document.querySelector('.tabbar a.on')||{dataset:{}}).dataset.v") == 'browse')
+        go(pg, hh, '.pg13', 300); ok(f'[nav] More tab (tools live under More since 26.7) stays highlighted on {hh}', pg.evaluate("(document.querySelector('.tabbar a.on')||{dataset:{}}).dataset.v") == 'more')
     go(pg, '#/browse', '.kitbr262', 2500); ok('[browse] 26.2 tiles are in Browse and Costco/Whole Foods remain pinned first', pg.evaluate("[...document.querySelectorAll('.kitbr262 a')].map(a=>a.getAttribute('href'))") == ['#/kitchen', '#/fish', '#/pesticides', '#/air'] and re.search(r'Costco', pg.evaluate("document.querySelector('.browse74').innerText")[:1200]) is not None)
     go(pg, '#/privacy', '.card', 1500); ok('[privacy] the privacy page documents the ZIP lookup', 'Air quality ZIP lookup' in txt(pg) and 'first 3 digits' in txt(pg))
     ok('no page errors (desktop)', not errs, errs); c.close()
