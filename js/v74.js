@@ -35,9 +35,9 @@ function viewHome() {
   const draw = err => { const el = $('#picks'); if (!el) return; let p = []; try { p = homePicks(); } catch (e) { console.warn(e); }
     if (p.length) el.innerHTML = `<div class="list">${p.map(d => rowHTML(itemFromDoc(d))).join('')}</div>`;
     else { el.innerHTML = `<div class="card" role="status"><p class="small">${err ? "Top picks couldn't load. Check your connection." : 'No top picks to show right now.'} <a class="lnk" href="#/browse">Browse all</a></p>${err ? '<button class="btn" id="picksRetry" type="button">Try again</button>' : ''}</div>`;
-      const r = $('#picksRetry'); if (r) r.onclick = () => { el.innerHTML = skel(3); loadIndex().then(() => draw()).catch(() => draw(true)); }; }
+      const r = $('#picksRetry'); if (r) r.onclick = () => { el.innerHTML = skel(3); homeLite().then(() => draw()).catch(() => draw(true)); }; }
     const rl = $('#restList'); if (rl) rl.innerHTML = restPicks74().map(d => rowHTML(itemFromDoc(d))).join(''); };
-  loadIndex().then(() => draw()).catch(() => draw(true)); // v9: home needs only tier 0 (≈0.65 MB gz); the larger tiers load when you search
+  homeLite().then(() => draw()).catch(() => draw(true)); // 26.3: Home reads the small prebuilt pool (data/home27/home.json), not the search index. (v9: home needs only tier 0 (≈0.65 MB gz); the larger tiers load when you search
 }
 function viewBrowseHub() {
   document.title = 'Browse — Lumi';

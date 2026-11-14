@@ -160,10 +160,13 @@ function pickKinds141(pool, key, n, avoid = new Set()) {
   for (const [, L] of groups) { const c = L.filter(d => !avoid.has(d.code) && !brands.has(bk14(d)) && (labs.get(catLabel141(d)) || 0) < 1); if (!c.length) continue; const d = c[(day + out.length) % c.length]; out.push(d); brands.add(bk14(d)); labs.set(catLabel141(d), 1); if (out.length >= n) break; }
   return out.sort((a, b) => b[key] - a[key]);
 }
-function homeCols141() {
+function homePool141() { /* 26.3: split out so tools/home27/build_home.py can see every candidate */
   const pool = engine.docs.filter(d => (d.src === 'local' && d.brand && d.rank < 40000 && usEnglish(d) && !isStaple(d) && !isSugaryDrink(d) && !/\bwater\b/i.test(d.name) || d.src === 'whole') && ok141(d, { min: 60, cap: 1e9, img: true, ready: true }) && pickServ19(d) && (nameQ141(d).name.match(/[A-Za-z]+/g) || []).length >= 2);
   const NOAI = /sweet|candy|powder|supplement|creatine|vitamin|broth|soup base|spice|season|baking|condiment|sauce|oil|vinegar/i;
-  const P2 = pool.filter(d => !NOAI.test(catLabel141(d)) && !NOAI.test(d.ai >= 0 && LumiAisles.SUB[d.ai] ? LumiAisles.SUB[d.ai][2] : ''));
+  return pool.filter(d => !NOAI.test(catLabel141(d)) && !NOAI.test(d.ai >= 0 && LumiAisles.SUB[d.ai] ? LumiAisles.SUB[d.ai][2] : ''));
+}
+function homeCols141() {
+  const P2 = homePool141();
   const capW = L => { let w = 0; return L.filter(d => d.src !== 'whole' || ++w <= 1); };
   const A = capW(pickKinds141(P2, 'score', 30)).slice(0, 6); const nA = new Set(A.map(d => nameQ141(d).name.toLowerCase())); const B = capW(pickKinds141(P2.filter(d => !nA.has(nameQ141(d).name.toLowerCase())), 'h', 30, new Set(A.map(d => d.code)))).slice(0, 6);
   return [A, B];
@@ -181,7 +184,7 @@ const _mini14 = mini14; mini14 = mini141; // every dual column uses the upgraded
 /* re-gate the columns (v14 functions call these) */
 home14 = function () {
   const el = $('#picks'); if (!el) return;
-  loadIndex().then(() => { let A = [], B = []; try { [A, B] = homeCols141(); } catch (e) { console.warn(e); } if (!A.length && !B.length) return;
+  homeLite().then(() => { let A = [], B = []; try { [A, B] = homeCols141(); } catch (e) { console.warn(e); } if (!A.length && !B.length) return;
     const html = dual14(A, B, { label: 'Top picks', subA: 'Gentlest on glucose · ready to eat', subB: 'Best overall nutrition · still diabetes-friendly' });
     const put = () => { const el = $('#picks'); if (el && !el.querySelector('.du14')) { el.innerHTML = html; bindCmp141(el); const h = el.previousElementSibling; if (h && h.classList.contains('sec-h')) { h.classList.add('sh141'); h.querySelector('h2').innerHTML = `Top picks <small class="xs">Updated daily · both scores 60+ (per serving) · 5–25 g carbs and ≤6 g sugar per serving</small>`; } } };
     put(); setTimeout(put, 50); setTimeout(put, 600); const mo = new MutationObserver(put); mo.observe(el, { childList: true }); setTimeout(() => mo.disconnect(), 15000);
