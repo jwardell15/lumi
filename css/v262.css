@@ -1,0 +1,23 @@
+/* Lumi 26.2: kitchen, fish, pesticides, air. Uses the 23.x tokens. */
+.kit262p,.fish262p,.pest262p,.air262p{max-width:1200px}
+.fish262p input[type=search],.pest262p input[type=search],.kit262p textarea,.air262p input{width:100%;min-height:48px;font:inherit;font-size:var(--t-body);padding:10px 14px;border-radius:var(--r-s);border:1px solid var(--line2);background:var(--bg2);color:var(--ink)}
+.kit262p textarea{min-height:110px;resize:vertical}
+.zr262{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap}.zr262 input{flex:1 1 160px;max-width:260px}.zr262 .btn{min-height:48px}
+.fr262,.pr262{border:1px solid var(--line);border-left:5px solid var(--na);border-radius:var(--r-s);padding:6px 12px;margin:8px 0;background:var(--bg2)}
+.fr262.b{border-left-color:var(--gd)}.fr262.g{border-left-color:var(--sun)}.fr262.a{border-left-color:var(--bd)}
+.fr262 summary,.pr262 summary{cursor:pointer;display:flex;gap:8px 12px;align-items:center;flex-wrap:wrap;min-height:44px}.fr262 summary b,.pr262 summary b{font-size:var(--t-hl)}
+.pv262{display:flex;flex-direction:column;gap:2px;margin-left:auto}.pv262 small{color:var(--ink2);font-size:var(--t-fn)}
+.tg262{font-style:normal;font-size:12px;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--chip);color:var(--ink);white-space:nowrap}
+.tg262.b{background:var(--chip);border:1px solid var(--gd)}.tg262.g{background:var(--sunSoft)}.tg262.a{background:var(--bdSoft,var(--chip));color:var(--bdT)}
+.mt262{width:100%;border-collapse:collapse;font-size:var(--t-fn);margin:8px 0}.mt262 th,.mt262 td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}.mt262 th{color:var(--ink2);font-weight:600}
+.mt262{display:block;overflow-x:auto}
+.na262{color:var(--ink2)}
+.kr262.hit262{border-left:5px solid var(--sun)}.kr262.clr262{border-left:5px solid var(--na)}.kh262 h3{margin:10px 0 4px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.fish262,.pest262{border-left:5px solid var(--sun)}.fish262 h2,.pest262 h2{margin:0 0 6px}.fl262{list-style:none;margin:6px 0;padding:0;display:grid;gap:6px}.fl262 a{min-height:44px;display:inline-flex;align-items:center}
+.bar262{display:flex;height:18px;border-radius:99px;overflow:hidden;margin:8px 0;background:var(--chip)}
+.b0{background:#2e9e5b}.b1{background:#e3b505}.b2{background:#ec8a2f}.b3{background:#d64545}.b4{background:#8f3f97}.b5{background:#7e2a3b}
+.lg262{list-style:none;margin:6px 0;padding:0;display:grid;gap:2px;font-size:var(--t-fn)}.sw262{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:8px;vertical-align:-1px}
+.sec262{margin:18px 0 6px}
+.kitbr262{margin-top:8px}
+.pest262p [hidden],.fish262p [hidden]{display:none!important}
+@media (max-width:520px){.pv262{margin-left:0}}
