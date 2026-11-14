@@ -14,3 +14,18 @@ Rules the watch follows: it reads only the ingredient list on file; no list or a
 ## 26.0 Restaurant meal builder
 
 No new dataset. It uses the chain nutrition already in `data/index-*.json` and `data/d` (`src: "rest"` items) and scores the meal with `mealScore241` like saved meals.
+
+## 26.1 Pets
+
+| What | Where | Source | Refresh |
+|---|---|---|---|
+| Pet food products (barcode, name, brand, species, quantity, front photo path, ingredient text and its language) | `data/pet26/p/<NN>.json` (100 shards by the last two digits of the barcode), `data/pet26/index.json` (search: `[code, name, brand, species, hasIngredients]`) | Open Pet Food Facts **bulk dump** `https://static.openpetfoodfacts.org/data/openpetfoodfacts-products.jsonl.gz` (ODbL; photos CC BY-SA). robots.txt (`/api`, `/cgi`, `/facets` disallowed) was read; only the static dump is used, never the live API. Nov 13, 2026: 15,865 pet foods, 13,124 with a name or brand, 2,874 with an ingredient list, 13,777 with a photo; 16 spam entries (phone numbers, links) skipped | `curl -o /workspace/m26/raw/opff.jsonl.gz <url>` then `python3 tools/pet26/build_pet.py [RAW_DIR]`, then `tools/sync_data.sh --verify` |
+| FDA animal and veterinary recalls (date, brand names, product, reason, company, terminated flag) | `data/pet26/recalls.json` | FDA Center for Veterinary Medicine table, `https://www.fda.gov/animal-veterinary/safety-health/recalls-withdrawals` (the page's own "download" link gives `animal_recalls.xlsx`; 65 rows as of 2026-11-10). Put the page's "Content current as of" date in `RAW_DIR/recalls_asof.txt` before building | Same build command (it reads `RAW_DIR/animal_recalls.xlsx`) |
+| Dog-toxic ingredient list (11 entries: xylitol, chocolate/cocoa, cocoa butter, caffeine/coffee, tea/matcha/yerba mate, grapes/raisins, grape products, onion/garlic/chives/leek, macadamia, alcohol, avocado) | `js/pet26core.js` (`W`, `S`, `POISON`, `ASOF`) | ASPCA "People foods to avoid feeding your pets", FDA "Potentially dangerous items for your pet", FDA "Paws off xylitol", FDA "Leave chocolate out of Rover's celebrations", read Nov 13, 2026. Short paraphrases only, each with a link; poison-line numbers from the ASPCA and Pet Poison Helpline pages | Re-read the four pages by hand, edit `W`, bump `ASOF` |
+
+How the pet pieces behave:
+- Pet food is **not scored**: Open Pet Food Facts almost never has a nutrition panel and Lumi's scores are for human food. A pet product page shows the name, brand, species, photo, ingredient list on file, the dog-toxic check, and a brand-level FDA recall match (labelled as brand-name matching only).
+- A dog-toxic check with no hit says "none of the ... found in the list on file ... not a safety rating". A missing list, a non-English list (hits still shown) or a junk list (under 12 letters or 2 words, e.g. a volunteer typo like "80g") is "couldn't verify". Nothing says "safe".
+- Barcode scan order: Lumi's food index and Open Food Facts/USDA first, then pet food (Open Pet Food Facts), then Home & Body, then OTC medicines, then NIH DSLD supplements. Scans are looked up in Lumi's own copy; nothing is sent to Open Pet Food Facts except the product photo file name when a photo is shown (`images.openpetfoodfacts.org`, listed on the Privacy page).
+- The same dog-toxic check runs on every human-food product page that has an ingredient list (after the additive watch card).
+- Tests: `tests26/t261.py` (needs the repo `data/pet26/` for its independent checks).

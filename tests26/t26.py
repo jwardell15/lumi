@@ -46,8 +46,8 @@ with sync_playwright() as p:
     swt = pg.evaluate("fetch('sw.js',{cache:'no-store'}).then(r=>r.text())")
     ok('sw cache lumi-v%s lists v26 files' % VER, ("'lumi-v%s'" % VER) in swt and 'js/v26.js' in swt and 'css/v26.css' in swt and 'js/aw26core.js' in swt)
     scr = pg.evaluate("[...document.scripts].map(s=>s.getAttribute('src')).filter(Boolean)")
-    ok('index loads aw26core then v26 last, after v252', scr[-3:] == ['js/v252.js', 'js/aw26core.js', 'js/v26.js'], scr[-4:])
-    ok("What's new lists 26.0 first, then 25.2", pg.evaluate("V7_NEWS[0][1]") == 'Restaurant meal builder and additive watch (26.0)' and pg.evaluate("V7_NEWS[1][1]") == 'Supplements, medicines and local water (25.2)')
+    ok('index loads aw26core then v26 last, after v252', (lambda i: i >= 1 and scr[i-1] == 'js/v252.js' and scr[i+1] == 'js/v26.js')(scr.index('js/aw26core.js')), scr[-6:])
+    nw = pg.evaluate("V7_NEWS.map(x=>x[1])"); ok("What's new lists 26.0 directly before 25.2", nw.index('Restaurant meal builder and additive watch (26.0)') + 1 == nw.index('Supplements, medicines and local water (25.2)'), nw[:4])
     # ---- watch list integrity ----
     W = pg.evaluate("AW26.W.map(w=>({id:w.id,tier:w.tier,facts:w.facts.map(f=>({j:f[0],s:f[1],u:f[2].map(k=>AW26.S[k]&&AW26.S[k][1])}))}))")
     ok('[watch] every entry has at least one dated fact and every fact an official https source', len(W) == 20 and all(w['facts'] and all(f['u'] and all(u and u.startswith('https://') for u in f['u']) for f in w['facts']) for w in W), [w['id'] for w in W if not w['facts']])

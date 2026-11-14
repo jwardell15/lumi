@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '26.0';
+const VERSION = '26.1';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -479,7 +479,7 @@ async function viewProduct(id) {
   }
   if (location.hash.replace(/^#\/product\//, '') !== id && !location.hash.endsWith(encodeURIComponent(id))) return;
   if (!p && /^\d{8,14}$/.test(id)) { const cp = await cosProduct(id).catch(() => null); if (cp) { const sc = sessionStorage.getItem('lumi.scanned') === id; if (sc) sessionStorage.removeItem('lumi.scanned'); return viewCosProduct(id, cp, sc); } }
-  if (!p) { app.innerHTML = `${searchBox()}<div class="card empty" style="margin-top:14px"><b>Barcode ${esc(id)} not found</b>It isn't in Lumi's index, Open Food Facts, USDA, Open Beauty Facts or Open Products Facts. Try searching by name, or <a style="color:var(--acc)" href="https://world.openfoodfacts.org/cgi/product.pl?type=add&code=${esc(id)}" target="_blank" rel="noopener">add it to Open Food Facts</a>.<div class="actions"><a class="btn pri" href="#/label/${esc(id)}">📷 Scan its Nutrition Facts label</a></div></div>`; bindSearch(); return; }
+  if (!p) { app.innerHTML = `${searchBox()}<div class="card empty" style="margin-top:14px"><b>Barcode ${esc(id)} not found</b>It isn't in Lumi's index, Open Food Facts, USDA, Open Beauty Facts, Open Products Facts or Open Pet Food Facts. Try searching by name, or <a style="color:var(--acc)" href="https://world.openfoodfacts.org/cgi/product.pl?type=add&code=${esc(id)}" target="_blank" rel="noopener">add it to Open Food Facts</a>.<div class="actions"><a class="btn pri" href="#/label/${esc(id)}">📷 Scan its Nutrition Facts label</a></div></div>`; bindSearch(); return; }
   memo.set(p.id, p); pushHist('viewed', p);
   const scanned = sessionStorage.getItem('lumi.scanned') === id; if (scanned) { sessionStorage.removeItem('lumi.scanned'); pushHist('scans', p, 50); }
   const s = S.score(p), n = p.n, unit = p.liquid ? 'ml' : 'g'; const hr = HR(p), hp = PRIM() === 'health';
