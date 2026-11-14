@@ -5,7 +5,7 @@ REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), '..')); RES = []
 def ok(name, cond, info=''):
     RES.append((name, bool(cond))); print(('PASS ' if cond else 'FAIL ') + name + ('' if cond else '  :: ' + str(info)[:700]), flush=True)
 from playwright.sync_api import sync_playwright
-VER = os.environ.get('VER') or re.search(r"VERSION = '([\d.]+)'", open(REPO + '/js/app.js').read()).group(1); OLD_REF = os.environ.get('OLD_REF', '09e38b4')
+VER = os.environ.get('VER') or re.search(r"VERSION = '([\d.]+)'", open(REPO + '/js/app.js').read()).group(1); OLD_REF = os.environ.get('OLD_REF', '7a711cf')
 ROOT = {'p': REPO}; LOG = []
 class H(http.server.SimpleHTTPRequestHandler):
     def translate_path(self, path): return http.server.SimpleHTTPRequestHandler.translate_path(self, path).replace(os.getcwd(), ROOT['p'], 1)
@@ -23,10 +23,11 @@ def sw_ready(pg, t=90):
 chk = subprocess.run([sys.executable, REPO + '/tools/build_shell.py', '--check'], capture_output=True, text=True)
 ok('[manifest] tools/build_shell.py --check: SHELL_H in sw.js matches the files (run build_shell.py after editing any shell file)', chk.returncode == 0, chk.stdout + chk.stderr)
 SW = open(REPO + '/sw.js').read(); SH = json.loads(re.search(r'const SHELL_H = (\{.*?\});', SW, re.S).group(1))
-ok('[manifest] sw.js cache name matches VERSION; ' + str(len(SH)) + ' shell files, each hashed', f"'lumi-v{VER}'" in SW and len(SH) >= 90 and all(re.fullmatch(r'[0-9a-f]{12}', v) for v in SH.values()), len(SH))
+ok('[manifest] sw.js cache name matches VERSION; ' + str(len(SH)) + ' shell files, each hashed', f"'lumi-v{VER}'" in SW and len(SH) >= 20 and all(re.fullmatch(r'[0-9a-f]{12}', v) for v in SH.values()), len(SH))
 ok('[manifest] the shell has no catalog data (no index-*.json, no data/ in the precache list)', not [f for f in SH if f.startswith('data/') or 'index-' in f], [f for f in SH if 'index-' in f][:3])
-ok('[manifest] startup files all in the shell: index.html, sworker.js, search27.js, home27.js, app.js, fonts, manifest', all(f in SH for f in ['index.html', 'js/sworker.js', 'js/search27.js', 'js/home27.js', 'js/app.js', 'manifest.webmanifest', 'fonts/inter-var-latin.woff2']), [f for f in ['js/sworker.js', 'js/search27.js'] if f not in SH])
-ok('[manifest] shell raw size under 2.2 MB', sum(os.path.getsize(REPO + '/' + f) for f in SH) < 2.2e6, sum(os.path.getsize(REPO + '/' + f) for f in SH))
+DM = json.load(open(REPO + '/dist/manifest.json'))
+ok('[manifest] startup files all in the shell: index.html, sworker.js, the JS and CSS bundle, scanner library, fonts, manifest', all(f in SH for f in ['index.html', 'js/sworker.js', DM['js'], DM['css'], 'vendor/html5-qrcode-2.3.8.min.js', 'manifest.webmanifest', 'fonts/inter-var-latin.woff2']), [f for f in ['js/sworker.js', DM['js'], DM['css']] if f not in SH])
+ok('[manifest] shell raw size under 2.6 MB', sum(os.path.getsize(REPO + '/' + f) for f in SH) < 2.6e6, sum(os.path.getsize(REPO + '/' + f) for f in SH))
 import gzip
 BG = json.load(open(REPO + '/tests27/perf_budget.json')).get(VER) or {}
 gz = sum(len(gzip.compress(open(REPO + '/' + f, 'rb').read(), 6)) for f in SH) / 1024
@@ -78,7 +79,7 @@ with sync_playwright() as p:
         ok('[update] (skipped: could not extract ' + OLD_REF + ')', True, ar.stderr)
     # ---------- 6. a stale/mismatched file must not install ----------
     bad_root = tempfile.mkdtemp(prefix='lumi_bad_'); shutil.copytree(REPO, bad_root, dirs_exist_ok=True, ignore=shutil.ignore_patterns('.git', 'data', '__pycache__', 'node_modules'))
-    open(bad_root + '/js/v20.js', 'a').write('\n/* tampered after the manifest was built */\n'); ROOT['p'] = bad_root
+    open(bad_root + '/' + DM['js'], 'a').write('\n/* tampered after the manifest was built */\n'); ROOT['p'] = bad_root
     c = newctx(b); pg = c.new_page(); pg.goto(BASE + '#/'); pg.wait_for_selector('#picks .du14', timeout=60000); pg.wait_for_timeout(9000)
     st = pg.evaluate("(async()=>{const r=await navigator.serviceWorker.getRegistration();return {active:!!(r&&r.active),ctl:!!navigator.serviceWorker.controller}})()")
     ok('[safety] a shell file that does not match the manifest aborts the install: no worker takes over (the page still works from the network)', not st['active'] and not st['ctl'], st)

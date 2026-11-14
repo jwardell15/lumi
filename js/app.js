@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '26.6';
+const VERSION = '26.6.1';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -636,7 +636,7 @@ Bands: 75+ Excellent · 50–74 Good · 25–49 Poor · &lt;25 Bad</pre>
 
 /* ---------------- scanner ---------------- */
 let scanner = null, scanLib = null;
-function loadScanLib() { if (!scanLib) scanLib = new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js'; s.onload = res; s.onerror = () => { scanLib = null; rej(new Error('Scanner library failed to load')); }; document.head.appendChild(s); }); return scanLib; }
+function loadScanLib() { if (!scanLib) scanLib = new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'vendor/html5-qrcode-2.3.8.min.js'; s.onload = res; s.onerror = () => { scanLib = null; rej(new Error('Scanner library failed to load')); }; document.head.appendChild(s); }); return scanLib; }
 async function startScan() {
   if (!window.isSecureContext || !navigator.mediaDevices) return typeBarcode('The camera needs a secure (HTTPS) page.');
   const ov = $('#scanner'); ov.hidden = false;

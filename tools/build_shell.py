@@ -5,7 +5,7 @@ Run after any change to a shell file (the release flow: edit -> python3 tools/bu
 usage: python3 tools/build_shell.py [--check]"""
 import re, os, sys, hashlib, json
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-EXTRA = ['js/sworker.js', 'js/dbase.js', 'js/cats.js', 'js/aisles.js', 'js/search.js', 'js/hb25core.js', 'ref/gi2008.json', 'ref/additives.json', 'manifest.webmanifest',
+EXTRA = ['js/sworker.js', 'js/dbase.js', 'js/cats.js', 'js/aisles.js', 'js/search.js', 'js/hb25core.js', 'vendor/html5-qrcode-2.3.8.min.js', 'ref/gi2008.json', 'ref/additives.json', 'manifest.webmanifest',
          'icons/mascot-128.png', 'icons/mascot-256.png', 'icons/favicon-32.png', 'icons/icon-192.png', 'icons/apple-touch-icon.png', 'fonts/inter-var-latin.woff2', 'fonts/fraunces-var-latin.woff2']
 def files():
     h = open(ROOT + '/index.html', encoding='utf-8').read(); out = ['index.html']

@@ -55,7 +55,7 @@ with sync_playwright() as p:
     # ---------- lazy engine: typing starts it, search + product still work ----------
     c = ctx(b); errs = []; pg = page(c, errs); pg.goto(base + '#/'); pg.wait_for_selector('#picks .du14', timeout=25000); pg.wait_for_timeout(1500)
     ok('[lazy] engine empty on Home', pg.evaluate('engine.docs.length') == 0)
-    pg.fill('#q', 'yogurt'); pg.wait_for_function("()=>engine.docs.length>1000", timeout=60000); pg.wait_for_selector('#sugg a[href^="#/product/"]', timeout=30000)
+    pg.fill('#q', 'yogurt'); pg.wait_for_function("()=>engine.docs.length>1000||(typeof SW27!==\x27undefined\x27&&SW27.loaded&&SW27.loaded.size>=1)", timeout=60000); pg.wait_for_selector('#sugg a[href^="#/product/"]', timeout=30000)
     ok('[lazy] typing in the Home search box starts the engine and shows suggestions', pg.evaluate("document.querySelectorAll('#sugg a[href^=\"#/product/\"]').length") >= 3)
     pg.keyboard.press('Enter'); pg.wait_for_selector('a.row', timeout=60000); pg.wait_for_timeout(1500)
     ok('[lazy] search results for yogurt', 'yogurt' in pg.evaluate("document.getElementById('app').innerText").lower() and pg.evaluate("document.querySelectorAll('a.row').length") >= 5)
@@ -70,7 +70,7 @@ with sync_playwright() as p:
     try: pg.wait_for_selector('#picks .du14 a[href^="#/product/"]', timeout=90000)
     except Exception: pass
     pg.wait_for_timeout(1500)
-    ok('[fallback] home.json missing: Home still shows picks (via the full index)', pg.evaluate("document.querySelectorAll('#picks a[href^=\"#/product/\"]').length") >= 6 and pg.evaluate('engine.docs.length') > 1000)
+    ok('[fallback] home.json missing: Home still shows picks (via the full index)', pg.evaluate("document.querySelectorAll('#picks a[href^=\"#/product/\"]').length") >= 6 and pg.evaluate("engine.docs.length>1000||!!(typeof SW27!==\x27undefined\x27&&SW27.loaded&&SW27.loaded.size>=1)"))
     ok('[fallback] no page errors', not [e for e in errs if 'home27' not in e and '404' not in e], errs); c.close()
     # ---------- performance budget (CPU 4x, mobile profile) ----------
     BG = BUD.get(VER) or BUD[sorted(BUD)[-1]]

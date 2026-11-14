@@ -35,3 +35,8 @@
   `python3 tools/build_shell.py --check` fails when the service worker manifest is stale (t265 runs it).
 - Tests that used to read `index.html` for script/css names read `dist/manifest.json` (helpers `scr`/`swt` in the older suites).
 - Budget (`tests27/perf_budget.json`): bundle JS <= 420 KB gz, CSS <= 45 KB gz, <= 4 JS/CSS requests. Measured 476 -> 379 KB gz JS, 59 -> 38 KB gz CSS, 81 -> 2 requests.
+
+## 26.6.1 "Self-hosted scanner library"
+- `vendor/html5-qrcode-2.3.8.min.js` (unmodified, Apache-2.0, sha256 in `vendor/README.md`) replaces the `unpkg.com` script: `loadScanLib` loads `vendor/html5-qrcode-2.3.8.min.js`, which is in the service worker's shell precache (`EXTRA` in `tools/build_shell.py`), so the scanner works offline and can never fail on a CDN/tunnel error.
+  The unpkg row is gone from the privacy data-sources list (nothing is fetched from it). Tesseract (jsDelivr) is unchanged.
+- Test: `tests27/t2661.py` (file hash, manifest, no unpkg in code, scanner opens with unpkg blocked / with the SW / offline, privacy list).
