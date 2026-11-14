@@ -40,5 +40,25 @@
   "product_heap_mb": 80,
   "shell_gz_kb": 900,
   "install_requests_max": 135
+ },
+ "26.6": {
+  "home_picks_ms": 2500,
+  "home_longtask_max_ms": 800,
+  "home_tbt_ms": 1200,
+  "home_data_bytes": 700000,
+  "home_index_fetches": 0,
+  "max_js_requests": 60,
+  "max_css_requests": 30,
+  "search_longtask_max_ms": 600,
+  "search_tbt_ms": 2000,
+  "search_heap_mb": 60,
+  "product_longtask_max_ms": 600,
+  "product_tbt_ms": 2500,
+  "product_heap_mb": 80,
+  "shell_gz_kb": 900,
+  "install_requests_max": 135,
+  "bundle_js_gz_kb": 420,
+  "bundle_css_gz_kb": 45,
+  "js_css_requests_max": 4
  }
 }

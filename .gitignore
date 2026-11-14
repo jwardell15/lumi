@@ -9,3 +9,4 @@ __pycache__/
 # 17.4: food data is hosted on Cloudflare Pages (lumi-data); publish with tools/sync_data.sh
 /data/
 /img/w/
+tools/build/node_modules/

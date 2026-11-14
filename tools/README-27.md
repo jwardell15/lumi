@@ -25,3 +25,13 @@
   Install fetches via the HTTP cache first (the page just loaded those files: no second download), then forces the network if the hash differs; a mismatch aborts the install (old SW keeps serving). Entries unchanged since the previous version are copied, not downloaded.
 - Shell is cache-first (no network on warm start). Data (`lumi-data-cky.pages.dev`) is NOT precached: cached on first use, served stale-while-revalidate (revalidated in the background when older than 24 h by its `Date`); `DATA_EPOCH` bumps drop the data cache. Small launch files (home.json, meta) are pre-warmed at install.
 - Update path: `skipWaiting` + `clients.claim`; the page reloads once on `controllerchange` (guarded) so a user never runs new HTML against old JS.
+
+## 26.6 "Bundle + minify"
+- Source stays editable: `index.src.html` + `css/*.css` + `js/*.js`. `tools/build/build.mjs` (esbuild, pinned in `tools/build/package-lock.json`) minifies each file and emits
+  `dist/app.<hash>.js`, `dist/app.<hash>.css` and `dist/manifest.json`, and writes `index.html` (a generated file: do not edit; edit `index.src.html`).
+- The JS bundle keeps each source file as its own string injected as a separate classic script by a tiny IIFE loader, so per-file `'use strict'`, hoisting and error isolation are exactly as before
+  (t266 compares the global names with the unbundled page). No file is concatenated, so one broken file cannot take the others down.
+- Release flow: `cd tools/build && npm ci` once, then `tools/release.sh` (build + `tools/build_shell.py`) right before every commit that touches css/, js/ or index.src.html.
+  `python3 tools/build_shell.py --check` fails when the service worker manifest is stale (t265 runs it).
+- Tests that used to read `index.html` for script/css names read `dist/manifest.json` (helpers `scr`/`swt` in the older suites).
+- Budget (`tests27/perf_budget.json`): bundle JS <= 420 KB gz, CSS <= 45 KB gz, <= 4 JS/CSS requests. Measured 476 -> 379 KB gz JS, 59 -> 38 KB gz CSS, 81 -> 2 requests.

@@ -1,0 +1,1 @@
+{ "name": "lumi-build", "private": true, "version": "1.0.0", "description": "Lumi release build: bundles + minifies the stacked css/js files (tools/build/build.mjs). Run: cd tools/build && npm ci && cd ../.. && tools/release.sh", "devDependencies": { "esbuild": "0.28.2" } }

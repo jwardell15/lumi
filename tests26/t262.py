@@ -79,9 +79,9 @@ with sync_playwright() as p:
     reqs = []; pg.on('request', lambda r: reqs.append(r.url)); pg.add_init_script("window.__geo=0;try{const g=navigator.geolocation;['getCurrentPosition','watchPosition'].forEach(k=>{const o=g[k].bind(g);g[k]=function(){window.__geo++;return o.apply(g,arguments)}})}catch(e){}")
     pg.goto(base + '#/'); pg.wait_for_function("()=>typeof VERSION!=='undefined'", timeout=30000); pg.wait_for_timeout(800)
     ok('version ' + VER, pg.evaluate('VERSION') == VER)
-    swt = pg.evaluate("fetch('sw.js',{cache:'no-store'}).then(r=>r.text())")
+    swt = pg.evaluate("Promise.all([fetch('sw.js',{cache:'no-store'}).then(r=>r.text()),fetch('dist/manifest.json').then(r=>r.ok?r.text():'').catch(()=>'')]).then(a=>a.join(' '))")
     ok('sw cache lumi-v%s lists the 26.2 files' % VER, ("'lumi-v%s'" % VER) in swt and all(x in swt for x in ('js/v262.js', 'css/v262.css', 'js/core262.js')))
-    scr = pg.evaluate("[...document.scripts].map(s=>s.getAttribute('src')).filter(Boolean)")
+    scr = pg.evaluate("fetch('dist/manifest.json').then(r=>r.ok?r.json().then(m=>m.jsFiles):[...document.scripts].map(s=>s.getAttribute('src')).filter(Boolean)).catch(()=>[...document.scripts].map(s=>s.getAttribute('src')).filter(Boolean))")
     ok('index loads core262 then v262 last, after v261', [x for x in scr if x != 'js/perf27.js'][-3:] == ['js/v261.js', 'js/core262.js', 'js/v262.js'], scr[-4:])  # 26.4+: perf27.js (test marks) may follow
     ok("What's new lists 26.2 first, then 26.1", pg.evaluate("V7_NEWS[0][1]").endswith('(26.2)') and pg.evaluate("V7_NEWS[1][1]") == 'Pets (26.1)')
     # ---- fish page ----

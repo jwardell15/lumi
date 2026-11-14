@@ -19,7 +19,9 @@ for f in ('index-g.json', 'index-0.json', 'index-1.json'):
 miss = [d['code'] for d in HJ['docs'] if d['code'] not in rows]
 bad = [d['code'] for d in HJ['docs'] if d['code'] in rows and (rows[d['code']][3] != (d['score'] if d['score'] is not None else -1) or rows[d['code']][4] != (d['net'] if d['net'] is not None else -1))]
 ok('[home.json] every doc is a real catalog row (same code, carb score and carbs)', not miss and not bad, (miss[:5], bad[:5]))
-ok('[home.json] manifest: sw precache has home27.js; index.html loads it before app.js', 'js/home27.js' in open(REPO + '/sw.js').read() and open(REPO + '/index.html').read().index('js/home27.js') < open(REPO + '/index.html').read().index('js/app.js'))
+_M = json.load(open(REPO + '/dist/manifest.json')) if os.path.isfile(REPO + '/dist/manifest.json') else None  # 26.6+: bundled; the manifest lists files in load order
+_order = _M['jsFiles'] if _M else re.findall(r'<script src="(js/[^"]+)"', open(REPO + '/index.html').read())
+ok('[home.json] home27.js is shipped (service worker shell or bundle) and loads before app.js', ('js/home27.js' in open(REPO + '/sw.js').read() or bool(_M)) and _order.index('js/home27.js') < _order.index('js/app.js'))
 with sync_playwright() as p:
     b = p.chromium.launch(args=['--enable-precise-memory-info']); t0 = time.time()
     # ---------- launch: no catalog download, picks drawn ----------

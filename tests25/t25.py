@@ -16,9 +16,9 @@ with sync_playwright() as p:
     c = ctx(b, w=1440, h=900); errs = []; pg = page(c, errs)
     pg.goto(base + '#/'); pg.wait_for_function("()=>typeof VERSION!=='undefined'", timeout=30000); pg.wait_for_timeout(800)
     ok('version ' + VER, pg.evaluate('VERSION') == VER, pg.evaluate('VERSION'))
-    swt = pg.evaluate("fetch('sw.js',{cache:'no-store'}).then(r=>r.text())")
+    swt = pg.evaluate("Promise.all([fetch('sw.js',{cache:'no-store'}).then(r=>r.text()),fetch('dist/manifest.json').then(r=>r.ok?r.text():'').catch(()=>'')]).then(a=>a.join(' '))")
     ok('sw cache lumi-v%s lists v25 + core + earlier files' % VER, ("'lumi-v%s'" % VER) in swt and all(f in swt for f in ('js/v25.js', 'css/v25.css', 'js/hb25core.js', 'js/v242.js')))
-    scr = pg.evaluate("[...document.scripts].map(s=>s.getAttribute('src')).filter(Boolean)")
+    scr = pg.evaluate("fetch('dist/manifest.json').then(r=>r.ok?r.json().then(m=>m.jsFiles):[...document.scripts].map(s=>s.getAttribute('src')).filter(Boolean)).catch(()=>[...document.scripts].map(s=>s.getAttribute('src')).filter(Boolean))")
     ok('index loads hb25core then v25 after v242', scr[scr.index('js/hb25core.js')-1:scr.index('js/hb25core.js')+2] == ['js/v242.js', 'js/hb25core.js', 'js/v25.js'], scr[-4:])
     ok("What's new lists 25.0 (after 25.2 and 25.1)", 'Home & Body (25.0)' in pg.evaluate("V7_NEWS.map(n=>n[1])") and pg.evaluate("V7_NEWS.map(n=>n[1])").index('Home & Body (25.0)') > pg.evaluate("V7_NEWS.map(n=>n[1])").index('Laundry, cleaners and recalls (25.1)'))
     # ---- Browse ----

@@ -5,7 +5,7 @@ REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), '..')); RES = []
 def ok(name, cond, info=''):
     RES.append((name, bool(cond))); print(('PASS ' if cond else 'FAIL ') + name + ('' if cond else '  :: ' + str(info)[:700]), flush=True)
 from playwright.sync_api import sync_playwright
-VER = os.environ.get('VER', '26.5'); OLD_REF = os.environ.get('OLD_REF', '09e38b4')
+VER = os.environ.get('VER') or re.search(r"VERSION = '([\d.]+)'", open(REPO + '/js/app.js').read()).group(1); OLD_REF = os.environ.get('OLD_REF', '09e38b4')
 ROOT = {'p': REPO}; LOG = []
 class H(http.server.SimpleHTTPRequestHandler):
     def translate_path(self, path): return http.server.SimpleHTTPRequestHandler.translate_path(self, path).replace(os.getcwd(), ROOT['p'], 1)

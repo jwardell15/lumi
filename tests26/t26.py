@@ -43,9 +43,9 @@ with sync_playwright() as p:
     c = ctx(b, w=1440, h=900); errs = []; pg = page(c, errs)
     pg.goto(base + '#/'); pg.wait_for_function("()=>typeof VERSION!=='undefined'", timeout=30000); pg.wait_for_timeout(800)
     ok('version ' + VER, pg.evaluate('VERSION') == VER)
-    swt = pg.evaluate("fetch('sw.js',{cache:'no-store'}).then(r=>r.text())")
+    swt = pg.evaluate("Promise.all([fetch('sw.js',{cache:'no-store'}).then(r=>r.text()),fetch('dist/manifest.json').then(r=>r.ok?r.text():'').catch(()=>'')]).then(a=>a.join(' '))")
     ok('sw cache lumi-v%s lists v26 files' % VER, ("'lumi-v%s'" % VER) in swt and 'js/v26.js' in swt and 'css/v26.css' in swt and 'js/aw26core.js' in swt)
-    scr = pg.evaluate("[...document.scripts].map(s=>s.getAttribute('src')).filter(Boolean)")
+    scr = pg.evaluate("fetch('dist/manifest.json').then(r=>r.ok?r.json().then(m=>m.jsFiles):[...document.scripts].map(s=>s.getAttribute('src')).filter(Boolean)).catch(()=>[...document.scripts].map(s=>s.getAttribute('src')).filter(Boolean))")
     ok('index loads aw26core then v26 last, after v252', (lambda i: i >= 1 and scr[i-1] == 'js/v252.js' and scr[i+1] == 'js/v26.js')(scr.index('js/aw26core.js')), scr[-6:])
     nw = pg.evaluate("V7_NEWS.map(x=>x[1])"); ok("What's new lists 26.0 directly before 25.2", nw.index('Restaurant meal builder and additive watch (26.0)') + 1 == nw.index('Supplements, medicines and local water (25.2)'), nw[:4])
     # ---- watch list integrity ----
