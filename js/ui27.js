@@ -5,7 +5,7 @@
    (c) tidies the product page and Settings after they render. The route table below (R27) is the single list the More screen and the tests read. */
 (() => {
 'use strict';
-const prevHome = viewHome, prevTab = tab19, hv = () => location.hash.replace(/^#\/?/, '').split('/')[0];
+const hv = () => location.hash.replace(/^#\/?/, '').split('/')[0];
 /* ---------- route table: group -> [hash, title, one-line description] ---------- */
 const R27 = window.R27 = [
   ['Your foods', [['#/myfoods', 'My foods', 'Favorites, history, custom foods'], ['#/saved', 'Saved', 'Products you saved'], ['#/lists', 'Lists', 'Shopping lists'], ['#/compare', 'Compare', 'Side by side'], ['#/alerts', 'Ingredient alerts', 'Your watchlist']]],
@@ -19,6 +19,7 @@ const R27 = window.R27 = [
   ['Insights', [['#/patterns', 'Patterns', 'What moves your numbers'], ['#/glucose', 'Glucose import', 'Clarity CSV'], ['#/applehealth', 'Apple Health', 'Import'], ['#/weekly', 'Weekly report', 'For your endo'], ['#/report', 'Log report', 'Printable summary'], ['#/overview', 'Overview', 'Your stats'], ['#/prices', 'Prices', 'History and checks']]],
   ['Settings and about', [['#/settings', 'Settings', 'Carb targets, alerts, offline, data'], ['#/privacy', 'Privacy', "What's stored and what's sent"], ['#/disclaimer', 'Not medical advice', 'What Lumi is and is not'], ['#/whatsnew', "What's new", 'Release notes'], ['#/about', 'About', 'How scores work'], ['#/credits', 'Credits', 'Data sources'], ['#/browse', 'All browse sections', 'The full old Browse list'], ['#/classic', 'Classic home', 'The old, longer Home']]],
 ];
+function install27() { const prevHome = viewHome, prevTab = tab19;
 /* ---------- which tab is lit ---------- */
 tab19 = function (view, arg) { const t = prevTab.apply(this, arguments);
   if (view === '' || view === 'home' || view === 'classic') return 'home'; if (t === 'home' || t === 'search') return t;
@@ -27,6 +28,8 @@ tab19 = function (view, arg) { const t = prevTab.apply(this, arguments);
 viewHome = function () { const v = hv();
   if (v === '' || v === 'home') return viewHome27(); if (v === 'places') return viewPlaces27(); if (v === 'more') return viewMore27();
   return prevHome.apply(this, arguments); };
+}
+/* installed now, and again after the late bundle loads, so this layer is always the outermost wrapper (the same order as before 26.8, when ui27.js simply loaded last) */
 const shell = (cls, title, inner) => { document.title = title + ' — Lumi'; app.className = (app.className || '').replace(/\b(log11|logw11|rp12|prodv)\b/g, '').trim(); app.innerHTML = `<section class="${cls} pg27"><h1>${title}</h1>${inner}</section>`; const h = app.querySelector('h1'); if (h) h.setAttribute('tabindex', '-1'); };
 const ic = d => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">${d}</svg>`;
 /* ---------- Home ---------- */
@@ -95,6 +98,34 @@ let q = 0; const kick = () => { if (!q) q = requestAnimationFrame(() => { q = 0;
 new MutationObserver(kick).observe(app, { childList: true, subtree: true }); addEventListener('hashchange', kick);
 /* the jump buttons at the top of a product (e.g. 'Dog-toxic: Xylitol ↓') point at cards that now live in the collapsed More checks group: open it first so the scroll lands on the card */
 document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('button[id$="j261"],button[id$="j262"]'); if (b) { const d = document.getElementById('more27'); if (d && !d.open) d.open = true; } }, true);
+const addNews27 = () => {
 if (typeof V7_NEWS !== 'undefined') V7_NEWS.unshift(['✨', 'A simpler Lumi (26.7)', 'The bottom bar is now Home, Search, Scan, Places and More. Home is shorter: scan or search at the top, then Top picks (Overall health on the left, Blood sugar on the right). Places pins Whole Foods and Costco, then Restaurants, with other stores behind More stores. More groups every other tool. Product pages keep the scores and hidden sugars on top and fold the extra checks into More checks. Lumi also loads and searches faster, and the scanner now works offline. The old Home is at #/classic and the old Browse list at #/browse.']);
+};
+/* ---------- bottom bar height -> --tabh27 (the product action bar sits right above it) ---------- */
+{ const sync = () => { const t = document.querySelector('.tabbar'); if (!t) return; const r = t.getBoundingClientRect(); const bottom = r.width > r.height * 2 && r.bottom >= innerHeight - 2; document.documentElement.style.setProperty('--tabh27', bottom ? Math.ceil(innerHeight - r.top) + 'px' : '0px'); };
+  sync(); addEventListener('resize', sync); addEventListener('orientationchange', sync); addEventListener('load', sync); if (window.ResizeObserver) { const t = document.querySelector('.tabbar'); if (t) new ResizeObserver(sync).observe(t); } if (document.fonts && document.fonts.ready) document.fonts.ready.then(sync); }
+/* ---------- 26.8: late bundle ----------
+   The feature modules that only non-Home screens need (Better choice / order builder / share cards, planner, aisle mode, Home & Body, recalls, supplements / OTC / water,
+   restaurant meal builder + additive watch, pets, kitchen / fish / pesticides / air) are in a second bundle (dist/late.<hash>.js, files marked data-late in index.src.html).
+   It loads on idle shortly after Home is drawn, and always BEFORE the first route other than Home / Places / More, so every screen runs exactly the code it ran before. */
+let lateP = null; window.lateDone27 = false; const lateQ = [];
+window.onLate27 = fn => (window.lateDone27 ? fn() : lateQ.push(fn));
+window.loadLate27 = () => lateP || (lateP = new Promise((res, rej) => {
+  if (!window.LATE27) { window.lateDone27 = true; return res(); }
+  const sc = document.createElement('script'); sc.src = window.LATE27;
+  sc.onload = () => { window.lateDone27 = true; try { install27(); } catch (e) { console.warn(e); } lateQ.splice(0).forEach(f => { try { f(); } catch (e) { console.warn(e); } }); res(); };
+  sc.onerror = () => { lateP = null; rej(new Error('Lumi could not load a part of the app')); };
+  document.head.appendChild(sc);
+}));
+onLate27(addNews27);
+const EAGER27 = new Set(['', 'home', 'places', 'more']);
+const route0 = route;
+route = function () {
+  if (!window.lateDone27 && !EAGER27.has(hv())) { try { app.innerHTML = skel(3); } catch (e) {} loadLate27().then(() => route0(), () => route0()); return; }
+  return route0.apply(this, arguments);
+};
+removeEventListener('hashchange', route0); addEventListener('hashchange', route);
+install27();
 if (!window.__routed27) { window.__routed27 = 1; route(); } /* the first route(), now that every module is in place */
+{ const idle = () => (window.requestIdleCallback || (f => setTimeout(f, 200)))(() => { loadLate27().catch(() => {}); }, { timeout: 3000 }); const go = () => setTimeout(idle, 1200); document.readyState === 'complete' ? go() : addEventListener('load', go); }
 })();

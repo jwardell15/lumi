@@ -13,6 +13,10 @@ def files():
         u = m.group(1)
         if re.match(r'(https?:|//|data:|mailto:)', u): continue
         if re.search(r'\.(js|css|woff2|png|webmanifest|ico|json)$', u) and u not in out: out.append(u)
+    try:
+        m = json.load(open(ROOT + '/dist/manifest.json'))
+        if m.get('late') and m['late'] not in out: out.append(m['late'])
+    except Exception: pass
     for u in EXTRA:
         if u not in out: out.append(u)
     return out

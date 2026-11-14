@@ -40,3 +40,6 @@ html body .tabbar>a.side13{display:none!important}
 /* settings: optional sections */
 .col27>summary{cursor:pointer;list-style:none;font-weight:700;font-size:17px;min-height:44px;display:flex;align-items:center}
 .col27>summary::-webkit-details-marker{display:none}.col27>summary::after{content:"▸";margin-left:auto;color:var(--mut)}.col27[open]>summary::after{content:"▾"}
+/* 26.8: the product action bar (Log / Save / List / Share) sits fully above the bottom nav (and its raised Scan button); --tabh27 is the live height of the bottom bar (0 for the desktop sidebar), set by js/ui27.js */
+html body .pbar10{bottom:var(--tabh27,74px)!important;z-index:29!important}
+html body.hasbar10{padding-bottom:calc(var(--tabh27,74px) + 120px)!important}

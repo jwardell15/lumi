@@ -52,3 +52,14 @@
 - Settings: insulin ratio, offline and data sections are collapsed `details.col27`.
 - Existing suites: t261/t262 read card text, so their `go()` opens More checks; tool pages now light the More tab.
 - Test: `tests27/t267.py` (35 checks).
+
+## 26.8 "Late bundle"
+- Scripts marked `data-late` in `index.src.html` (v24 .. v262: Better choice / order builder / share cards, planner, aisle mode, Home & Body, recalls, supplements / OTC / water, restaurant meal builder + additive watch, pets, kitchen / fish / pesticides / air; 13 files, ~94 KB gz) build into a second bundle `dist/late.<hash>.js`
+  (same per-file loader, same order). `dist/manifest.json` lists it (`late`, `lateFiles`) and `tools/build_shell.py` adds it to the service-worker shell, so it is hashed, precached and works offline.
+- `js/ui27.js`: `loadLate27()` loads it (a) on idle ~1.2 s after the page `load` (so Home is drawn first) and (b) always BEFORE any route other than Home / Places / More: `route` is wrapped, shows a skeleton, loads the bundle, then runs the original `route()`.
+  Deep links, reloads and the hashchange listener all go through the gate. After the bundle runs, `install27()` re-applies the Home/Places/More + tab layer so it is again the outermost wrapper (the order the modules always ran in); `onLate27(fn)` queues work for after the load (the 26.7 What's-new entry).
+  If the bundle can't load the page falls back to the main bundle's routes (no hang, no uncaught error).
+- Main bundle 383 -> 289 KB gz (cold Home downloads 94 KB gz less before anything is drawn). To move another file to the late bundle: mark it `data-late` (it must stay in source order after all non-late files it patches, and nothing eager may need it at load time), run `tools/release.sh`, run t268 + the full suites.
+- Wrapper chains (viewHome/tab19 x12-16 wraps) and the 27 MutationObservers are NOT retired in 26.8: replacing them means re-writing the old modules' hooks (high regression risk for a layer that is tested only through behavior); the route gate + install27 are the contained step. Documented as follow-up.
+- Test: `tests27/t268.py` (18 checks).
+- Also in 26.8: the product action bar (Log/Save/List/Share) now sits exactly above the bottom nav (`--tabh27` = live nav height, set in js/ui27.js; `html body .pbar10{bottom:var(--tabh27)}` in css/v27.css) and is drawn under the nav so the raised Scan button and its glow are never covered; body padding makes the last card clear both bars. Test: t267 "[bars WxH]" (390x844, 360x640, 430x932, 1280x800).

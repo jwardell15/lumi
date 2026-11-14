@@ -1,6 +1,7 @@
 # Lumi 26.7 tests: simple UI (bottom bar Home | Search | Scan | Places | More, short Home, Places, More, product "More checks", Settings sections), old routes intact.
 # usage: VER=26.7 python3 t267.py <base> [local]
 import sys, os, re, json, time
+os.environ['LUMI_LATE'] = '0'  # see the real cold state (late bundle loads on idle)
 exec(open('/workspace/m24/t/t24.py').read().split('with sync_playwright() as p:')[0])
 RES = R
 def ok(name, cond, info=''):
@@ -80,6 +81,22 @@ with sync_playwright() as p:
     # a packaged product: dog-toxic check lives in the group too
     pg.goto(base + '#/product/0096619483556'); pg.wait_for_selector('#more27', timeout=40000); pg.wait_for_timeout(2500)
     ok('[product] packaged product: dog-toxic check inside More checks, additive watch outside', pg.evaluate("!!document.querySelector('#more27 #dog261')&&!document.querySelector('#more27 #aw26')&&!!document.getElementById('aw26')"))
+    # ---------- product action bar vs bottom nav (26.8 fix) ----------
+    BARS = """(()=>{const R=e=>{const b=e.getBoundingClientRect();return {l:b.left,t:b.top,r:b.right,b:b.bottom}},t=document.querySelector('.tabbar'),pb=document.querySelector('.pbar10'),sc=t.querySelector('[data-scan]'),T=R(t),P=R(pb),S=R(sc),a=document.getElementById('app');
+      const hit=(x,y)=>{const e=document.elementFromPoint(x,y);return !!e&&(e===sc||sc.contains(e))};
+      const cx=(S.l+S.r)/2, ints=[...pb.querySelectorAll('button,a')].map(R), ov=ints.filter(i=>!(i.r<=S.l||i.l>=S.r||i.b<=S.t||i.t>=S.b)).length;
+      scrollTo(0,document.documentElement.scrollHeight); const phone=T.t>innerHeight/2;
+      const lb=Math.max(...[...document.body.children].filter(e=>e.offsetHeight>0&&getComputedStyle(e).position!=='fixed'&&!/^(SCRIPT|STYLE)$/.test(e.tagName)).map(e=>{const kids=[...e.querySelectorAll('*')].filter(k=>k.offsetHeight>0&&!k.closest('.pbar10,.tabbar'));return Math.max(e.getBoundingClientRect().bottom,0)}));
+      const barTop=phone?Math.min(P.t,T.t):P.t;
+      return {T,P,S,vh:innerHeight,phone,aboveNav:P.b<=T.t+0.5,sideOK:P.l>=T.r-0.5,scanVis:hit(cx,S.t+4)&&hit(cx,(S.t+S.b)/2)&&hit(S.l+8,(S.t+S.b)/2)&&hit(cx,S.b-4),pbarBtnsClear:ov===0,zOK:(parseInt(getComputedStyle(pb).zIndex)||0)<(parseInt(getComputedStyle(t).zIndex)||0),lastBottom:lb,barTop,contentClear:lb<=barTop+1}})()"""
+    for (w_, h_) in [(390, 844), (360, 640), (430, 932), (1280, 800)]:
+        cc = ctx(b, w=w_, h=h_); errs2 = []; pb_ = page(cc, errs2); pb_.goto(base + '#/product/0078742082752'); pb_.wait_for_selector('.pbar10', timeout=60000); pb_.wait_for_timeout(3000)
+        r = pb_.evaluate(BARS); pb_.wait_for_timeout(300)
+        phone = r['phone']
+        ok(f'[bars {w_}x{h_}] ' + ('the action bar (Log/Save/List/Share) sits fully above the bottom nav, with no overlap' if phone else 'the action bar starts right of the sidebar, no overlap'), (r['aboveNav'] if phone else r['sideOK']), r)
+        ok(f'[bars {w_}x{h_}] the centre Scan button is fully visible: every edge and the middle hit the button, and no action-bar button touches it; the nav is drawn above the action bar so the raised glow is not cut', r['scanVis'] and r['pbarBtnsClear'] and r['zOK'], r)
+        ok(f'[bars {w_}x{h_}] scrolled to the bottom, the last card and the footer end above both bars (nothing hidden behind them)', r['contentClear'], r)
+        cc.close()
     # ---------- settings ----------
     pg.goto(base + '#/settings'); pg.wait_for_selector('#sf, .set11', timeout=30000); pg.wait_for_timeout(1500)
     S = pg.evaluate("[...document.querySelectorAll('details.col27')].map(d=>[d.querySelector('summary').innerText,d.open])")

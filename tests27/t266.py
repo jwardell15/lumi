@@ -23,6 +23,7 @@ def snap(b, base):
     c = b.new_context(viewport={'width': 390, 'height': 844}, service_workers='block'); c.add_init_script(SEED); pg = c.new_page(); errs = []; rq = []
     pg.on('pageerror', lambda e: errs.append(str(e)[:200])); pg.on('request', lambda r: rq.append(r.url))
     pg.goto(base + '#/'); pg.wait_for_selector('#picks .du14, .home74 #picks .list, #picks .list', timeout=60000); pg.wait_for_timeout(2500)
+    pg.evaluate("typeof loadLate27==='function'?loadLate27():0"); pg.wait_for_timeout(800)  # 26.8: the feature modules live in the late bundle; load it so the global names can be compared
     G = pg.evaluate("Object.keys(window).filter(k=>!/^(__|webkit|on[a-z]+$)/.test(k)).map(k=>k+':'+typeof window[k]).sort()")
     fn = pg.evaluate("(()=>{const o={};for(const k of ['route','viewHome','viewProduct','renderResults','tab19','viewBrowseHub','viewStore','homePicks','engine','VERSION'])o[k]=typeof window[k]==='undefined'?(()=>{try{return typeof eval(k)}catch(e){return 'undef'}})():typeof window[k];return o})()")
     local = [u for u in rq if u.startswith(base) and re.search(r'\.(js|css)(\?|$)', u)]
@@ -32,13 +33,13 @@ def snap(b, base):
 with sync_playwright() as p:
     b = p.chromium.launch(); t0 = time.time()
     G1, fn1, loc1, e1 = snap(b, BASE)
-    ok('[load] cold Home requests one script and one stylesheet from the site (plus the worker files when search starts): <= 3 js/css requests', len([u for u in loc1 if '/dist/' in u]) == 2 and len(loc1) <= 4, loc1)
+    ok('[load] cold Home requests the main script and the stylesheet (the late bundle follows on idle): <= 4 js/css requests', len([u for u in loc1 if '/dist/app.' in u]) == 2 and len([u for u in loc1 if '/dist/' in u]) <= 3 and len(loc1) <= 4, loc1)
     ok('[load] no page errors across Home, product, browse, search, settings, today, kitchen, pet, restaurant builder, privacy', not e1, e1)
     old = tempfile.mkdtemp(prefix='lumi_old_'); ar = subprocess.run(f'cd {REPO} && git archive {OLD_REF} | tar -x -C {old}', shell=True, capture_output=True, text=True)
     if ar.returncode == 0 and os.path.isfile(old + '/index.html') and 'dist/app.' not in open(old + '/index.html').read():
         ROOT['p'] = old; G0, fn0, loc0, e0 = snap(b, BASE); ROOT['p'] = REPO
         extra = sorted(set(G1) - set(G0)); missing = sorted(set(G0) - set(G1))
-        ok('[equivalence] the bundle defines exactly the same globals (names and types) as the ' + OLD_REF + ' separate files: ' + str(len(G0)) + ' globals', not [x for x in missing if not x.startswith('VERSION')] and not [x for x in extra if not re.match(r'(VERSION|__routed27|R27)', x)], (missing[:8], extra[:8]))
+        ok('[equivalence] the bundle defines exactly the same globals (names and types) as the ' + OLD_REF + ' separate files: ' + str(len(G0)) + ' globals', not [x for x in missing if not x.startswith('VERSION')] and not [x for x in extra if not re.match(r'(VERSION|__routed27|R27|LATE27|lateDone27|loadLate27|onLate27)', x)], (missing[:8], extra[:8]))
         ok('[equivalence] the separate-files build also loaded without page errors (control)', not e0, e0)
         ok('[equivalence] and it needed far more requests (' + str(len(loc0)) + ' js/css) than the bundle (' + str(len(loc1)) + ')', len(loc0) > 40 and len(loc1) <= 4, (len(loc0), len(loc1)))
     else:
