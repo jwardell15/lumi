@@ -27,7 +27,7 @@
 .tools#toolsLegacy[hidden]{display:none!important}
 
 /* sheet */
-#fs269{position:fixed;inset:0;z-index:80;display:none}
+#fs269{position:fixed;inset:0;z-index:90;display:none}
 #fs269.on{display:block}
 .fs269bg{position:absolute;inset:0;background:rgba(0,0,0,.4)}
 .fs269card{position:absolute;left:0;right:0;bottom:0;max-height:min(92vh,760px);max-width:560px;margin:0 auto;background:var(--card);border-radius:22px 22px 0 0;display:flex;flex-direction:column;box-shadow:0 -8px 32px rgba(0,0,0,.18);animation:fs269up .22s ease}

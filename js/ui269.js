@@ -196,7 +196,12 @@
   }
 
   function bindSheet() {
-    const el = $('#fs269'), btn = $('#fsBtn'); if (!el || !btn || btn.dataset.b269) return;
+    const el = $('#fs269'), btn = $('#fsBtn'); if (!el || !btn) return;
+    if (el.parentElement !== document.body) {
+      document.querySelectorAll('body > #fs269').forEach(x => { if (x !== el) x.remove(); });
+      document.body.appendChild(el);
+    }
+    if (btn.dataset.b269) return;
     btn.dataset.b269 = '1';
     btn.onclick = toggleSheet;
     el.querySelectorAll('[data-close]').forEach(x => x.onclick = closeSheet269);

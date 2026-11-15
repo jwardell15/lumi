@@ -77,7 +77,7 @@ with sync_playwright() as p:
     pg.click('.fs269x'); pg.wait_for_timeout(300)
     ok('[sheet] close button hides it', not chrome(pg)['sheetOn'])
     pg.click('#fsBtn'); pg.wait_for_timeout(300)
-    pg.click('.fs269bg'); pg.wait_for_timeout(300)
+    pg.locator('.fs269bg').click(position={'x': 20, 'y': 8}, force=True); pg.wait_for_timeout(300)
     ok('[sheet] backdrop click hides it', not chrome(pg)['sheetOn'])
     # ---- apply a filter, badge, chips ----
     pg.click('#fsBtn'); pg.wait_for_timeout(300)
