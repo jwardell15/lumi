@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '26.8';
+const VERSION = '26.9';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -293,11 +293,23 @@ function renderForYou() {
 }
 let rs = null; // current result state
 function resultsShell(title, q) {
+  const ico = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>';
   app.innerHTML = `${searchBox(q)}
-  <div class="tools"><div class="seg" id="sort"><button data-s="rel">Relevance</button><button data-s="health">Health</button><button data-s="score">Carb score</button><button data-s="carb">Low carb</button></div>
-  <button class="chip tog" id="fGood">Good+ carb</button><button class="chip tog" id="fHealthy">Healthy 50+</button><button class="chip tog" id="fLow">≤10g carbs</button><button class="chip tog" id="fHide">Hide conflicts</button><button class="chip tog" id="fReady">📦 Ready-to-eat</button><button class="chip tog" id="fPhoto">📷 Has photo</button><button class="chip tog" id="fBad">Hide bad data</button></div>
-  <div class="chips grp" id="grp"></div><div id="dym"></div><div id="cosHint"></div>
-  <div class="status" id="status"></div><div id="res">${skel(6)}</div>`;
+  <div class="tb269">
+    <button type="button" class="fs269btn" id="fsBtn" aria-haspopup="dialog" aria-expanded="false" aria-controls="fs269">${ico} Filters &amp; sort <span class="fsBadge" id="fsBadge" hidden></span></button>
+    <div class="typ269 chips grp" id="grp" hidden></div>
+  </div>
+  <div class="act269" id="act269" hidden></div>
+  <div id="dymTop"></div><div id="cosHint"></div>
+  <div id="res">${skel(6)}</div>
+  <div class="rf269"><div id="dym"></div><div class="status" id="status"></div></div>
+  <div id="fs269" hidden><div class="fs269bg" data-close></div><div class="fs269card" role="dialog" aria-modal="true" aria-labelledby="fs269h">
+    <div class="fs269hd"><h2 id="fs269h">Filters &amp; sort</h2><span class="f22per">per serving</span><button type="button" class="fs269x" data-close aria-label="Close">✕</button></div>
+    <div class="fs269bd"><div class="fs269sort" id="fsSort"></div><div id="fsBody"></div></div>
+    <div class="fs269ft"><button type="button" class="f22x" id="f22x" hidden>Clear all</button><button type="button" class="btn pri" id="fsShow">Show results</button></div>
+  </div></div>
+  <div class="tools" id="toolsLegacy" hidden aria-hidden="true"><div class="seg" id="sort"><button data-s="rel">Relevance</button><button data-s="health">Health</button><button data-s="score">Carb score</button><button data-s="carb">Low carb</button></div>
+  <button class="chip tog" id="fGood">Good+ carb</button><button class="chip tog" id="fHealthy">Healthy 50+</button><button class="chip tog" id="fLow">≤10g carbs</button><button class="chip tog" id="fHide">Hide conflicts</button><button class="chip tog" id="fReady">📦 Ready-to-eat</button><button class="chip tog" id="fPhoto">📷 Has photo</button><button class="chip tog" id="fBad">Hide bad data</button></div>`;
   bindSearch();
   const sortSel = store.get('sort', 'rel');
   document.querySelectorAll('#sort button').forEach(b => { b.classList.toggle('on', b.dataset.s === sortSel); b.onclick = () => { store.set('sort', b.dataset.s); document.querySelectorAll('#sort button').forEach(x => x.classList.toggle('on', x === b)); renderResults(); }; });
@@ -371,10 +383,12 @@ function runQuery(q, typing) {
   const runLocal = () => { if (rs !== my) return; /* 26.4: the engine lives in a worker; the three passes and "did you mean" come back asynchronously */
     return Promise.all([SW27.searchSet(q), SW27.dym(q)]).then(([docs, sug]) => { if (rs !== my) return; const seen = new Set(), r = [];
     for (const d of docs) if (!seen.has(d.code)) { seen.add(d.code); r.push(itemFromDoc(d)); } for (const id of (my.lids || [])) my.items.delete(id); for (const it of r) my.items.delete(it.id); my.lids = r.map(it => it.id); my.keyIdx = null; done('local', r); /* v18: drop the previous local pass's rows so a later shard's better representative can't be blocked as a duplicate */
+    const dTop = $('#dymTop'); if (dTop) dTop.innerHTML = sug ? `<div class="dym">Did you mean <a href="#/search/${encodeURIComponent(sug)}">${esc(sug)}</a>?</div>` : '';
     const d = $('#dym'); if (d) { const few = (my.counts.local || 0) < 12, mp = typeof META !== 'undefined' && META && META.products;
-      d.innerHTML = (sug ? `<div class="dym">Did you mean <a href="#/search/${encodeURIComponent(sug)}">${esc(sug)}</a>?</div>` : '')
-        + (SW27.allDone ? '' : `<div class="dym"><button class="linkbtn" id="allBtn"${my.allOn ? ' disabled' : ''}>${my.allOn ? 'Loading more products…' : `Search all ${mp ? fmtK(mp) + ' ' : ''}products`}</button><span class="small"> ${few && !my.allOn ? 'Few matches in the main catalog. ' : 'Searching the main catalog (about 167,000 products). '}</span></div>`)
-        + (my.worldOn ? `<div class="dym">🌍 Including international products (Open Food Facts, country shown).</div>` : `<div class="dym"><button class="linkbtn" id="worldBtn">🌍 Also search 2 million+ international products</button></div>`);
+      const all = SW27.allDone ? '' : `<button class="linkbtn" id="allBtn"${my.allOn ? ' disabled' : ''}>${my.allOn ? 'Loading more products…' : `Search all ${mp ? fmtK(mp) + ' ' : ''}products`}</button>`;
+      const world = my.worldOn ? `<span>Including international products (Open Food Facts, country shown).</span>` : `<button class="linkbtn" id="worldBtn">Also search 2 million+ international products</button>`;
+      const note = (!SW27.allDone && few && !my.allOn) ? '<span class="small"> Few matches in the main catalog.</span>' : '';
+      d.innerHTML = `<div class="dym dym269">${[all, world].filter(Boolean).join('<span class="dymsep"> · </span>')}${note}</div>`;
       const ab = $('#allBtn'); if (ab) ab.onclick = () => { my.allOn = true; SW27.allWanted = true; ab.disabled = true; ab.textContent = 'Loading more products…'; allLoad().then(runLocal).catch(runLocal); };
       const wb = $('#worldBtn'); if (wb) wb.onclick = () => { my.worldOn = true; wb.textContent = 'Loading international products…'; worldLoad().then(runLocal).catch(runLocal); }; } }); };
   tierHook18 = () => { if (rs !== my) { tierHook18 = null; return; } clearTimeout(my.tt); my.tt = setTimeout(runLocal, 250); }; /* v18: refresh results as each shard arrives */

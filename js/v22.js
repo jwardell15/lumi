@@ -69,25 +69,41 @@ function sort22(items, k) { const lo = k === 'sug' || k === 'carb'; const a = []
   a.sort((x, y) => (lo ? x[0] - y[0] : y[0] - x[0]) || ((y[1].score ?? -1) - (x[1].score ?? -1)) || ((y[1].rel || 0) - (x[1].rel || 0)));
   return { list: a.map(x => x[1]), miss }; }
 const chip22 = (k, v, label, on, title) => `<button type="button" class="chip f22c${on ? ' on' : ''}" data-k="${k}" data-v="${v}" aria-pressed="${on}"${title ? ` title="${esc(title)}"` : ''}>${label}</button>`;
-function barHTML22() { const F = st22();
-  return `<section class="f22" id="f22" aria-label="Smart filters"><div class="f22h"><b>${ICF22}Smart filters</b><span class="f22per">per serving</span><span class="f22sp"></span>
-    <label class="f22s"><span>Sort</span><select id="f22sort" aria-label="Sort results">${SORT22.map(([v, l]) => `<option value="${v}"${F.sort === v ? ' selected' : ''}>${l}</option>`).join('')}</select></label></div>
-  <div class="f22r" role="group" aria-label="Filters">
+function barHTML22() { const F = st22(), fl = store.get('filters', {}) || {};
+  const qchip = (k, label, on, title) => `<button type="button" class="chip f22c${on ? ' on' : ''}" data-f="${k}" aria-pressed="${on}"${title ? ` title="${esc(title)}"` : ''}>${label}</button>`;
+  return `<section class="f22" id="f22" aria-label="Filters">
+  <div class="f22h" hidden><b>Smart filters</b></div>
+  <label class="f22s" hidden><span>Sort</span><select id="f22sort" aria-label="Sort results">${SORT22.map(([v, l]) => `<option value="${v}"${F.sort === v ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
+  <div class="fg269"><h3>Sugar &amp; carbs</h3><div class="fg269c" role="group" aria-label="Sugar and carbs">
     ${TH22.sug.map(x => chip22('sug', x, `Sugar &lt;${x} g`, F.sug === x, `Under ${x} g sugar per serving`)).join('')}
+    ${qchip('low', 'Carbs ≤10 g', !!fl.low, '10 g or less total carbs per serving')}
     ${TH22.carb.map(x => chip22('carb', x, `Carbs &lt;${x} g`, F.carb === x, `Under ${x} g total carbs per serving`)).join('')}
+  </div><p class="xs">Per serving. One carb threshold at a time.</p></div>
+  <div class="fg269"><h3>Nutrition</h3><div class="fg269c" role="group" aria-label="Nutrition">
+    ${qchip('good', 'Blood sugar 50+', !!fl.good, 'Blood sugar score 50 or higher')}
+    ${qchip('healthy', 'Healthy 50+', !!fl.healthy, 'Health score 50 or higher')}
     ${chip22('pro', 1, 'High protein', F.pro, '15 g or more per serving (20 g for restaurant meals)')}${chip22('fib', 1, 'High fiber', F.fib, '5 g or more per serving')}
-    ${chip22('sat', 1, 'Low sat fat', F.sat, '1 g or less per serving (restaurant meals: 1 g or less per 100 g)')}${chip22('clean', 1, 'No warnings', F.clean, 'Ingredient list checked, no added sugar and no caution or avoid flags')}</div>
-  <div class="f22n" aria-live="polite"><span id="f22n"></span><button type="button" class="f22x" id="f22x"${active22(F) ? '' : ' hidden'}>Clear filters</button></div>
-  <details class="f22i"><summary>How these filters work</summary><p class="small">All amounts are per serving, from the label or the chain's own nutrition data. Sugar &lt;5 / &lt;10 g and carbs &lt;15 / &lt;30 / &lt;45 g mean less than that amount. High protein: 15 g or more (20 g for restaurant meals). High fiber: 5 g or more (the FDA's "high fiber" level). Low sat fat: 1 g or less (the FDA's "low saturated fat" level; for restaurant meals, 1 g or less per 100 g). No warnings: the ingredient list was checked and has no added sugar and nothing flagged caution or avoid (info notes like MSG or erythritol don't count). Filters combine. Items missing a number a filter needs are hidden and counted, never treated as zero.</p></details></section>`; }
+    ${chip22('sat', 1, 'Low sat fat', F.sat, '1 g or less per serving (restaurant meals: 1 g or less per 100 g)')}
+  </div></div>
+  <div class="fg269"><h3>Ingredients &amp; additives</h3><div class="f22r" id="f22ing" role="group" aria-label="Ingredients and additives">
+    ${chip22('clean', 1, 'No warnings', F.clean, 'Ingredient list checked, no added sugar and no caution or avoid flags')}</div></div>
+  <div class="fg269"><h3>Display</h3><div class="fg269c" role="group" aria-label="Display">
+    ${qchip('ready', 'Ready-to-eat', !!fl.ready, 'Foods that are typically eaten as they are')}
+    ${qchip('photo', 'Has photo', !!fl.photo, 'Only items with a photo')}
+    ${qchip('nobad', 'Hide bad data', !!fl.nobad, 'Hide items whose label numbers look wrong')}
+    ${qchip('hide', 'Hide conflicts', !!fl.hide, 'Hide items that conflict with your diet settings')}
+  </div></div>
+  <div class="f22n" aria-live="polite"><span id="f22n"></span></div>
+  <details class="f22i"><summary>How these filters work</summary><p class="small">All amounts are per serving, from the label or the chain's own nutrition data. Sugar &lt;5 / &lt;10 g and carbs ≤10 / &lt;15 / &lt;30 / &lt;45 g mean that amount or less (≤10 g) or less than that amount (&lt;15 and up). Blood sugar 50+ and Healthy 50+ use those scores. High protein: 15 g or more (20 g for restaurant meals). High fiber: 5 g or more (the FDA's "high fiber" level). Low sat fat: 1 g or less (the FDA's "low saturated fat" level; for restaurant meals, 1 g or less per 100 g). No warnings: the ingredient list was checked and has no added sugar and nothing flagged caution or avoid (info notes like MSG or erythritol don't count). Filters combine. Items missing a number a filter needs are hidden and counted, never treated as zero.</p></details></section>`; }
 const ICF22 = '<svg class="i22" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>';
-function bar22() { if ($('#f22') || !$('#res')) return; const t = app.querySelector('.tools'); if (!t) return; t.insertAdjacentHTML('afterend', barHTML22());
+function bar22() { if ($('#f22') || !$('#res')) return; const t = $('#fsBody') || app.querySelector('.tools'); if (!t) return; t.insertAdjacentHTML(t.id === 'fsBody' ? 'beforeend' : 'afterend', barHTML22());
   const set = (fn) => { const s = store.get('f22', {}); fn(s); store.set('f22', s); F22.lim = 40; syncBar22(); renderResults(); };
-  app.querySelectorAll('#f22 .f22c').forEach(b => b.onclick = () => set(s => { const k = b.dataset.k, v = +b.dataset.v; if (k === 'sug' || k === 'carb') s[k] = (+s[k] === v ? 0 : v); else s[k] = !s[k]; }));
+  app.querySelectorAll('#f22 .f22c[data-k]').forEach(b => b.onclick = () => set(s => { const k = b.dataset.k, v = +b.dataset.v; if (k === 'sug' || k === 'carb') s[k] = (+s[k] === v ? 0 : v); else s[k] = !s[k]; }));
   $('#f22sort').onchange = e => set(s => { s.sort = e.target.value; });
   $('#f22x').onclick = () => { store.set('f22', {}); F22.lim = 40; syncBar22(); renderResults(); };
   document.querySelectorAll('#sort button').forEach(b => b.addEventListener('click', () => { const s = store.get('f22', {}); if (s.sort) { s.sort = ''; store.set('f22', s); syncBar22(); renderResults(); } }));
 }
-function syncBar22() { const F = st22(); app.querySelectorAll('#f22 .f22c').forEach(b => { const k = b.dataset.k, v = +b.dataset.v, on = k === 'sug' || k === 'carb' ? F[k] === v : !!F[k]; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+function syncBar22() { const F = st22(); app.querySelectorAll('#f22 .f22c[data-k]').forEach(b => { const k = b.dataset.k, v = +b.dataset.v, on = k === 'sug' || k === 'carb' ? F[k] === v : !!F[k]; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
   const s = $('#f22sort'); if (s) s.value = F.sort; const x = $('#f22x'); if (x) x.hidden = !active22(F);
   if (F.sort) document.querySelectorAll('#sort button').forEach(b => b.classList.remove('on')); else { const cur = store.get('sort', 'rel'); document.querySelectorAll('#sort button').forEach(b => b.classList.toggle('on', b.dataset.s === cur)); } }
 if (typeof renderResults === 'function') { const rr22 = renderResults; renderResults = function () {

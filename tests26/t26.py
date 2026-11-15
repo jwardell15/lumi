@@ -70,7 +70,9 @@ with sync_playwright() as p:
     # restaurant item: no card
     go(pg, '#/product/r-arbys-curly-fries-medium', '#nt24', 2500); ok('[card] chain menu items (no ingredient lists) get no watch card', not pg.evaluate("!!document.getElementById('aw26')"))
     # ---- filters ----
-    go(pg, '#/search/soda', '#f22', 4000)
+    go(pg, '#/search/soda', '#fsBtn', 4000)
+    pg.evaluate("document.getElementById('fsBtn')&&document.getElementById('fsBtn').click()")
+    pg.wait_for_selector('#f22', timeout=20000); pg.wait_for_timeout(400)
     ok('[filter] two chips on the smart filter bar', pg.evaluate("[...document.querySelectorAll('.f26c')].map(b=>b.innerText)") == ['No banned additives', 'No synthetic dyes'])
     n0 = pg.evaluate("document.querySelectorAll('#res a.row').length")
     pg.evaluate("document.querySelector('.f26c[data-k26=ban]').click()"); pg.wait_for_timeout(4000)
@@ -84,7 +86,7 @@ with sync_playwright() as p:
     flags2 = pg.evaluate("ids=>ids.map(i=>{const d=codeMap22().get(i);return d?[d.aw26u,d.aw26m&(AW26.BANMASK|AW26.DYEMASK)]:null})", rows2)
     ok('[filter] both chips: stricter, listed items have neither banned additives nor dyes', len(rows2) <= n1 and all(f and f[1] == 0 and f[0] in '.x' for f in flags2), (len(rows2), flags2[:5]))
     ok('[filter] choice is remembered on this device', pg.evaluate("JSON.stringify(store.get('f26'))") == '{"ban":true,"dye":true}')
-    pg.click('#f26x'); pg.wait_for_timeout(2500)
+    pg.evaluate("document.getElementById('f26x')&&document.getElementById('f26x').click()"); pg.wait_for_timeout(2500)
     ok('[filter] Clear additive filters restores the list and unpresses both chips', pg.evaluate("document.querySelectorAll('#res a.row').length") == n0 and pg.evaluate("[...document.querySelectorAll('.f26c')].every(b=>b.getAttribute('aria-pressed')=='false')") and pg.evaluate("JSON.stringify(store.get('f26'))") == '{}', (n0, pg.evaluate("document.querySelectorAll('#res a.row').length")))
     # combines with a 22.0 filter
     pg.evaluate("document.querySelector('.f26c[data-k26=ban]').click()"); pg.wait_for_timeout(1500); pg.evaluate("document.querySelector('#f22 .f22c[data-k=sug]').click()"); pg.wait_for_timeout(2500)
@@ -157,9 +159,11 @@ with sync_playwright() as p:
         for w, h in ((390, 844), (1440, 900)):
             c = ctx(b, th=th, w=w, h=h); errs = []; pg = page(c, errs); pg.goto(base + '#/'); pg.wait_for_function("()=>typeof VERSION!=='undefined'"); pg.wait_for_timeout(600)
             meal = '#/rmeal/chick-fil-a/m/' + '~'.join(x + '*1' for x in codes)
-            for hh, sel in (('#/rmeal', '#rh26l li'), (meal, '#ym26 .yi26'), ('#/addwatch', '.awl26 .card'), ('#/product/' + BVO, '#aw26'), ('#/product/' + CLEAR, '#aw26'), ('#/search/soda', '#f22')):
+            for hh, sel in (('#/rmeal', '#rh26l li'), (meal, '#ym26 .yi26'), ('#/addwatch', '.awl26 .card'), ('#/product/' + BVO, '#aw26'), ('#/product/' + CLEAR, '#aw26'), ('#/search/soda', '#fsBtn')):
                 go(pg, '#/browse', '#app', 100); go(pg, hh, sel, 2500)
-                if hh == '#/search/soda': pg.evaluate("document.querySelector('.f26c[data-k26=dye]').click()"); pg.wait_for_timeout(2500)
+                if hh == '#/search/soda':
+                    pg.evaluate("document.getElementById('fsBtn')&&document.getElementById('fsBtn').click()"); pg.wait_for_selector('#f22', timeout=20000); pg.wait_for_timeout(300)
+                    pg.evaluate("document.querySelector('.f26c[data-k26=dye]').click()"); pg.wait_for_timeout(2500)
                 a = pg.evaluate(JS); ok(f'[{th} {w}] {hh[:26]} layout/contrast', a['over'] <= 1 and not a['wide'] and not a['bad'] and not a['small'], a)
                 if th == 'light' and hh in (meal, '#/product/' + BVO, '#/addwatch'): pg.evaluate('scrollTo(0,0)'); pg.screenshot(path=OUT + f'v26-{hh[2:7]}-{w}.png', full_page=(w == 390))
             ok(f'[{th} {w}] no page errors', not errs, errs); c.close()

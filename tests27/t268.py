@@ -24,8 +24,8 @@ with sync_playwright() as p:
     ok('[late] the late bundle then loads by itself on idle (one request, after Home)', len(lt) == 1 and lt[0] >= t_pk - 0.05, (len(lt), lt and lt[0] - t_pk))
     ok('[late] Home content does not wait for it and nothing breaks: no page errors', not errs, errs)
     # after load: layer order, news, tabs
-    r = pg.evaluate("({home:!!document.querySelector('.home27'),news:V7_NEWS[0][1],tab:tab19('kitchen',''),tabh:tab19('',''),tabp:tab19('product','x')})")
-    ok('[late] after it loads Home is still the new Home, the 26.7 news entry is first, tabs map as before (kitchen -> More, product -> Search)', r['home'] and r['news'].startswith('A simpler Lumi') and r['tab'] == 'more' and r['tabh'] == 'home' and r['tabp'] == 'search', r)
+    r = pg.evaluate("({home:!!document.querySelector('.home27'),news:V7_NEWS[0][1],has27:V7_NEWS.some(x=>String(x[1]).startsWith('A simpler Lumi')),tab:tab19('kitchen',''),tabh:tab19('',''),tabp:tab19('product','x')})")
+    ok('[late] after it loads Home is still the new Home, the 26.9 news entry is first (26.7 still present), tabs map as before (kitchen -> More, product -> Search)', r['home'] and r['news'].startswith('Easier search') and r['has27'] and r['tab'] == 'more' and r['tabh'] == 'home' and r['tabp'] == 'search', r)
     pg.goto(base + '#/'); pg.reload(); pg.wait_for_selector('#picks .du14', timeout=60000); pg.wait_for_timeout(500)
     ok('[late] the new Home is drawn once (no duplicate build, no classic-home leftovers)', pg.evaluate("document.querySelectorAll('.home27').length===1&&!document.querySelector('.home74')"))
     c.close()
