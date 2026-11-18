@@ -71,3 +71,11 @@
 - Home: the unlabeled ⇅-style icon on each top-pick card is now a **Compare** text button (same compare action, no new features).
 - Code: `js/ui269.js`, `css/v269.css`; `resultsShell` in `js/app.js`; `bar22` mounts into the sheet so `#f22` / `.f22c` / `#f22x` / `#f22n` / `.f22r` still work for v22 / v221 / v26. VERSION 26.9.
 - Test: `tests27/t269.py`. Existing t26 filter checks open the sheet first.
+
+## 27.0 — simpler Home, Picks tab, orange theme
+- Home (`viewHome27`, js/ui27.js): greeting, a big chat-style search box (textarea, Enter or the arrow runs the existing search; filler words like "show me"/"find" are stripped by `cleanQuery270`), three example chips, a Scan button, small "Type a barcode" / "Scan a label photo" links and an optional Recent row. No picks data is fetched on Home.
+- Picks tab `#/picks` (`viewPicks27`): the old Top picks (Overall health left, Blood sugar right), See all picks, restaurant picks. Bottom bar: Home | Search | Scan | Picks | More.
+- Places (`#/places`) and Restaurants are the first group under More; More ends with the version, What's new, Not medical advice and Privacy links. The tab bar lights More for stores/places routes.
+- Theme: css/v270.css (loaded last) overrides the v23 green tokens with orange (`--acc #C2410C`, text/link `--accT #9A3412`, dark `#FF8A3D` / `#FFB27A`). Score badge colors and the column accents are unchanged. theme-color metas (js/v19.js sets them at runtime), manifest theme_color `#c2410c`.
+- Fixed a 26.9 bug: the sort/filter chips inside the Filters sheet did not show their pressed state (they were looked up under #app, the sheet lives on <body>).
+- Tests: tests27/t270.py; t263/t264/t267/t268/t269 updated for the new Home / #/picks.

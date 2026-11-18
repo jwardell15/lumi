@@ -17,7 +17,7 @@ with sync_playwright() as p:
     # ---- A: cold Home: late bundle comes after Home is drawn
     c = ctx(b); errs = []; pg = page(c, errs); rq = []
     pg.on('request', lambda r: rq.append((time.time(), r.url)))
-    pg.goto(base + '#/'); pg.wait_for_selector('#picks .du14', timeout=60000); t_pk = time.time(); st = pg.evaluate("window.lateDone27")
+    pg.goto(base + '#/picks'); pg.wait_for_selector('#picks .du14', timeout=60000); t_pk = time.time(); st = pg.evaluate("window.lateDone27")
     ok('[late] cold Home: picks are drawn before the late bundle has loaded', st is False, st)
     pg.wait_for_function("window.lateDone27===true", timeout=30000)
     lt = [t for t, u in rq if '/dist/late.' in u]
@@ -25,8 +25,8 @@ with sync_playwright() as p:
     ok('[late] Home content does not wait for it and nothing breaks: no page errors', not errs, errs)
     # after load: layer order, news, tabs
     r = pg.evaluate("({home:!!document.querySelector('.home27'),news:V7_NEWS[0][1],has27:V7_NEWS.some(x=>String(x[1]).startsWith('A simpler Lumi')),tab:tab19('kitchen',''),tabh:tab19('',''),tabp:tab19('product','x')})")
-    ok('[late] after it loads Home is still the new Home, the 26.9 news entry is first (26.7 still present), tabs map as before (kitchen -> More, product -> Search)', r['home'] and r['news'].startswith('Easier search') and r['has27'] and r['tab'] == 'more' and r['tabh'] == 'home' and r['tabp'] == 'search', r)
-    pg.goto(base + '#/'); pg.reload(); pg.wait_for_selector('#picks .du14', timeout=60000); pg.wait_for_timeout(500)
+    ok('[late] after it loads Home is still the new Home, the 27.0 news entry is first (26.9, 26.7 still present), tabs map as before (kitchen -> More, product -> Search)', r['home'] and r['news'].startswith('Simpler Home') and r['has27'] and r['tab'] == 'more' and r['tabh'] == 'home' and r['tabp'] == 'search', r)
+    pg.goto(base + '#/picks'); pg.reload(); pg.wait_for_selector('#picks .du14', timeout=60000); pg.wait_for_timeout(500)
     ok('[late] the new Home is drawn once (no duplicate build, no classic-home leftovers)', pg.evaluate("document.querySelectorAll('.home27').length===1&&!document.querySelector('.home74')"))
     c.close()
     # ---- B: deep link to a product waits for the late bundle, renders with every card
@@ -35,8 +35,8 @@ with sync_playwright() as p:
     ok('[gate] deep link to a product page: loads the late bundle first, then shows scores, additive watch and the dog-toxic card in More checks', pg.evaluate("window.lateDone27===true&&!!document.getElementById('hcard')&&!!document.getElementById('aw26')&&!!document.querySelector('#more27 #dog261')&&!!document.getElementById('dogj261')"))
     ok('[gate] no page errors on the deep link', not errs, errs)
     # Home -> search through the Home search box
-    pg.goto(base + '#/'); pg.wait_for_selector('#picks .du14', timeout=60000)
-    pg.fill('#q', 'oats'); pg.keyboard.press('Enter'); pg.wait_for_selector('a.row', timeout=60000)
+    pg.goto(base + '#/picks'); pg.wait_for_selector('#picks .du14', timeout=60000)
+    pg.goto(base + '#/'); pg.wait_for_selector('#q'); pg.fill('#q', 'oats'); pg.keyboard.press('Enter'); pg.wait_for_selector('a.row', timeout=60000)
     ok('[gate] Home search box -> results page works (late bundle loaded on the way)', pg.evaluate("location.hash.startsWith('#/search/')&&window.lateDone27===true&&document.querySelectorAll('a.row').length>3"))
     # every route of the app that lives in the late modules
     bad = []
@@ -50,7 +50,7 @@ with sync_playwright() as p:
     ok('[gate] no page errors across them', not errs, errs); c.close()
     # ---- C: late bundle blocked: Home fine, other pages still draw what the main bundle can, no uncaught errors
     c = ctx(b); errs = []; pg = page(c, errs); c.route(re.compile(r'.*/dist/late\.[0-9a-f]+\.js'), lambda rt: rt.abort())
-    pg.goto(base + '#/'); pg.wait_for_selector('#picks .du14', timeout=60000); pg.wait_for_timeout(3500)
+    pg.goto(base + '#/picks'); pg.wait_for_selector('#picks .du14', timeout=60000); pg.wait_for_timeout(3500)
     ok('[fail] late bundle unavailable: Home still works', pg.evaluate("!!document.querySelector('.home27')&&document.querySelectorAll('#picks li').length>=6"), errs)
     pg.goto(base + '#/search/oats'); pg.wait_for_timeout(4000)
     ok('[fail] late bundle unavailable: navigating on does not hang on a skeleton or throw (search still lists results)', pg.evaluate("document.querySelectorAll('a.row').length>0") and not [e for e in errs if 'pageerror' in e], errs)
@@ -62,10 +62,10 @@ with sync_playwright() as p:
             pth = REPO + '/' + rt.request.url.split('pages.dev/', 1)[1].split('?')[0]
             rt.fulfill(path=pth, headers={'access-control-allow-origin': '*', 'content-type': 'application/json' if pth.endswith('.json') else 'image/webp'}) if os.path.isfile(pth) else rt.fulfill(status=404, body='nf')
         c.route(re.compile(r'https://lumi-data-cky\.pages\.dev/(data|img)/.*'), h_)
-    pg.goto(base + '#/'); pg.wait_for_selector('#picks .du14', timeout=60000); pg.wait_for_function("navigator.serviceWorker&&navigator.serviceWorker.controller", timeout=120000)
+    pg.goto(base + '#/picks'); pg.wait_for_selector('#picks .du14', timeout=60000); pg.wait_for_function("navigator.serviceWorker&&navigator.serviceWorker.controller", timeout=120000)
     n = pg.evaluate("(async()=>{for(const k of await caches.keys())if(k.startsWith('lumi-v'))return (await (await caches.open(k)).keys()).map(r=>r.url).filter(u=>u.includes('/dist/late.'))})()")
     ok('[sw] the late bundle is in the shell cache under its hashed key', len(n) == 1 and '?h=' + SH[M['late']] in n[0], n)
-    pg.goto(base + '#/search/yogurt'); pg.wait_for_selector('a.row', timeout=90000); pg.goto(base + '#/'); pg.wait_for_selector('#picks .du14', timeout=60000)
+    pg.goto(base + '#/search/yogurt'); pg.wait_for_selector('a.row', timeout=90000); pg.goto(base + '#/picks'); pg.wait_for_selector('#picks .du14', timeout=60000)
     c.set_offline(True); pg.reload(); pg.wait_for_selector('#picks .du14', timeout=60000)
     pg.goto(base + '#/kitchen'); pg.wait_for_timeout(2500)
     ok('[sw] offline (network off): Home loads and a late-module page (#/kitchen) opens from the cache', pg.evaluate("window.lateDone27===true&&document.getElementById('app').innerText.length>200"), errs)

@@ -151,7 +151,7 @@ function wfSummary221() { const w = wf221(); const L = [...w.cats.map(k => (WCAT
   return L.length ? L.slice(0, 6).join(', ') + (L.length > 6 ? ` +${L.length - 6} more` : '') : 'Nothing yet'; }
 /* filter bar chip: "Hide my watch-for items" */
 const wfF221 = () => !!store.get('f22', {}).wf && wfOn221();
-function wfChip221() { const r = app.querySelector('#f22 .f22r'); if (!r) return; let b = r.querySelector('.wfc22'); if (!wfOn221()) { if (b) b.remove(); return; }
+function wfChip221() { const r = document.querySelector('#f22 .f22r'); if (!r) return; let b = r.querySelector('.wfc22'); if (!wfOn221()) { if (b) b.remove(); return; }
   if (!b) { r.insertAdjacentHTML('beforeend', `<button type="button" class="chip f22c wfc22" title="Hide items with anything on your watch-for list, and items Lumi couldn't check">${EYE221}Hide my watch-for items</button>`); b = r.querySelector('.wfc22');
     b.onclick = () => { const s = store.get('f22', {}); s.wf = !s.wf; store.set('f22', s); F22.lim = 40; renderResults(); }; }
   const on = wfF221(); b.classList.toggle('on', on); b.setAttribute('aria-pressed', on);

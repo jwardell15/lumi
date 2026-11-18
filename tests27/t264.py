@@ -14,7 +14,7 @@ with sync_playwright() as p:
     b = p.chromium.launch(args=['--enable-precise-memory-info']); t0 = time.time()
     # ---------- 1. default search: two tiers, worker, Search all ----------
     c = ctx(b); errs = []; pg = page(c, errs); rq = []; data_reqs(pg, rq)
-    pg.goto(base + '#/'); pg.wait_for_selector('#picks .du14', timeout=25000); pg.wait_for_timeout(1200)
+    pg.goto(base + '#/'); pg.wait_for_selector('#heroScan', timeout=25000); pg.wait_for_timeout(1200)
     ok('version ' + VER, pg.evaluate('VERSION') == VER, pg.evaluate('VERSION'))
     ok('[worker] Home starts no worker and downloads no catalog tiers', pg.evaluate('SW27.w') is None and not [r for r in rq if re.match(r'(index-|f22/|aw26/)', r)], rq)
     pg.click('#q'); pg.fill('#q', 'yogurt'); pg.wait_for_selector('#sugg a[href^="#/product/"]', timeout=60000)
@@ -40,7 +40,7 @@ with sync_playwright() as p:
     t = txt(pg); ok('[better] packaged yogurt page: Health and Blood sugar scores, Better choice card', 'Health' in t and 'Blood sugar' in t and pg.evaluate("!!document.getElementById('bc24')"), t[:300])
     ok('[better] no page errors', not errs, errs); c.close()
     # ---------- 3. parity with the old main-thread engine (same swaps, same sidecar fields) ----------
-    c = ctx(b); errs = []; pg = page(c, errs); pg.goto(base + '#/'); pg.wait_for_selector('#picks .du14', timeout=25000)
+    c = ctx(b); errs = []; pg = page(c, errs); pg.goto(base + '#/picks'); pg.wait_for_selector('#picks .du14', timeout=25000)
     r = pg.evaluate("""async()=>{ await loadIndex(); await loadIndexFull(); try{for(let i=0;i<4&&await ensure22();i++);}catch(e){} await SW27.base();
       const D=engine.docs.filter(d=>d.src!=='world'&&d.score!=null&&d.score<85&&d.sugar!=null&&d.net!=null&&!d.bad&&!d.zc&&d.img&&(d.rank%997===0||d.src==='rest'&&d.rank%53===0||d.src==='whole'&&d.rank%11===0)).slice(0,90);
       let same=0,diff=[],checked=0;
@@ -97,7 +97,7 @@ with sync_playwright() as p:
     ok(f"[budget] search (20 s window at 4x): longest task <= {BG['search_longtask_max_ms']} ms ({s['lt_max']}), TBT <= {BG['search_tbt_ms']} ms ({s['tbt']}), page heap <= {BG['search_heap_mb']} MB ({s['heap_mb']})", s['lt_max'] <= BG['search_longtask_max_ms'] and s['tbt'] <= BG['search_tbt_ms'] and s['heap_mb'] <= BG['search_heap_mb'], s)
     q = sorted([measure(b, base, cf, hash_='#/product/0096619483556', wait=14000) for _ in range(2)], key=lambda x: x['tbt'])[0]
     ok(f"[budget] product page cold (14 s window at 4x): longest task <= {BG['product_longtask_max_ms']} ms ({q['lt_max']}), TBT <= {BG['product_tbt_ms']} ms ({q['tbt']}), page heap <= {BG['product_heap_mb']} MB ({q['heap_mb']})", q['lt_max'] <= BG['product_longtask_max_ms'] and q['tbt'] <= BG['product_tbt_ms'] and q['heap_mb'] <= BG['product_heap_mb'], q)
-    h = measure(b, base, cf)
+    h = measure(b, base, cf, hash_='#/picks')
     ok(f"[budget] Home still meets the 26.3 budget (picks {h['picks']} ms, TBT {h['tbt']} ms)", 0 < h['picks'] <= BG['home_picks_ms'] and h['tbt'] <= BG['home_tbt_ms'] and h['lt_max'] <= BG['home_longtask_max_ms'], h)
     b.close()
 n = len(RES); f = [x for x in RES if not x[1]]

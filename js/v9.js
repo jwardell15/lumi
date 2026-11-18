@@ -93,6 +93,6 @@ function viewMeals9() { document.title = 'Saved meals — Lumi'; const ms = meal
   if (!document.querySelector('.skip9')) document.body.insertAdjacentHTML('afterbegin', '<a class="skip9" href="#app">Skip to content</a>');
   const m = document.getElementById('app'); if (m) m.setAttribute('tabindex', '-1');
   document.addEventListener('click', e => { const a = e.target.closest && e.target.closest('a.skip9'); if (a) { e.preventDefault(); m && m.focus(); } });
-  window.addEventListener('hashchange', () => setTimeout(() => { const h = app.querySelector('h1'); if (h && !document.activeElement.closest('input,#res')) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); } }, 60));
+  window.addEventListener('hashchange', () => setTimeout(() => { const h = app.querySelector('h1'); if (h && !document.activeElement.closest('input,textarea,#res')) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); } }, 60));
   new MutationObserver(() => { const r = document.getElementById('res'); if (r && !r.hasAttribute('aria-live')) { r.setAttribute('aria-live', 'polite'); r.setAttribute('aria-busy', 'false'); } }).observe(document.getElementById('app'), { childList: true });
 })();

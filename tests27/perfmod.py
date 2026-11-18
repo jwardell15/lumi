@@ -4,7 +4,7 @@ INIT = r"""
 window.__m={lt:[],fcp:0,home:0,picks:0};
 try{new PerformanceObserver(l=>{for(const e of l.getEntries())__m.lt.push([e.startTime,e.duration])}).observe({type:'longtask',buffered:true})}catch(e){}
 try{new PerformanceObserver(l=>{for(const e of l.getEntries())if(e.name==='first-contentful-paint')__m.fcp=e.startTime}).observe({type:'paint',buffered:true})}catch(e){}
-(function poll(){const a=document.getElementById('app');if(a){const t=a.innerText||'';if(!__m.home&&/Scan a barcode|Scan/.test(t)&&a.querySelector('input'))__m.home=performance.now();if(!__m.picks&&a.querySelector('#picks a[href^="#/product/"], .du14 a[href^="#/product/"]'))__m.picks=performance.now();}requestAnimationFrame(poll)})();
+(function poll(){const a=document.getElementById('app');if(a){const t=a.innerText||'';if(!__m.home&&/Scan a barcode|Scan/.test(t)&&a.querySelector('input,textarea'))__m.home=performance.now();if(!__m.picks&&a.querySelector('#picks a[href^="#/product/"], .du14 a[href^="#/product/"]'))__m.picks=performance.now();}requestAnimationFrame(poll)})();
 """
 def measure(browser, base, ctxfn, hash_='#/', wait=6000, cpu=4):
     c = ctxfn(browser); pg = c.new_page(); cd = c.new_cdp_session(pg)

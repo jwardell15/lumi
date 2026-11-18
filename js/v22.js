@@ -98,12 +98,12 @@ function barHTML22() { const F = st22(), fl = store.get('filters', {}) || {};
 const ICF22 = '<svg class="i22" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>';
 function bar22() { if ($('#f22') || !$('#res')) return; const t = $('#fsBody') || app.querySelector('.tools'); if (!t) return; t.insertAdjacentHTML(t.id === 'fsBody' ? 'beforeend' : 'afterend', barHTML22());
   const set = (fn) => { const s = store.get('f22', {}); fn(s); store.set('f22', s); F22.lim = 40; syncBar22(); renderResults(); };
-  app.querySelectorAll('#f22 .f22c[data-k]').forEach(b => b.onclick = () => set(s => { const k = b.dataset.k, v = +b.dataset.v; if (k === 'sug' || k === 'carb') s[k] = (+s[k] === v ? 0 : v); else s[k] = !s[k]; }));
+  document.querySelectorAll('#f22 .f22c[data-k]').forEach(b => b.onclick = () => set(s => { const k = b.dataset.k, v = +b.dataset.v; if (k === 'sug' || k === 'carb') s[k] = (+s[k] === v ? 0 : v); else s[k] = !s[k]; }));
   $('#f22sort').onchange = e => set(s => { s.sort = e.target.value; });
   $('#f22x').onclick = () => { store.set('f22', {}); F22.lim = 40; syncBar22(); renderResults(); };
   document.querySelectorAll('#sort button').forEach(b => b.addEventListener('click', () => { const s = store.get('f22', {}); if (s.sort) { s.sort = ''; store.set('f22', s); syncBar22(); renderResults(); } }));
 }
-function syncBar22() { const F = st22(); app.querySelectorAll('#f22 .f22c[data-k]').forEach(b => { const k = b.dataset.k, v = +b.dataset.v, on = k === 'sug' || k === 'carb' ? F[k] === v : !!F[k]; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+function syncBar22() { const F = st22(); document.querySelectorAll('#f22 .f22c[data-k]').forEach(b => { const k = b.dataset.k, v = +b.dataset.v, on = k === 'sug' || k === 'carb' ? F[k] === v : !!F[k]; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
   const s = $('#f22sort'); if (s) s.value = F.sort; const x = $('#f22x'); if (x) x.hidden = !active22(F);
   if (F.sort) document.querySelectorAll('#sort button').forEach(b => b.classList.remove('on')); else { const cur = store.get('sort', 'rel'); document.querySelectorAll('#sort button').forEach(b => b.classList.toggle('on', b.dataset.s === cur)); } }
 if (typeof renderResults === 'function') { const rr22 = renderResults; renderResults = function () {

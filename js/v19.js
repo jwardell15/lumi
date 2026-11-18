@@ -31,7 +31,7 @@ function viewSearch19() {
 function rest19n() { try { const n = C.subs('rest').length; return n > 10 ? n : 'many'; } catch { return 'many'; } }
 (function () {
   const meta = () => { const dark = (document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')) === 'dark';
-    document.querySelectorAll('meta[name=theme-color]').forEach(m => m.setAttribute('content', dark ? '#0c0b19' : '#f5f4fb')); };
+    document.querySelectorAll('meta[name=theme-color]').forEach(m => m.setAttribute('content', dark ? '#1a0f08' : '#c2410c')); };
   meta(); new MutationObserver(meta).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
   if (/^#\/search\/?$/.test(location.hash)) route();
   else { const h = location.hash.replace(/^#\/?/, ''); const v = h.split('/')[0]; const tv = tab19(v); document.querySelectorAll('.tabbar a').forEach(a => { const on = a.dataset.v === tv; a.classList.toggle('on', on); if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); }); }

@@ -53,7 +53,7 @@ with sync_playwright() as p:
     b = p.chromium.launch(args=['--enable-precise-memory-info']); t0 = time.time()
     c = ctx(b); errs = []; pg = page(c, errs)
     # ---- Home compare label (light pass) ----
-    pg.goto(base + '#/'); pg.wait_for_selector('#picks .du14', timeout=60000); pg.wait_for_timeout(800)
+    pg.goto(base + '#/picks'); pg.wait_for_selector('#picks .du14', timeout=60000); pg.wait_for_timeout(800)
     ok('version ' + VER, pg.evaluate('VERSION') == VER, pg.evaluate('VERSION'))
     cmp = pg.evaluate("[...document.querySelectorAll('#picks .cmp141')].map(b=>({t:b.innerText.trim(),a:b.getAttribute('aria-label')||''}))")
     ok('[home] each top-pick Compare button is labeled Compare (not an unlabeled icon)', len(cmp) >= 4 and all(x['t'] == 'Compare' and re.search(r'^Compare ', x['a'] or 'Compare ') for x in cmp), cmp[:3])

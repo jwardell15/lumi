@@ -159,14 +159,14 @@ if (typeof renderResults === 'function') { const rr26 = renderResults; renderRes
   const x = $('#f26x'); if (x) x.onclick = () => { store.set('f26', {}); syncBar22(); renderResults(); };
   return out; }; }
 const chip26 = (k, label, on, title) => `<button type="button" class="chip f22c f26c${on ? ' on' : ''}" data-k26="${k}" aria-pressed="${on}" title="${esc(title)}">${label}</button>`;
-function bar26() { const row = app.querySelector('#f22 .f22r'); if (!row || row.querySelector('.f26c')) return; const s = st26();
+function bar26() { const row = document.querySelector('#f22 .f22r'); if (!row || row.querySelector('.f26c')) return; const s = st26();
   row.insertAdjacentHTML('beforeend', chip26('ban', 'No banned additives', s.ban, 'Hides products whose ingredient list has an additive banned, revoked or not authorised by FDA, California or the EU') + chip26('dye', 'No synthetic dyes', s.dye, 'Hides products whose ingredient list names a synthetic dye or says artificial color'));
   row.querySelectorAll('.f26c').forEach(b => b.onclick = () => { const t = st26(); t[b.dataset.k26] = !t[b.dataset.k26]; store.set('f26', t); F22.lim = 40; syncBar22(); renderResults(); });
   if (!$('#f26n')) $('#f22').insertAdjacentHTML('beforeend', '<div class="f26n" id="f26n" aria-live="polite"></div>');
   const x = $('#f22x'); if (x) x.addEventListener('click', () => { store.set('f26', {}); }, true);
-  const det = app.querySelector('#f22 .f22i p'); if (det && !det.dataset.aw26) { det.dataset.aw26 = '1'; det.insertAdjacentHTML('beforeend', ' No banned additives and No synthetic dyes read the ingredient list and use the Additive and dye watch list (<a class="lnk" href="#/addwatch">see it</a>); products without an ingredient list are hidden and counted.'); } }
+  const det = document.querySelector('#f22 .f22i p'); if (det && !det.dataset.aw26) { det.dataset.aw26 = '1'; det.insertAdjacentHTML('beforeend', ' No banned additives and No synthetic dyes read the ingredient list and use the Additive and dye watch list (<a class="lnk" href="#/addwatch">see it</a>); products without an ingredient list are hidden and counted.'); } }
 { const b0 = bar22; bar22 = function () { const r = b0.apply(this, arguments); try { bar26(); } catch (e) { console.warn(e); } return r; }; }
-{ const s0 = syncBar22; syncBar22 = function () { const r = s0.apply(this, arguments); try { const s = st26(); app.querySelectorAll('#f22 .f26c').forEach(b => { const on = !!s[b.dataset.k26]; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); }); } catch { } return r; }; }
+{ const s0 = syncBar22; syncBar22 = function () { const r = s0.apply(this, arguments); try { const s = st26(); document.querySelectorAll('#f22 .f26c').forEach(b => { const on = !!s[b.dataset.k26]; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); }); } catch { } return r; }; }
 
 /* =====================  3. integration  ===================== */
 if (typeof tab19 === 'function') { const t0 = tab19; tab19 = function (view) { if (view === 'rmeal' || view === 'addwatch') return 'browse'; return t0.apply(this, arguments); }; }

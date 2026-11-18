@@ -36,7 +36,7 @@ with sync_playwright() as p:
     b = p.chromium.launch(); t0 = time.time()
     # ---------- 2. first visit: install ----------
     c = newctx(b); errs = []; pg = c.new_page(); pg.on('pageerror', lambda e: errs.append(str(e)[:200])); LOG.clear()
-    pg.goto(BASE + '#/'); pg.wait_for_selector('#picks .du14', timeout=60000); sw_ready(pg)
+    pg.goto(BASE + '#/picks'); pg.wait_for_selector('#picks .du14', timeout=60000); sw_ready(pg)
     ok('[install] version ' + VER, pg.evaluate('VERSION') == VER, pg.evaluate('VERSION'))
     cs = pg.evaluate(CACHES); shell = cs.get('lumi-v' + VER, [])
     ok('[install] shell cache holds every manifest file under a hashed key (file?h=hash)', len(shell) == len(SH) and all(re.search(r'\?h=[0-9a-f]{12}$', u) for u in shell), (len(shell), len(SH)))
@@ -54,7 +54,7 @@ with sync_playwright() as p:
     pg.goto(BASE + '#/search/yogurt'); pg.wait_for_selector('#res a.row', timeout=90000); pg.wait_for_function("SW27.loaded.size>=3", timeout=120000); pg.wait_for_timeout(1500)
     cs = pg.evaluate(CACHES); dents = [u for k in cs if k.startswith('lumi-d-') for u in cs[k]]
     ok('[data] after a search the tiers are in the data cache (index-0, index-g, index-1)', all(any(t in u for u in dents) for t in ('index-0.json', 'index-g.json', 'index-1.json')), [u[-30:] for u in dents])
-    c.set_offline(True); pg.goto(BASE + '#/'); pg.reload(); pg.wait_for_selector('#picks .du14', timeout=60000)
+    c.set_offline(True); pg.goto(BASE + '#/picks'); pg.reload(); pg.wait_for_selector('#picks .du14', timeout=60000)
     ok('[offline] reload with no network: the app opens and Home shows picks', pg.evaluate("document.querySelectorAll('#picks .du14').length") >= 1 and not errs, errs)
     pg.goto(BASE + '#/search/yogurt'); pg.reload(); pg.wait_for_selector('#res a.row', timeout=90000)
     ok('[offline] a search that was done online works offline (tiers come from the data cache)', pg.evaluate("document.querySelectorAll('#res a.row').length") >= 5)
@@ -63,7 +63,7 @@ with sync_playwright() as p:
     old = tempfile.mkdtemp(prefix='lumi_old_'); ar = subprocess.run(f'cd {REPO} && git archive {OLD_REF} | tar -x -C {old}', shell=True, capture_output=True, text=True)
     if ar.returncode == 0 and os.path.isfile(old + '/sw.js'):
         oldv = re.search(r"const V = '(lumi-v[\d.]+)'", open(old + '/sw.js').read()).group(1); ROOT['p'] = old
-        c = newctx(b); errs = []; pg = c.new_page(); pg.on('pageerror', lambda e: errs.append(str(e)[:200])); pg.goto(BASE + '#/'); pg.wait_for_selector('#picks .du14', timeout=90000); sw_ready(pg, 180)
+        c = newctx(b); errs = []; pg = c.new_page(); pg.on('pageerror', lambda e: errs.append(str(e)[:200])); pg.goto(BASE + '#/picks'); pg.wait_for_selector('#picks .du14', timeout=90000); sw_ready(pg, 180)
         pg.wait_for_function("(async()=>(await caches.keys()).includes('%s'))()" % oldv, timeout=180000)
         ov = pg.evaluate('VERSION'); ok(f'[update] the previous release ({ov}, cache {oldv}) is installed and controlling', ov != VER and oldv != 'lumi-v' + VER, (ov, oldv))
         pg.reload(); pg.wait_for_selector('#picks .du14', timeout=60000); pg.wait_for_function("!!navigator.serviceWorker.controller") # a returning visit: the page is controlled, as for a real user
@@ -80,7 +80,7 @@ with sync_playwright() as p:
     # ---------- 6. a stale/mismatched file must not install ----------
     bad_root = tempfile.mkdtemp(prefix='lumi_bad_'); shutil.copytree(REPO, bad_root, dirs_exist_ok=True, ignore=shutil.ignore_patterns('.git', 'data', '__pycache__', 'node_modules'))
     open(bad_root + '/' + DM['js'], 'a').write('\n/* tampered after the manifest was built */\n'); ROOT['p'] = bad_root
-    c = newctx(b); pg = c.new_page(); pg.goto(BASE + '#/'); pg.wait_for_selector('#picks .du14', timeout=60000); pg.wait_for_timeout(9000)
+    c = newctx(b); pg = c.new_page(); pg.goto(BASE + '#/picks'); pg.wait_for_selector('#picks .du14', timeout=60000); pg.wait_for_timeout(9000)
     st = pg.evaluate("(async()=>{const r=await navigator.serviceWorker.getRegistration();return {active:!!(r&&r.active),ctl:!!navigator.serviceWorker.controller}})()")
     ok('[safety] a shell file that does not match the manifest aborts the install: no worker takes over (the page still works from the network)', not st['active'] and not st['ctl'], st)
     c.close(); ROOT['p'] = REPO; shutil.rmtree(bad_root, ignore_errors=True)

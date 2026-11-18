@@ -27,7 +27,7 @@ with sync_playwright() as p:
     # ---------- launch: no catalog download, picks drawn ----------
     c = ctx(b); errs = []; pg = page(c, errs); reqs = []
     pg.on('request', lambda r: '/data/' in r.url and reqs.append(r.url.split('/data/')[1]))
-    pg.goto(base + '#/'); pg.wait_for_function("()=>typeof VERSION!=='undefined'", timeout=30000)
+    pg.goto(base + '#/picks'); pg.wait_for_function("()=>typeof VERSION!=='undefined'", timeout=30000)
     ok('version ' + VER, pg.evaluate('VERSION') == VER, pg.evaluate('VERSION'))
     try: pg.wait_for_selector('#picks .du14 a[href^="#/product/"]', timeout=20000)
     except Exception: pass
@@ -53,9 +53,9 @@ with sync_playwright() as p:
     ok('[equivalence] the prebuilt pool gives the same picks as the full catalog (6 pickers x 14 days)', r['n'] == 84 and not r['diffs'] and r['docs'] > 100000, r)
     c.close()
     # ---------- lazy engine: typing starts it, search + product still work ----------
-    c = ctx(b); errs = []; pg = page(c, errs); pg.goto(base + '#/'); pg.wait_for_selector('#picks .du14', timeout=25000); pg.wait_for_timeout(1500)
+    c = ctx(b); errs = []; pg = page(c, errs); pg.goto(base + '#/picks'); pg.wait_for_selector('#picks .du14', timeout=25000); pg.wait_for_timeout(1500)
     ok('[lazy] engine empty on Home', pg.evaluate('engine.docs.length') == 0)
-    pg.fill('#q', 'yogurt'); pg.wait_for_function("()=>engine.docs.length>1000||(typeof SW27!==\x27undefined\x27&&SW27.loaded&&SW27.loaded.size>=1)", timeout=60000); pg.wait_for_selector('#sugg a[href^="#/product/"]', timeout=30000)
+    pg.goto(base + '#/'); pg.wait_for_selector('#q'); pg.fill('#q', 'yogurt'); pg.wait_for_function("()=>engine.docs.length>1000||(typeof SW27!==\x27undefined\x27&&SW27.loaded&&SW27.loaded.size>=1)", timeout=60000); pg.wait_for_selector('#sugg a[href^="#/product/"]', timeout=30000)
     ok('[lazy] typing in the Home search box starts the engine and shows suggestions', pg.evaluate("document.querySelectorAll('#sugg a[href^=\"#/product/\"]').length") >= 3)
     pg.keyboard.press('Enter'); pg.wait_for_selector('a.row', timeout=60000); pg.wait_for_timeout(1500)
     ok('[lazy] search results for yogurt', 'yogurt' in pg.evaluate("document.getElementById('app').innerText").lower() and pg.evaluate("document.querySelectorAll('a.row').length") >= 5)
@@ -66,7 +66,7 @@ with sync_playwright() as p:
     # ---------- fallback: home.json unreachable -> old path still draws picks ----------
     c = ctx(b); errs = []; pg = page(c, errs)
     c.route(re.compile(r'.*/data/home27/home\.json.*'), lambda rt: rt.fulfill(status=404, body='nf'))
-    pg.goto(base + '#/')
+    pg.goto(base + '#/picks')
     try: pg.wait_for_selector('#picks .du14 a[href^="#/product/"]', timeout=90000)
     except Exception: pass
     pg.wait_for_timeout(1500)
@@ -80,10 +80,10 @@ with sync_playwright() as p:
         h_ = lambda rt: (lambda pth: rt.fulfill(path=pth, headers={'access-control-allow-origin': '*', 'content-type': 'application/json' if pth.endswith('.json') else 'image/webp'}) if os.path.isfile(pth) else rt.fulfill(status=404, body='nf'))(REPO + '/' + rt.request.url.split('pages.dev/', 1)[1].split('?')[0])
         if LOCAL: cc.route(re.compile(r'https://lumi-data-cky\.pages\.dev/(data|img)/.*'), h_)
         return cc
-    runs = [measure(b, base, cf) for _ in range(3)]; m = sorted(runs, key=lambda x: x['picks'])[1]
+    runs = [measure(b, base, cf, hash_='#/picks') for _ in range(3)]; m = sorted(runs, key=lambda x: x['picks'])[1]
     print('perf runs:', json.dumps(runs)[:1400])
     dbytes = sum(sz for f, sz in m['data'])
-    ok(f"[budget] Home picks visible within {BG['home_picks_ms']} ms at 4x CPU (median {m['picks']} ms)", 0 < m['picks'] <= BG['home_picks_ms'], m)
+    ok(f"[budget] Picks page: picks visible within {BG['home_picks_ms']} ms at 4x CPU (median {m['picks']} ms)", 0 < m['picks'] <= BG['home_picks_ms'], m)
     ok(f"[budget] longest main-thread task under {BG['home_longtask_max_ms']} ms (median run {m['lt_max']} ms)", m['lt_max'] <= BG['home_longtask_max_ms'], m)
     ok(f"[budget] total blocking time under {BG['home_tbt_ms']} ms (median run {m['tbt']} ms)", m['tbt'] <= BG['home_tbt_ms'], m)
     ok(f"[budget] data downloaded for Home under {BG['home_data_bytes']//1000} KB ({dbytes//1000} KB) and no catalog tiers", dbytes <= BG['home_data_bytes'] and not [f for f in m['data_files'] if re.match(r'(index-|f22/|aw26/)', f)], m['data_files'])

@@ -1,7 +1,7 @@
 {
- "css": "dist/app.795735b994.css",
- "js": "dist/app.1bd9f09369.js",
- "late": "dist/late.a58a97979d.js",
+ "css": "dist/app.230ecd157d.css",
+ "js": "dist/app.32900295e9.js",
+ "late": "dist/late.863db422c4.js",
  "cssFiles": [
   "css/app.css",
   "css/v10.css",
@@ -31,7 +31,8 @@
   "css/v261.css",
   "css/v262.css",
   "css/v27.css",
-  "css/v269.css"
+  "css/v269.css",
+  "css/v270.css"
  ],
  "jsFiles": [
   "js/dbase.js",

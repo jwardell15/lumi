@@ -214,6 +214,7 @@
     if (!document._fs269esc) {
       document._fs269esc = 1;
       document.addEventListener('keydown', e => { if (e.key === 'Escape' && isOpen()) { e.preventDefault(); closeSheet269(); } });
+      window.addEventListener('hashchange', () => { if (isOpen() && !/^#\/search/.test(location.hash)) closeSheet269(); }); /* 27.0: leaving search closes the sheet */
     }
     const box = $('#fsSort');
     if (box && !box.dataset.s269) {
@@ -260,7 +261,7 @@
     hookRR();
     if (window.onLate27) onLate27(() => { hookRR(); try { bindSheet(); sync269(); } catch (e) {} });
     if (typeof V7_NEWS !== 'undefined') {
-      const add = () => { if (typeof V7_NEWS === 'undefined') return; if (V7_NEWS[0] && /Easier search/.test(String(V7_NEWS[0][1]||''))) return; V7_NEWS.unshift(['🎛️', 'Easier search (26.9)', 'Search results now open with one Filters & sort button instead of rows of chips and tabs. Tap it for sort and every filter, grouped in a sheet. Active filters show as small chips you can remove.']); };
+      const add = () => { if (typeof V7_NEWS === 'undefined') return; if (V7_NEWS.some(x => /Easier search/.test(String(x[1] || '')))) return; V7_NEWS.splice(V7_NEWS[0] && /Simpler Home/.test(String(V7_NEWS[0][1] || '')) ? 1 : 0, 0, ['🎛️', 'Easier search (26.9)', 'Search results now open with one Filters & sort button instead of rows of chips and tabs. Tap it for sort and every filter, grouped in a sheet. Active filters show as small chips you can remove.']); };
       add();
       if (window.onLate27) onLate27(add);
     }
