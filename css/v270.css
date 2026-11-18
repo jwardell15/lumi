@@ -58,3 +58,4 @@ body:has(.home270) .ft231{display:none}
 html body #app .chat270f textarea{padding:0!important;margin:0!important;text-indent:0;box-shadow:none!important;border-radius:0!important}
 html body #app .chat270f textarea:focus,html body #app .chat270f textarea:focus-visible{outline:none!important;box-shadow:none!important}
 html body .sugg a{color:var(--ink)}
+html body #app h1[tabindex="-1"]:focus-visible{outline:none!important}
