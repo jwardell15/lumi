@@ -140,6 +140,7 @@ function searchAll(engine, q, specs, opts) {
   let pass = fkeys.length ? ok0.filter(x => passes(x[1], P.f)) : ok0;
   const anyPass = pass.length > 0;
   if (fkeys.length && !anyPass && ok0.length) { meta.nomatch = true; meta.note = noteFor(P, P.text); pass = ok0.map(x => [x[0] - 30 * gap(x[1], P.f), x[1]]); }
+  if (vs.length && vs[0].hard.length && pass.length > 12) { const clean = pass.filter(x => typeAdj(x[1], vs[0]) > -15); if (clean.length >= 6) pass = clean; } /* a crackers/chips item that only carries the type word is dropped when enough real ones exist */
   pass.sort((a, b) => b[0] - a[0]);
   if (!P.text && !P.store && pass.length > 40 && anyPass) pass = mixPicks(pass);
   const lists = specs.map(sp => { const L = []; for (const [r, d] of pass) { if (sp.src && d.src !== sp.src) continue; L.push(Object.assign({}, d, { rel: r })); if (L.length >= (sp.limit || 80)) break; } return L; });
