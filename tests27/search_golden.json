@@ -1285,6 +1285,8 @@
 {"q":"creamy soup","cat":"product type","type":"type vs companion","subj":"soup|broth|chowder|bisque|chili|stew|lentil","forb":"cracker|chips?\\b|crisps"},
 {"q":"canned soup","cat":"product type","type":"type vs companion","subj":"soup|broth|chowder|bisque|chili|stew|lentil","forb":"cracker|chips?\\b|crisps"},
 {"q":"diabetic soup","cat":"product type","type":"type vs companion","subj":"soup|broth|chowder|bisque|chili|stew|lentil","forb":"cracker|chips?\\b|crisps"},
+{"q":"low sodium onion soup","cat":"product type","type":"type vs companion","subj":"soup|broth|chowder|bisque|chili|stew|lentil","forb":"cracker|chips?\\b|crisps"},
+{"q":"french onion soup","cat":"product type","type":"type vs companion","subj":"soup|broth|chowder|bisque|chili|stew|lentil","forb":"cracker|chips?\\b|crisps"},
 {"q":"protein bread","cat":"product type","type":"type vs companion","subj":"bread|loaf|rye|sourdough","forb":"crumb|crouton|stuffing"},
 {"q":"diabetic bread","cat":"product type","type":"type vs companion","subj":"bread|loaf|rye|sourdough","forb":"crumb|crouton|stuffing"},
 {"q":"sandwich bread","cat":"product type","type":"type vs companion","subj":"bread|loaf|rye|sourdough","forb":"crumb|crouton|stuffing"},

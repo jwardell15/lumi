@@ -83,10 +83,12 @@ function gap(d, F) { const v = val(d); let g = 0; if (F.sug != null) g += v && v
   if (F.pro) g += v && v.p != null ? Math.max(0, 15 - v.p) / 15 : 9; if (F.fib) g += v && v.f != null ? Math.max(0, 5 - v.f) / 5 : 9; if (F.sat) g += v && v.sat != null ? Math.max(0, v.sat - 1) : 9; if (F.nas) g += added(d) == null ? 9 : added(d); if (F.na != null) g += v && v.na != null ? Math.max(0, v.na - F.na) / Math.max(50, F.na) : 9; if (F.healthy) g += d.h != null ? Math.max(0, 50 - d.h) / 50 : 9; if (F.good) g += d.score != null ? Math.max(0, 50 - d.score) / 50 : 9; return g; }
 /* product type vs companion: for "soup", "bread", "yogurt" the product itself should win over crackers/chips/crumbs/pretzels that only carry the word as a flavor or pairing */
 const OTHERTYPE = /\b(crackers?|biscuits?|cookies?|cakes?|chips?|crisps?|snacks?|candy|candies|confection\w*|pretzels?|cereals?|seasoning|spices?|croutons?|crumbs?|puffs?|popcorn)\b/;
+const SNKSIG = /\b(wavy|ridged|rippled|kettle cooked|crinkle|lays|ruffles|doritos|pringles|cheetos|fritos|tostitos|cape cod|funyuns|sunchips|takis)\b/;
 const COMPHEAD = new Set(['cracker', 'crackers', 'chip', 'chips', 'crisp', 'crisps', 'pretzel', 'pretzels', 'crumb', 'crumbs', 'crouton', 'croutons', 'seasoning', 'cookie', 'cookies', 'biscuit', 'biscuits', 'cake', 'cakes', 'puffs', 'popcorn', 'mix']);
 function typeAdj(d, v) { if (d.src === 'rest' || d.src === 'whole' || !v.hard.length) return 0; const hs = v.hard, nm = norm(d.name || ''), cn = ' ' + norm(d.cat || '') + ' ';
   if (hs.some(t => COMPHEAD.has(t) || OTHERTYPE.test(t))) return 0; let a = 0;
   const catHas = hs.every(t => cn.includes(' ' + t + ' ') || cn.includes(' ' + t + 's ') || cn.includes(' ' + stem(t) + ' ') || cn.includes(stem(t))), head = nm.split(' ').filter(Boolean).slice(-1)[0] || '';
+  if (!catHas && SNKSIG.test(nm + ' ' + norm(d.brand || ''))) a -= 22; /* chips-style name or snack brand: the soup/bread word is only the flavor */
   if (catHas) a += 6; else if (d.cat && OTHERTYPE.test(cn)) a -= 22;
   if (COMPHEAD.has(head) && head !== hs[hs.length - 1]) a -= 18;
   if (hs.some(t => new RegExp('\\b' + t + 's? (?:covered|dipped|flavou?red|crumbs?|seasoning|croutons?|chips|crackers|cookies|pretzels)\\b|\\b(?:for|with|and) (?:\\w+ )?' + t + 's?\\b').test(nm))) a -= 10;
