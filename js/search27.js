@@ -36,7 +36,9 @@ const SW27 = {
   keep(list) { this.ver++; if (this.docs.size > 6000) { let n = this.docs.size - 3000; for (const k of this.docs.keys()) { if (n-- <= 0) break; this.docs.delete(k); } } this.patch(); return list; },
   patch() { if (this.patched || typeof codeMap22 !== 'function') return; this.patched = true; const o = codeMap22; self.codeMap22 = function () { const m = o.apply(this, arguments); if (SW27.docs.size && m._s27 !== SW27.ver) { for (const [c, d] of SW27.docs) if (!m.has(c)) m.set(c, d); m._s27 = SW27.ver; } return m; }; },
   /* the three passes runLocal always made, in the same order: 160 best, 30 restaurant items, 30 whole foods */
-  searchSet(q) { return this.search(q, [{ limit: 160 }, { limit: 30, src: 'rest' }, { limit: 30, src: 'whole' }]).then(L => [].concat(...L)); },
+  searchSet(q, off) { const specs = [{ limit: 160 }, { limit: 30, src: 'rest' }, { limit: 30, src: 'whole' }];
+    if (!this.ok) { this.meta271 = null; return this.search(q, specs).then(L => [].concat(...L)); }
+    return this.base().then(() => this.req.get('0')).then(() => this.call('search271', { q, specs, off: off || [] })).then(r => { this.meta271 = r.meta; return [].concat(...r.lists.map(l => this.keep(l.map(o => this.hydrate(o))))); }); },
   async search(q, specs) {
     if (!this.ok) { await loadIndex(); return specs.map(sp => engine.search(q, { limit: sp.limit || 80, prefix: !!sp.prefix, filter: sp.src ? (d => d.src === sp.src) : undefined })); }
     const b = this.base(); await this.req.get('0'); /* answer as soon as the first tier is in; the rest arrives and the page refreshes */

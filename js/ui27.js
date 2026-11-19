@@ -137,7 +137,9 @@ window.loadLate27 = () => lateP || (lateP = new Promise((res, rej) => {
 onLate27(addNews27);
 const addNews270 = () => { if (typeof V7_NEWS === 'undefined') return; if (!V7_NEWS.some(x => /Simpler Home/.test(String(x[1] || '')))) V7_NEWS.push(['🧡', 'Simpler Home, orange Lumi (27.0)', 'Home is now just a big search box, three example prompts and Scan. Top picks moved to their own Picks tab. Places live under More. New warm orange colors, light and dark.']);
   [/A simpler Lumi/, /Easier search/, /Simpler Home/].forEach(re => { const i = V7_NEWS.findIndex(x => re.test(String(x[1] || ''))); if (i > 0) V7_NEWS.unshift(V7_NEWS.splice(i, 1)[0]); }); }; /* newest first: 27.0, 26.9, 26.7 */
-addNews270(); onLate27(addNews270);
+const addNews271 = () => { if (typeof V7_NEWS === 'undefined') return; if (!V7_NEWS.some(x => /Better search/.test(String(x[1] || '')))) V7_NEWS.push(['🔎', 'Better search (27.1)', 'Search now understands "low sugar", "high protein", "keto", "unsweetened", store names and questions. It shows products of the thing you asked for (a low sugar creamer, not cheese) and applies the matching filters, which you can remove with one tap.']);
+  const i = V7_NEWS.findIndex(x => /Better search/.test(String(x[1] || ''))); if (i > 0) V7_NEWS.unshift(V7_NEWS.splice(i, 1)[0]); };
+addNews270(); addNews271(); onLate27(addNews270); onLate27(addNews271);
 const EAGER27 = new Set(['', 'home', 'places', 'more', 'picks']);
 const route0 = route;
 route = function () {

@@ -159,6 +159,7 @@ class Engine {
     while (i < N) { const step = Math.min(N, i + 100); this._slice(data, s, i, step); i = step; if (now() - t0 >= sliceMs) { await yieldNow(); t0 = now(); } }
     this._end(data);
   }
+  catKey(query) { const KC = root.LumiCats, ck = KC && CATQ[norm(query)]; return ck ? KC.KEYS.indexOf(ck) : -1; } // 27.1: the category key a query names (cereal, pasta sauce...), for the subject check
   terms(q, prefix) {
     const out = new Map(); const fw = (t, w) => { if ((out.get(t) || 0) < w) out.set(t, w); };
     if (this.post.has(q)) fw(q, 1);
@@ -191,7 +192,8 @@ class Engine {
         // v8.1 mainstream signal: how many index entries in this category share the product's lead word (Cheerios, Frosted, Special K…)
         if (!L.lead) { L.lead = new Map(); for (const i of L) { const w = leadWord(this.docs[i].name), w2 = leadPair(this.docs[i].name); if (w) L.lead.set(w, (L.lead.get(w) || 0) + 1); if (w2) L.lead.set('2:' + w2, (L.lead.get('2:' + w2) || 0) + 1); } }
         leadMap = L.lead; } }
-    let qcKi = -1; { const KC = root.LumiCats, nq0 = ' ' + norm(query) + ' '; let best = null; for (const c of this.chainN || []) if (nq0.includes(' ' + c.n + ' ') && (!best || c.n.length > best.n.length)) best = c; // v9.1.1: query names a chain
+    let qcKi = -1; { const KC = root.LumiCats, nq0 = ' ' + norm(query) + ' '; let best = null; for (const c of this.chainN || []) if (nq0.includes(' ' + c.n + ' ') && (!best || c.n.length > best.n.length)) best = c;
+      if (!best) { const q1 = nq0.trim(); if (q1.length >= 5 && q1.indexOf(' ') < 0) { const m = (this.chainN || []).filter(c => c.n.startsWith(q1 + ' ')); if (m.length && new Set(m.map(c => c.k)).size === 1) best = m[0]; } } // 27.1: "jamba" = Jamba Juice // v9.1.1: query names a chain
       if (best && KC) { qcKi = KC.KEYS.indexOf(best.k); if (qcKi >= 0) this.docs.forEach((d, i) => { if (d.keys.includes(qcKi) && !acc.has(i)) acc.set(i, [0.78 * qt.length, qt.length]); }); } }
     const chainRest = qcKi >= 0 ? (' ' + norm(query) + ' ').replace(' ' + (this.chainN || []).find(c => root.LumiCats && root.LumiCats.KEYS.indexOf(c.k) === qcKi).n + ' ', ' ').trim() : null;
     const need = qt.length <= 2 ? qt.length : qt.length - 1;

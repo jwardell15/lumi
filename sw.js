@@ -6,7 +6,7 @@
    - data (Cloudflare Pages host): cached on first use, served from the cache for 24 h, then refreshed in the background (stale-while-revalidate). Data is NOT precached
      (the old worker pre-downloaded 17 MB of catalog files on every release). Only a few small files Home needs are fetched at install.
    - photos / CDN libraries: stale-while-revalidate as before. "Save for offline" data (lumi-off) is written by the app and kept across versions. */
-const V = 'lumi-v27.0';
+const V = 'lumi-v27.1';
 const OFF = 'lumi-off';
 const DATA_EPOCH = '27c'; /* bump when files under data/ change in place (new data release); old data caches are dropped on activate */
 const DC = 'lumi-d-' + DATA_EPOCH;
@@ -14,7 +14,7 @@ const DATA = 'https://lumi-data-cky.pages.dev/';
 const DATA_PRE = ['data/pick15.json', 'data/meta.json', 'data/home27/home.json']; /* small files the Home screen needs, fetched at install (best effort) */
 const FRESH = 24 * 3600e3;
 /*SHELL-BEGIN*/
-const SHELL_H = {"index.html":"178cec55b8f4","manifest.webmanifest":"43c1a6212237","icons/favicon.ico":"e3075c9b4da1","icons/favicon-32.png":"94866cd60daf","icons/favicon-16.png":"03b16be75f89","icons/apple-touch-icon.png":"beffea1b6350","dist/app.8fa96a6fc3.css":"8fa96a6fc3df","fonts/inter-var-latin.woff2":"3100e775e861","fonts/fraunces-var-latin.woff2":"7f9d191d9993","icons/mascot-128.png":"68eb9167fa07","dist/app.32900295e9.js":"32900295e9f8","dist/late.863db422c4.js":"863db422c437","js/sworker.js":"688f9a3cab52","js/dbase.js":"15f91170c474","js/cats.js":"31f40c740b44","js/aisles.js":"f126956ea780","js/search.js":"9ffd44698552","js/hb25core.js":"64944fb5cc7c","vendor/html5-qrcode-2.3.8.min.js":"660b12437b1d","ref/gi2008.json":"9897d38a7858","ref/additives.json":"f616b68eab59","icons/mascot-256.png":"931e7fa6d49f","icons/icon-192.png":"6771060d937a"};
+const SHELL_H = {"index.html":"51f154c5361d","manifest.webmanifest":"43c1a6212237","icons/favicon.ico":"e3075c9b4da1","icons/favicon-32.png":"94866cd60daf","icons/favicon-16.png":"03b16be75f89","icons/apple-touch-icon.png":"beffea1b6350","dist/app.a39c4a8d0e.css":"a39c4a8d0ef9","fonts/inter-var-latin.woff2":"3100e775e861","fonts/fraunces-var-latin.woff2":"7f9d191d9993","icons/mascot-128.png":"68eb9167fa07","dist/app.4c31e4a134.js":"4c31e4a1346c","dist/late.fa1e4f32c3.js":"fa1e4f32c303","js/sworker.js":"3fa0a73ab8cc","js/dbase.js":"15f91170c474","js/cats.js":"31f40c740b44","js/aisles.js":"f126956ea780","js/search.js":"f07c89dd8b03","js/hb25core.js":"64944fb5cc7c","vendor/html5-qrcode-2.3.8.min.js":"660b12437b1d","ref/gi2008.json":"9897d38a7858","ref/additives.json":"f616b68eab59","icons/mascot-256.png":"931e7fa6d49f","icons/icon-192.png":"6771060d937a"};
 /*SHELL-END*/
 const hex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
 /* cors responses hide the Date header, so keep our own fetch time on the stored copy */

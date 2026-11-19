@@ -4,7 +4,7 @@
    Docs are sent back with category keys by NAME (indices differ between this registry and the page's). Ingredient/additive sidecars (data/f22, data/aw26)
    are attached here exactly like v22/v26 do on the page, so rows from the worker carry the same fields as rows from the old main-thread engine. */
 'use strict';
-importScripts('dbase.js', 'cats.js', 'aisles.js', 'search.js', 'hb25core.js');
+importScripts('dbase.js', 'cats.js', 'aisles.js', 'search.js', 'hb25core.js', 'stores.js', 'q271.js');
 const engine = new LumiSearch.Engine(), C = self.LumiCats;
 const loaded = new Set(); let META = null;
 const getData = u => fetch(u).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
@@ -47,6 +47,7 @@ function dym(q) { return dymFn ? dymFn(q) : null; }
 const ops = {
   async load({ tiers }) { for (const t of tiers) await loadTier(String(t)); return { docs: engine.docs.length, loaded: [...loaded] }; },
   async meta() { return META || (META = await getData('data/meta.json').catch(() => ({}))); },
+  search271({ q, specs, off }) { const r = Q271.searchAll(engine, q, specs, { off }); return { lists: r.lists.map(l => l.map(toWire)), meta: r.meta }; },
   search({ q, specs }) { return specs.map(sp => { const f = sp.src ? (d => d.src === sp.src) : undefined; return engine.search(q, { limit: sp.limit || 80, prefix: !!sp.prefix, filter: f }).map(toWire); }); },
   dym({ q }) { return dym(q); },
   setDym({ src }) { dymFn = new Function('engine', 'LumiSearch', `return (${src})`)(engine, self.LumiSearch); return true; },

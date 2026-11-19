@@ -76,7 +76,7 @@ if (typeof renderResults === 'function') { const _rr14 = renderResults; renderRe
   const r = _rr14.apply(this, arguments);
   try { if (!rs) return r; const res = $('#res'); if (!res) return r;
     const all = [...rs.items.values()].filter(i => i.src !== 'cos' && i.score != null && i.h != null && !i.fl && !i.bad);
-    const browse = /^#\/browse\//.test(location.hash), pool = browse ? all : all.sort((a, b) => (b.rel || 0) - (a.rel || 0)).slice(0, 40);
+    const browse = /^#\/browse\//.test(location.hash), m271 = !browse && rs.meta271 && rs.meta271.active && typeof Q271 !== 'undefined' ? rs.meta271 : null, pool = browse ? all : m271 ? Q271.bestPool(all, m271, null) : all.sort((a, b) => (b.rel || 0) - (a.rel || 0)).slice(0, 40);
     let el = $('#du14s');
     if (pool.length < 4) { if (el) el.remove(); return r; }
     const A = rank14(pool, 'score', 3, 1), B = rank14(pool, 'h', 3, 1);

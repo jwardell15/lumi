@@ -79,3 +79,9 @@
 - Theme: css/v270.css (loaded last) overrides the v23 green tokens with orange (`--acc #C2410C`, text/link `--accT #9A3412`, dark `#FF8A3D` / `#FFB27A`). Score badge colors and the column accents are unchanged. theme-color metas (js/v19.js sets them at runtime), manifest theme_color `#c2410c`.
 - Fixed a 26.9 bug: the sort/filter chips inside the Filters sheet did not show their pressed state (they were looked up under #app, the sheet lives on <body>).
 - Tests: tests27/t270.py; t263/t264/t267/t268/t269 updated for the new Home / #/picks.
+
+## 27.1 search relevance
+- `js/q271.js` (`Q271`): `parse(q)` turns "low sugar / sugar free / no added sugar / unsweetened / low carb / keto / high protein / high fiber / low fat / low sodium / healthy / diabetic friendly / under Ng carbs", a store name and filler words into per-serving filters (same thresholds as the Smart filters) plus a clean subject. `searchAll` requires the subject (all hard words, or a category match as a fallback), applies the filters, ranks added-sugar-flagged products lower for sugar modifiers, and when nothing passes returns the closest subject matches with a note. Plain single-word queries use the unchanged engine. `bestPool` feeds "Best matches" (subject + filters only). Runs in the worker (`search271` op); chips (`.q271chip`) remove a filter by re-running with `off`.
+- Golden suite: `tests27/search_golden.json` (~1,160 queries, regenerate with `node tools/gen_golden.mjs`, checked for satisfiability against the real catalog).
+- Harness: `node tools/search_eval.mjs` (new engine, scorecard by category and phrase type, failures listed; `--legacy` = old engine, `--all` all tiers, `--only text`, `--fails N`, `--out file.json`). Threshold: keep overall >= 95%. Baseline 57.5% -> 96.9%.
+- Smoke test: `cd tests27 && VER=27.1 python3 t271.py http://localhost:8769/ local`.
