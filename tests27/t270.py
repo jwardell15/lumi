@@ -58,7 +58,7 @@ with sync_playwright() as p:
     # ---------- More has Places ----------
     pg.goto(base + '#/more'); pg.wait_for_selector('.ml27', timeout=30000)
     L = pg.evaluate("[...document.querySelectorAll('.ml27 a')].map(a=>a.getAttribute('href'))"); first = pg.evaluate("document.querySelector('.mg27 summary b').innerText")
-    ok('[more] Places is the first group (open) with Places and Restaurants; hidden sugars/additives still there; version + What\'s new at the bottom', first == 'Places' and '#/places' in L and '#/browse/rest' in L and '#/additives' in L and pg.evaluate("/27\\.[01]/.test(document.querySelector('.more270').innerText)&&!!document.querySelector('.more270 a[href=\"#/whatsnew\"]')"), (first, L[:5]))
+    ok('[more] Places is the first group (open) with Places and Restaurants; hidden sugars/additives still there; version + What\'s new at the bottom', first == 'Places' and '#/places' in L and '#/browse/rest' in L and '#/additives' in L and pg.evaluate("/27\\.[012]/.test(document.querySelector('.more270').innerText)&&!!document.querySelector('.more270 a[href=\"#/whatsnew\"]')"), (first, L[:5]))
     tb = pg.evaluate(TAB); ok('[nav] More is lit on #/more', [x['t'] for x in tb if x['on']] == ['More'], tb)
     pg.goto(base + '#/places'); pg.wait_for_selector('.places27', timeout=30000); ok('[places] #/places still works and More is lit', [x['t'] for x in pg.evaluate(TAB) if x['on']] == ['More'])
     # ---------- Theme ----------

@@ -15,14 +15,15 @@ function attach22(j) { if (!j || !j.a || !j.n) return; const st = find(j); if (s
   if (j.t && j.t.length) for (let k = 0; k < j.t.length; k += 2) { const d = D[st + j.t[k]]; if (d) d.t22 = j.t[k + 1] >>> 0; } }
 function attach26(j) { if (!j || !j.u || !j.n) return; const st = find(j); if (st < 0) return; const D = engine.docs, hm = new Map(); for (let i = 0; i < j.h.length; i += 2) hm.set(j.h[i], j.h[i + 1]);
   for (let i = 0; i < j.n; i++) { const d = D[st + i]; d.aw26u = j.u[i]; d.aw26m = hm.get(i) || 0; } }
-async function sidecars(t, preFetch) { const [a, b] = await Promise.all([preFetch ? preFetch[0] : getData(`data/f22/${t}.json`).catch(() => null), preFetch ? preFetch[1] : getData(`data/aw26/${t}.json`).catch(() => null)]); attach22(a); attach26(b); }
+function attach272(j) { if (!j || !j.a || !j.n) return; const st = find(j); if (st < 0) return; const D = engine.docs, a = j.a; for (let i = 0; i < j.n; i++) D[st + i].na272 = a[i]; } /* 27.2: sodium mg per 100 g, -1 = not listed */
+async function sidecars(t, preFetch) { const [a, b, c] = await Promise.all([preFetch ? preFetch[0] : getData(`data/f22/${t}.json`).catch(() => null), preFetch ? preFetch[1] : getData(`data/aw26/${t}.json`).catch(() => null), preFetch ? preFetch[2] : getData(`data/n272/${t}.json`).catch(() => null)]); attach22(a); attach26(b); attach272(c); }
 const urlFor = t => /^w\d+$/.test(t) ? `data/index-w-${t.slice(1)}.json` : `data/index-${t}.json`;
 const sideFor = t => /^w/.test(t) ? null : t; /* the international layer has no sidecars */
 let chain = Promise.resolve();
 async function loadTier(t) {
   if (loaded.has(t)) return; const g = t === 'g';
   /* start the sidecar downloads together with the tier so they overlap */
-  const side = sideFor(t) ? [getData(`data/f22/${t}.json`).catch(() => null), getData(`data/aw26/${t}.json`).catch(() => null)] : null;
+  const side = sideFor(t) ? [getData(`data/f22/${t}.json`).catch(() => null), getData(`data/aw26/${t}.json`).catch(() => null), getData(`data/n272/${t}.json`).catch(() => null)] : null;
   const d = await getData(urlFor(t));
   if (g) { postMessage({ ev: 'chains', chains: d.chains || [] }); (d.chains || []).forEach(([k, l]) => C.register(k, l, 'rest')); }
   await engine.addAsync(d, 15); loaded.add(t); if (side) await sidecars(t, side);

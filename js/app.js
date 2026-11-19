@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '27.1';
+const VERSION = '27.2';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -380,9 +380,9 @@ function runQuery(q, typing) {
   const done = (k, list, err) => { if (rs !== my) return; my.src[k] = err ? 'err' : 'ok'; if (list) { my.counts[k] = list.length; mergeItems(list); } renderResults(); };
   const worldLoad = () => SW27.ok ? SW27.world() : loadIndexW(), world2Load = () => SW27.ok ? SW27.world2() : loadIndexW2();
   const allLoad = () => (SW27.ok ? SW27.all() : loadIndexAll().then(loadIndexX)).then(() => { SW27.allDone = true; });
-  const q271Bar = (m, st) => { if (!m || !m.active) return ''; const ch = (m.mods || []).map((id, i) => `<button type="button" class="q271chip" data-q271="${esc(id)}" aria-label="Remove filter ${esc(m.labels[i])}">${esc(m.labels[i])} <span aria-hidden="true">×</span></button>`).join(''); const stc = m.store ? `<span class="q271chip st">${esc((typeof LumiStores !== "undefined" && (LumiStores.STORES.find(x => x[0] === m.store) || [])[1]) || m.store)}</span>` : '';
-    return (ch || stc || m.note) ? `<div class="q271" id="q271">${m.note ? `<div class="q271note">${esc(m.note)}</div>` : ''}${ch || stc ? `<div class="q271chips">${stc}${ch}</div>` : ''}</div>` : ''; };
-  const q271Wire = (st, again) => { document.querySelectorAll('[data-q271]').forEach(b => { b.onclick = () => { (st.qoff = st.qoff || []).push(b.dataset.q271); again(); }; }); };
+  const q271Bar = (m, st) => { if (!m || !m.active) return ''; const stc = m.store ? `<span class="q271chip st">${esc((typeof LumiStores !== "undefined" && (LumiStores.STORES.find(x => x[0] === m.store) || [])[1]) || m.store)}</span>` : '';
+    return (stc || m.note) ? `<div class="q271" id="q271">${m.note ? `<div class="q271note">${esc(m.note)}</div>` : ''}${stc ? `<div class="q271chips">${stc}</div>` : ''}</div>` : ''; };
+  const q271Wire = (st, again) => { try { if (typeof q272Hook === 'function') q272Hook(st, st.meta271, again); } catch (e) { console.warn('q272', e); } };
   const runLocal = () => { if (rs !== my) return; /* 26.4: the engine lives in a worker; the three passes and "did you mean" come back asynchronously */
     return Promise.all([SW27.searchSet(q, my.qoff), SW27.dym(q)]).then(([docs, sug]) => { if (rs !== my) return; const seen = new Set(), r = [];
     for (const d of docs) if (!seen.has(d.code)) { seen.add(d.code); r.push(itemFromDoc(d)); } for (const id of (my.lids || [])) my.items.delete(id); for (const it of r) my.items.delete(it.id); my.lids = r.map(it => it.id); my.keyIdx = null; done('local', r); /* v18: drop the previous local pass's rows so a later shard's better representative can't be blocked as a duplicate */

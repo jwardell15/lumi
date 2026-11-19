@@ -1,7 +1,7 @@
 {
- "css": "dist/app.a39c4a8d0e.css",
- "js": "dist/app.4c31e4a134.js",
- "late": "dist/late.fa1e4f32c3.js",
+ "css": "dist/app.4ee607c133.css",
+ "js": "dist/app.759b3f54fa.js",
+ "late": "dist/late.c1a348a57c.js",
  "cssFiles": [
   "css/app.css",
   "css/v10.css",
@@ -32,7 +32,8 @@
   "css/v262.css",
   "css/v27.css",
   "css/v269.css",
-  "css/v270.css"
+  "css/v270.css",
+  "css/v272.css"
  ],
  "jsFiles": [
   "js/dbase.js",
@@ -92,6 +93,7 @@
   "js/core262.js",
   "js/v262.js",
   "js/q271.js",
+  "js/ui272.js",
   "js/perf27.js",
   "js/ui269.js",
   "js/ui27.js"
@@ -110,6 +112,7 @@
   "js/v261.js",
   "js/core262.js",
   "js/v262.js",
-  "js/q271.js"
+  "js/q271.js",
+  "js/ui272.js"
  ]
 }

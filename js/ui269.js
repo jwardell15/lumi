@@ -14,7 +14,7 @@
     good: 'Blood sugar 50+', healthy: 'Healthy 50+', low: 'Carbs ≤10 g', hide: 'Hide conflicts',
     ready: 'Ready-to-eat', photo: 'Has photo', nobad: 'Hide bad data',
     sug5: 'Sugar <5 g', sug10: 'Sugar <10 g', carb15: 'Carbs <15 g', carb30: 'Carbs <30 g', carb45: 'Carbs <45 g',
-    pro: 'High protein', fib: 'High fiber', sat: 'Low sat fat', clean: 'No warnings',
+    na140: 'Low sodium ≤140 mg', na600: 'Sodium ≤600 mg', nas: 'No added sugar', pro: 'High protein', fib: 'High fiber', sat: 'Low sat fat', clean: 'No warnings',
     ban: 'No banned additives', dye: 'No synthetic dyes', wf: 'Hide my watch-for items'
   };
 
@@ -29,6 +29,8 @@
     if (f.low) out.push(['low', FLABEL.low]);
     if (F.sug) out.push(['sug' + F.sug, FLABEL['sug' + F.sug] || ('Sugar <' + F.sug + ' g')]);
     if (F.carb) out.push(['carb' + F.carb, FLABEL['carb' + F.carb] || ('Carbs <' + F.carb + ' g')]);
+    if (F.na) out.push(['na' + F.na, FLABEL['na' + F.na] || ('Sodium ≤' + F.na + ' mg')]);
+    if (F.nas) out.push(['nas', FLABEL.nas]);
     if (F.pro) out.push(['pro', FLABEL.pro]);
     if (F.fib) out.push(['fib', FLABEL.fib]);
     if (F.sat) out.push(['sat', FLABEL.sat]);
@@ -72,6 +74,8 @@
     if (key === 'good' || key === 'healthy' || key === 'low' || key === 'hide' || key === 'ready' || key === 'photo' || key === 'nobad') { f[key] = false; store.set('filters', f); }
     else if (key === 'ban' || key === 'dye') { a[key] = false; store.set('f26', a); }
     else if (key === 'wf') { delete s.wf; store.set('f22', s); }
+    else if (key === 'nas') { s.nas = false; store.set('f22', s); }
+    else if (key.slice(0, 2) === 'na') { s.na = 0; store.set('f22', s); }
     else if (key.slice(0, 3) === 'sug') { s.sug = 0; store.set('f22', s); }
     else if (key.slice(0, 4) === 'carb') { s.carb = 0; store.set('f22', s); }
     else if (key === 'pro' || key === 'fib' || key === 'sat' || key === 'clean') { s[key] = false; store.set('f22', s); }

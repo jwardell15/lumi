@@ -79,8 +79,8 @@ if (typeof renderResults === 'function') { const _rr14 = renderResults; renderRe
     const browse = /^#\/browse\//.test(location.hash), m271 = !browse && rs.meta271 && rs.meta271.active && typeof Q271 !== 'undefined' ? rs.meta271 : null, pool = browse ? all : m271 ? Q271.bestPool(all, m271, null) : all.sort((a, b) => (b.rel || 0) - (a.rel || 0)).slice(0, 40);
     let el = $('#du14s');
     if (pool.length < 4) { if (el) el.remove(); return r; }
-    const A = rank14(pool, 'score', 3, 1), B = rank14(pool, 'h', 3, 1);
-    const html = dual14(A, B, { id: 'du14s', title: browse ? 'Best here' : 'Best matches', label: 'Best results for each goal', subA: 'Top carb score in these results', subB: 'Top health rating in these results', how: true });
+    const nB = browse ? 3 : 2, A = rank14(pool, 'score', nB, 1), B = rank14(pool, 'h', nB, 1);
+    const html = dual14(A, B, { id: 'du14s', title: browse ? 'Best here' : 'Best matches', mini: (d, k) => typeof mini272 === 'function' && !browse ? mini272(d, k) : mini14(d, k === 'bs' ? 'score' : 'h'), label: 'Best results for each goal', subA: 'Top carb score in these results', subB: 'Top health rating in these results', how: browse });
     if (el) el.outerHTML = html; else res.insertAdjacentHTML('beforebegin', html);
   } catch (e) { console.warn('du14', e); }
   return r; }; }

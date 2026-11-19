@@ -36,20 +36,20 @@ with sync_playwright() as p:
     pg.goto(base + '#/'); pg.wait_for_selector('#heroScan', timeout=40000)
     for q, subj, forb, chips in CASES:
         pg.goto(base + '#/search/' + q.replace(' ', '%20')); pg.wait_for_function("document.querySelectorAll('#res a[href^=\"#/product\"]').length>0", timeout=90000); pg.wait_for_function("SW27.loaded.has('1')", timeout=90000); pg.wait_for_timeout(2500)
-        rows = pg.evaluate(ROWS)[:8]; got = pg.evaluate("[...document.querySelectorAll('.q271chip:not(.st)')].map(e=>e.innerText.replace('×','').trim())")
+        rows = pg.evaluate(ROWS)[:8]; got = pg.evaluate("[...document.querySelectorAll('#act269 button')].map(e=>e.innerText.replace('×','').trim()).filter(x=>x)")
         bad = [r for r in rows if re.search(forb, r, re.I)] if forb != r'^$' else []
         miss = [r for r in rows if subj != '.' and not re.search(subj, r, re.I)]
         ok('[%s] has results, nothing forbidden, subject words present in the top rows' % q, rows and not bad and len(miss) <= 2, (rows, bad, miss))
         ok('[%s] filter chips %s' % (q, chips), sorted(got) == sorted(chips), got)
     # chip removal re-runs without that filter
-    pg.goto(base + '#/search/low%20sugar%20coffee%20creamer'); pg.wait_for_selector('.q271chip', timeout=90000); pg.wait_for_timeout(1500)
-    n0 = len(pg.evaluate(ROWS)); pg.click('.q271chip:not(.st)'); pg.wait_for_timeout(2500)
-    ok('[chip] removing the Sugar chip drops it and keeps results', pg.evaluate("document.querySelectorAll('.q271chip:not(.st)').length") == 0 and len(pg.evaluate(ROWS)) >= 1, n0)
+    pg.goto(base + '#/search/low%20sugar%20coffee%20creamer'); pg.wait_for_selector('#act269 button', timeout=90000); pg.wait_for_timeout(1500)
+    n0 = len(pg.evaluate(ROWS)); pg.click('#act269 button'); pg.wait_for_timeout(2500)
+    ok('[chip] removing the Sugar chip drops it and keeps results', pg.evaluate("document.querySelectorAll('#act269 button').length") == 0 and len(pg.evaluate(ROWS)) >= 1, n0)
     # no-match note
     pg.goto(base + '#/search/sugar%20free%20potatoes'); pg.wait_for_timeout(4000)
     note = pg.evaluate("(document.querySelector('.q271note')||{}).innerText||''"); ok('[note] impossible filter shows a "showing closest" note or results pass', ('closest' in note) or len(pg.evaluate(ROWS)) > 0, note)
-    pg.goto(base + '#/search/low%20sodium%20soup'); pg.wait_for_timeout(4000)
-    ok('[note] low sodium: honest note, no fake filter', "can't be checked" in pg.evaluate("(document.querySelector('.q271note')||{}).innerText||''"))
+    pg.goto(base + '#/search/no%20salt%20added%20beans'); pg.wait_for_timeout(5000)
+    ok('[note] "no salt added" is approximated by low sodium and says so', "can't be verified" in pg.evaluate("(document.querySelector('.q271note')||{}).innerText||''"))
     ok('[perf] no page errors', not errs, errs)
     c.close(); b.close()
     print('done in %.1fs  %d/%d passed' % (time.time()-t0, sum(1 for _,x in RES if x), len(RES)))

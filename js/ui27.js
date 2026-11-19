@@ -139,7 +139,9 @@ const addNews270 = () => { if (typeof V7_NEWS === 'undefined') return; if (!V7_N
   [/A simpler Lumi/, /Easier search/, /Simpler Home/].forEach(re => { const i = V7_NEWS.findIndex(x => re.test(String(x[1] || ''))); if (i > 0) V7_NEWS.unshift(V7_NEWS.splice(i, 1)[0]); }); }; /* newest first: 27.0, 26.9, 26.7 */
 const addNews271 = () => { if (typeof V7_NEWS === 'undefined') return; if (!V7_NEWS.some(x => /Better search/.test(String(x[1] || '')))) V7_NEWS.push(['🔎', 'Better search (27.1)', 'Search now understands "low sugar", "high protein", "keto", "unsweetened", store names and questions. It shows products of the thing you asked for (a low sugar creamer, not cheese) and applies the matching filters, which you can remove with one tap.']);
   const i = V7_NEWS.findIndex(x => /Better search/.test(String(x[1] || ''))); if (i > 0) V7_NEWS.unshift(V7_NEWS.splice(i, 1)[0]); };
-addNews270(); addNews271(); onLate27(addNews270); onLate27(addNews271);
+const addNews272 = () => { if (typeof V7_NEWS === 'undefined') return; if (!V7_NEWS.some(x => /Sodium filter/.test(String(x[1] || '')))) V7_NEWS.push(['🧂', 'Sodium filter and cleaner results (27.2)', 'Filter by sodium per serving (Low sodium 140 mg or less, Under 600 mg); products with no sodium listed are never counted as low. Search results have a new card with one photo frame, Health and Blood sugar side by side, and sugar, carbs and sodium per serving. Search filters you type (like "low sugar") now show up in the Filters sheet.']);
+  const i = V7_NEWS.findIndex(x => /Sodium filter/.test(String(x[1] || ''))); if (i > 0) V7_NEWS.unshift(V7_NEWS.splice(i, 1)[0]); };
+addNews270(); addNews271(); addNews272(); onLate27(addNews270); onLate27(addNews271); onLate27(addNews272);
 const EAGER27 = new Set(['', 'home', 'places', 'more', 'picks']);
 const route0 = route;
 route = function () {

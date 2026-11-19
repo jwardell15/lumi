@@ -1,15 +1,16 @@
 // Independent oracle for search-quality checks: per-serving numbers, filter thresholds, "Best matches" ranking. Matches the app's Smart filters.
 export const TH = { pro: 15, proMeal: 20, fib: 5, sat: 1 };
 export function val(d) {
-  const ok = d.net != null && d.sg > 0 && d.sb != null && d.sb >= 0 && (d.sb & 3) !== 3; if (!ok) return null; const k = d.sg / 100, m = v => v == null ? null : v * k;
-  return { k, s: m(d.sugar), c: m(d.net), p: m(d.p22), f: m(d.f22), sat: m(d.s22), s100: d.s22, w: d.w22 === undefined ? null : d.w22, meal: d.src === 'rest' };
+  const ok = d.sg > 0 && d.sb != null && d.sb >= 0 && (d.sb & 3) !== 3; if (!ok) return null; const k = d.sg / 100, m = v => v == null ? null : v * k;
+  return { k, s: m(d.sugar), c: m(d.net), p: m(d.p22), f: m(d.f22), sat: m(d.s22), na: d.na272 != null && d.na272 >= 0 ? d.na272 * k : null, s100: d.s22, w: d.w22 === undefined ? null : d.w22, meal: d.src === 'rest' };
 }
 export const added = d => (d.w22 == null || d.w22 < 0) ? null : (d.w22 & 15);
 export function passes(d, F) { // true / false
   const v = val(d);
   if (F.h != null && !(d.h != null && d.h >= F.h)) return false;
   if (F.bs != null && !(d.score != null && d.score >= F.bs)) return false;
-  if (F.sug != null || F.carb != null || F.pro || F.fib || F.sat) { if (!v) return false; }
+  if (F.sug != null || F.carb != null || F.pro || F.fib || F.sat || F.na != null) { if (!v) return false; }
+  if (F.na != null && !(v.na != null && v.na <= F.na)) return false;
   if (F.sug != null && !(v.s != null && v.s < F.sug)) return false;
   if (F.carb != null && !(v.c != null && v.c < F.carb)) return false;
   if (F.pro && !(v.p != null && v.p >= (v.meal ? TH.proMeal : TH.pro))) return false;
@@ -36,6 +37,8 @@ export function evalCase(c, res, poolFn) { // res: {items, note, chips}
   if (c.code) { add('barcode first', items[0].code === c.code, items[0].name); return out; }
   if (re) { const hit = top.filter(d => re.test(hay(d))).length, need = Math.min(c.min || 4, top.length); add(`subject in top ${top.length} (${hit}/${need})`, hit >= need, top.map(d => d.name).join(' | ')); }
   if (fb) { const bad = items.slice(0, 10).filter(d => fb.test(`${d.name} ${d.cat || ''}`)); add('no forbidden terms in top 10', !bad.length, bad.map(d => d.name).join(' | ')); }
+  if (c.diverse) { const cs = new Set(items.slice(0, 12).map(d => d.cat)); add(`varied categories in top 12 (${cs.size}/${c.diverse})`, cs.size >= c.diverse, [...cs].join(' | ')); }
+  if (c.wholeTop) add('plain USDA whole food in top 3', items.slice(0, 3).some(d => d.src === 'whole'), items.slice(0, 3).map(d => d.name).join(' | '));
   const F = c.f || {};
   if (c.nomatch) add('no-match note shown', !!res.note && /closest|no /i.test(res.note), res.note);
   else if (Object.keys(F).length) { const bad = top.filter(d => !passes(d, F)); add('filters hold per serving (top 5)', !bad.length, bad.map(d => `${d.name} [s=${val(d)?.s?.toFixed?.(1)} c=${val(d)?.c?.toFixed?.(1)} add=${added(d)}]`).join(' | ')); }

@@ -18,11 +18,12 @@ export async function loadTiers(engine, tiers) {
     if (j.t && j.t.length) for (let k = 0; k < j.t.length; k += 2) { const d = D[st + j.t[k]]; if (d) d.t22 = j.t[k + 1] >>> 0; } };
   const attach26 = (j) => { if (!j || !j.u || !j.n) return; const D = engine.docs; let st = -1; for (let i = 0; i < D.length; i++) if (D[i].code === j.c0 && D[i + j.n - 1] && D[i + j.n - 1].code === j.c1) { st = i; break; } if (st < 0) return; const hm = new Map(); for (let i = 0; i < j.h.length; i += 2) hm.set(j.h[i], j.h[i + 1]);
     for (let i = 0; i < j.n; i++) { const d = D[st + i]; d.aw26u = j.u[i]; d.aw26m = hm.get(i) || 0; } };
+  const attach272 = (j) => { if (!j || !j.a || !j.n) return; const D = engine.docs; let st = -1; for (let i = 0; i < D.length; i++) if (D[i].code === j.c0 && D[i + j.n - 1] && D[i + j.n - 1].code === j.c1) { st = i; break; } if (st < 0) return; for (let i = 0; i < j.n; i++) D[st + i].na272 = j.a[i]; };
   for (const t of tiers) {
     const url = /^w\d+$/.test(t) ? `data/index-w-${t.slice(1)}.json` : `data/index-${t}.json`; const d = json(url);
     if (t === 'g') (d.chains || []).forEach(([k, l]) => C.register(k, l, 'rest'));
     engine.add(d); loaded.push(t);
-    if (!/^w/.test(t)) { const rd = f => { try { return json(f); } catch { return null; } }; attach22(rd(`data/f22/${t}.json`)); attach26(rd(`data/aw26/${t}.json`)); }
+    if (!/^w/.test(t)) { const rd = f => { try { return json(f); } catch { return null; } }; attach22(rd(`data/f22/${t}.json`)); attach26(rd(`data/aw26/${t}.json`)); attach272(rd(`data/n272/${t}.json`)); }
   }
   return loaded;
 }

@@ -61,9 +61,9 @@ with sync_playwright() as p:
     ok('[parity] no page errors', not errs, errs); c.close()
     # search-row "Better:" hints still appear in worker mode (candidates come from the worker pool; the page holds no docs)
     c = ctx(b); errs = []; pg = page(c, errs); pg.goto(base + '#/search/frosted%20flakes'); pg.wait_for_selector('#res a.row', timeout=60000)
-    try: pg.wait_for_selector('#res a.srs20', timeout=60000)
+    try: pg.wait_for_selector('#res a.srs20, #res .sw272', timeout=60000)
     except Exception: pass
-    sw = pg.evaluate("[...document.querySelectorAll('#res a.srs20')].map(a=>({h:a.getAttribute('href'),t:a.textContent,p:a.previousElementSibling&&a.previousElementSibling.matches('a.row')}))")
+    sw = pg.evaluate("[...document.querySelectorAll('#res a.srs20, #res .sw272')].map(a=>({h:a.getAttribute('href')||a.dataset.href,t:a.textContent,p:a.matches('.sw272')?!!a.closest('a.row'):a.previousElementSibling&&a.previousElementSibling.matches('a.row')}))")
     ok('[search swaps] worker mode still shows Better-choice hints under weak search rows (with per-serving savings)', len(sw) >= 1 and all(x['p'] and re.search(r'saves .*serving', x['t']) for x in sw) and not pg.evaluate('engine.docs.length'), sw[:2])
     ok('[search swaps] no page errors', not errs, errs); c.close()
     # ---------- 4. recalls from the worker ----------
