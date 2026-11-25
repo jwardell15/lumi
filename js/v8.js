@@ -120,7 +120,9 @@ function viewReport(arg) { const n = Math.min(90, Math.max(3, +arg || 14)); docu
     <p class="small">No insulin doses or corrections are included.</p></div>`;
   $('#pr8').onclick = () => window.print(); $('#expCsv').onclick = exportCSV; }
 /* ---------- 2. Label photo OCR (Tesseract.js, on-device) ---------- */
-function loadTess() { if (window.Tesseract) return Promise.resolve(); return new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js'; s.onload = res; s.onerror = () => rej(new Error('Could not load the OCR engine (offline?)')); document.head.appendChild(s); }); }
+/* 27.3: Tesseract.js is served from this site (vendor/tess), not a CDN */
+const TESS0 = () => { const A = p => new URL(p, location.href).href; return { workerPath: A('vendor/tess/v7/worker.min.js'), corePath: A('vendor/tess/v7/'), langPath: A('vendor/tess/v7/'), gzip: true, workerBlobURL: false, cacheMethod: 'none' }; };
+function loadTess() { if (window.Tesseract) return Promise.resolve(); return new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'vendor/tess/v7/tesseract.min.js'; s.onload = res; s.onerror = () => rej(new Error('Could not load the OCR engine (offline?)')); document.head.appendChild(s); }); }
 function parseLabel(raw) {
   let t = ' ' + String(raw).replace(/\r/g, '').replace(/[|]/g, 'l') + ' ';
   t = t.replace(/(\d)\s*[oO](?=\s*(g|mg)\b)/g, '$10').replace(/\b[oO](?=\s*(g|mg)\b)/g, '0').replace(/\b[lI](?=\s*(g|mg)\b)/g, '1').replace(/(\d),(\d)/g, '$1.$2');
@@ -143,7 +145,7 @@ function viewLabel(code) {
   const f = $('#lbForm');
   $('#lbFile').onchange = async e => { const file = e.target.files[0]; if (!file) return; const st = $('#lbStat'), img = $('#lbPrev'); img.src = URL.createObjectURL(file); img.hidden = false;
     try { st.textContent = 'Loading the text reader (first time ~10 MB)…'; await loadTess(); st.textContent = 'Reading the label…';
-      const r = await Tesseract.recognize(file, 'eng', { logger: m => { if (m.status === 'recognizing text') st.textContent = `Reading the label… ${Math.round(m.progress * 100)}%`; } });
+      const r = await Tesseract.recognize(file, 'eng', { ...TESS0(), logger: m => { if (m.status === 'recognizing text') st.textContent = `Reading the label… ${Math.round(m.progress * 100)}%`; } });
       const v = parseLabel(r.data.text); V8.lastOCR = { text: r.data.text, v }; let nf = 0;
       for (const [k] of LF8) if (v[k] != null && v[k] !== '' && f.elements[k]) { f.elements[k].value = v[k]; f.elements[k].classList.add('ocr8'); nf++; }
       if (v.liquid) f.elements.liquid.checked = true;

@@ -87,7 +87,7 @@ function viewMenuScan211(arg) {
       try { im.src = URL.createObjectURL(f); im.hidden = false; } catch {}
       st.textContent = 'Loading the on-device text reader…';
       try { await loadTess(); st.textContent = 'Reading the menu…';
-        const r = await Tesseract.recognize(f, 'eng', { logger: m => { if (m.status === 'recognizing text') st.textContent = `Reading the menu… ${Math.round(m.progress * 100)}%`; } });
+        const r = await Tesseract.recognize(f, 'eng', { ...TESS0(), logger: m => { if (m.status === 'recognizing text') st.textContent = `Reading the menu… ${Math.round(m.progress * 100)}%`; } });
         ms211.raw = (r && r.data && r.data.text) || ''; $('#ms211t').value = ms211.raw; $('#ms211p').open = true; run211();
       } catch (err) { st.textContent = (err && err.message) || "Couldn't read that photo. You can paste the menu text instead."; } };
     if (ms211.raw) run211(); }); }

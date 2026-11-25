@@ -5,8 +5,9 @@
    - fetch: shell files are served from the cache without touching the network (no per-file revalidation); index.html for every navigation.
    - data (Cloudflare Pages host): cached on first use, served from the cache for 24 h, then refreshed in the background (stale-while-revalidate). Data is NOT precached
      (the old worker pre-downloaded 17 MB of catalog files on every release). Only a few small files Home needs are fetched at install.
+   - on-device text reader (27.3): vendor/tess/* (Tesseract.js worker, core wasm, English data, ~11 MB) is cached on first use in lumi-ocr, cache-first, kept across releases (file names carry the version).
    - photos / CDN libraries: stale-while-revalidate as before. "Save for offline" data (lumi-off) is written by the app and kept across versions. */
-const V = 'lumi-v27.2';
+const V = 'lumi-v27.3';
 const OFF = 'lumi-off';
 const DATA_EPOCH = '27c'; /* bump when files under data/ change in place (new data release); old data caches are dropped on activate */
 const DC = 'lumi-d-' + DATA_EPOCH;
@@ -14,7 +15,7 @@ const DATA = 'https://lumi-data-cky.pages.dev/';
 const DATA_PRE = ['data/pick15.json', 'data/meta.json', 'data/home27/home.json']; /* small files the Home screen needs, fetched at install (best effort) */
 const FRESH = 24 * 3600e3;
 /*SHELL-BEGIN*/
-const SHELL_H = {"index.html":"c6e223c8747e","manifest.webmanifest":"43c1a6212237","icons/favicon.ico":"e3075c9b4da1","icons/favicon-32.png":"94866cd60daf","icons/favicon-16.png":"03b16be75f89","icons/apple-touch-icon.png":"beffea1b6350","dist/app.4ee607c133.css":"4ee607c13375","fonts/inter-var-latin.woff2":"3100e775e861","fonts/fraunces-var-latin.woff2":"7f9d191d9993","icons/mascot-128.png":"68eb9167fa07","dist/app.7f75cb5172.js":"7f75cb517296","dist/late.75aab60272.js":"75aab6027299","js/sworker.js":"40afa29b8ec3","js/dbase.js":"15f91170c474","js/cats.js":"31f40c740b44","js/aisles.js":"f126956ea780","js/search.js":"f07c89dd8b03","js/hb25core.js":"64944fb5cc7c","vendor/html5-qrcode-2.3.8.min.js":"660b12437b1d","ref/gi2008.json":"9897d38a7858","ref/additives.json":"f616b68eab59","icons/mascot-256.png":"931e7fa6d49f","icons/icon-192.png":"6771060d937a"};
+const SHELL_H = {"index.html":"b5edbd1c46e2","manifest.webmanifest":"43c1a6212237","icons/favicon.ico":"e3075c9b4da1","icons/favicon-32.png":"94866cd60daf","icons/favicon-16.png":"03b16be75f89","icons/apple-touch-icon.png":"beffea1b6350","dist/app.26c1cafb18.css":"26c1cafb1879","fonts/inter-var-latin.woff2":"3100e775e861","fonts/fraunces-var-latin.woff2":"7f9d191d9993","icons/mascot-128.png":"68eb9167fa07","dist/app.f245cd13cf.js":"f245cd13cf67","dist/late.75aab60272.js":"75aab6027299","js/label273.js":"b6e1e1406a1d","js/photo273.js":"64b458b2c15d","js/sworker.js":"40afa29b8ec3","js/dbase.js":"15f91170c474","js/cats.js":"31f40c740b44","js/aisles.js":"f126956ea780","js/search.js":"f07c89dd8b03","js/hb25core.js":"64944fb5cc7c","vendor/html5-qrcode-2.3.8.min.js":"660b12437b1d","ref/gi2008.json":"9897d38a7858","ref/additives.json":"f616b68eab59","icons/mascot-256.png":"931e7fa6d49f","icons/icon-192.png":"6771060d937a"};
 /*SHELL-END*/
 const hex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
 /* cors responses hide the Date header, so keep our own fetch time on the stored copy */
@@ -52,6 +53,7 @@ async function dataSWR(e) { const req = e.request, url = req.url;
   if (hit) { const age = Date.now() - (Number(hit.headers.get('x-lumi-t')) || 0); if (age > FRESH) e.waitUntil(net().catch(() => {})); return hit; } /* cached copy now, refresh behind it once a day */
   try { return await net(); } catch (err) { const off = await caches.open(OFF).then(o => o.match(url, { ignoreSearch: true })); if (off) return off; throw err; }
 }
+async function ocrFirst(req) { const c = await caches.open('lumi-ocr'), hit = await c.match(req, { ignoreSearch: false }); if (hit) return hit; const r = await fetch(req); if (r.ok) await c.put(req, r.clone()); return r; }
 async function swr(req) {
   const c = await caches.open('lumi-img'); const hit = await c.match(req);
   const net = fetch(req).then(r => { if (r.ok || r.type === 'opaque') c.put(req, r.clone()); return r; }).catch(() => hit);
@@ -60,6 +62,7 @@ async function swr(req) {
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   const u = new URL(e.request.url);
+  if (u.origin === location.origin && u.pathname.startsWith(BASE + 'vendor/tess/')) return e.respondWith(ocrFirst(e.request));
   if (u.origin === location.origin) { const f = shellFile(u); return e.respondWith(f ? shellFirst(e.request, f) : networkFirst(e.request)); }
   if (u.href.startsWith(DATA)) { if (u.pathname.startsWith('/usda/')) return; return e.respondWith(u.pathname.startsWith('/img/') ? swr(e.request) : dataSWR(e)); }
   if (u.hostname === 'images.openfoodfacts.org' || u.hostname === 'images.openbeautyfacts.org' || u.hostname === 'images.openproductsfacts.org' || u.hostname === 'images.openpetfoodfacts.org' || u.hostname === 'unpkg.com' || u.hostname === 'cdn.jsdelivr.net' || u.hostname === 'tessdata.projectnaptha.com') return e.respondWith(swr(e.request));

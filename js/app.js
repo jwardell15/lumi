@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '27.2';
+const VERSION = '27.3';
 const $ = s => document.querySelector(s);
 const app = $('#app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -703,6 +703,7 @@ function route() {
   if (view === 'list' && arg) return viewList(arg);
   if (view === 'whatsnew') return viewWhatsNew();
   if (view === 'label') return viewLabel(arg);
+  if (view === 'photo') return PH273A.view(arg); /* 27.3: grade a label photo */
   if (view === 'alerts') return viewAlerts();
   if (view === 'meals') return viewMeals9();
   if (view === 'history') return viewHistory11();

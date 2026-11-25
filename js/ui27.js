@@ -141,7 +141,9 @@ const addNews271 = () => { if (typeof V7_NEWS === 'undefined') return; if (!V7_N
   const i = V7_NEWS.findIndex(x => /Better search/.test(String(x[1] || ''))); if (i > 0) V7_NEWS.unshift(V7_NEWS.splice(i, 1)[0]); };
 const addNews272 = () => { if (typeof V7_NEWS === 'undefined') return; if (!V7_NEWS.some(x => /Sodium filter/.test(String(x[1] || '')))) V7_NEWS.push(['🧂', 'Sodium filter and cleaner results (27.2)', 'Filter by sodium per serving (Low sodium 140 mg or less, Under 600 mg); products with no sodium listed are never counted as low. Search results have a new card with one photo frame, Health and Blood sugar side by side, and sugar, carbs and sodium per serving. Search filters you type (like "low sugar") now show up in the Filters sheet.']);
   const i = V7_NEWS.findIndex(x => /Sodium filter/.test(String(x[1] || ''))); if (i > 0) V7_NEWS.unshift(V7_NEWS.splice(i, 1)[0]); };
-addNews270(); addNews271(); addNews272(); onLate27(addNews270); onLate27(addNews271); onLate27(addNews272);
+const addNews273 = () => { if (typeof V7_NEWS === 'undefined') return; if (!V7_NEWS.some(x => /Grade a label photo/.test(String(x[1] || '')))) V7_NEWS.push(['📷', 'Grade a label photo (27.3)', 'Paste, drop or take a photo of a Nutrition Facts or ingredient label in the search box and Lumi reads it on your phone (nothing is uploaded), then grades it per serving with the usual Health and Blood sugar scores and ingredient notes. Anything it could not read is marked, and you can fix the numbers before saving.']);
+  const i = V7_NEWS.findIndex(x => /Grade a label photo/.test(String(x[1] || ''))); if (i > 0) V7_NEWS.unshift(V7_NEWS.splice(i, 1)[0]); };
+addNews270(); addNews271(); addNews272(); addNews273(); onLate27(addNews270); onLate27(addNews271); onLate27(addNews272); onLate27(addNews273);
 const EAGER27 = new Set(['', 'home', 'places', 'more', 'picks']);
 const route0 = route;
 route = function () {
